@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -921,6 +920,15 @@ function targetFor(initials, date, code){
   const lost = hoursLostForCode(code, fullDayHours);
   const available = Math.max(0, fullDayHours - lost);
   return Math.round(BASE_RATE * available);
+}
+
+/* Which holiday codes count as a genuine "off today" absence
+   (holiday / sickness / bank holiday) — Carrier runs and 2nd-fix
+   help are still working days, just off-site, so they don't count. */
+function isAbsenceCode(code){
+  if(!code) return false;
+  const c = code.toLowerCase();
+  return c==='h' || c==='h/am' || c==='h/pm' || c==='b' || c==='o';
 }
 
 function statusLabel(code){
