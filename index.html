@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1152,7 +1153,7 @@ async function loadAndRender(){
 
     document.getElementById('errorBanner').innerHTML = '';
     document.getElementById('loadingMsg').style.display = 'none';
-    document.getElementById('mainPage').style.display = 'block';
+    document.getElementById('mainPage').style.removeProperty('display');
     document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB');
 
   } catch(err){
@@ -1160,7 +1161,7 @@ async function loadAndRender(){
     document.getElementById('errorBanner').innerHTML =
       `<div class="error-banner">Couldn't load live data: ${err.message}. Make sure sheets are shared as "Anyone with the link can view".</div>`;
     document.getElementById('loadingMsg').style.display = 'none';
-    document.getElementById('mainPage').style.display = 'block';
+    document.getElementById('mainPage').style.removeProperty('display');
   }
 }
 
