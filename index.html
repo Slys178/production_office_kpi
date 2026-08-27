@@ -1020,7 +1020,6 @@ function parseStairRows(rows){
   // Look for a "Completed" column – this is Column D
   let completedCol = header.findIndex(c => c.includes('COMPLETED') || c.includes('DONE') || c.includes('TICK'));
   if(completedCol === -1) {
-    // If no header found, fallback to index 3 (0-based) => Column D
     completedCol = 3;
   }
 
@@ -1029,35 +1028,50 @@ function parseStairRows(rows){
 
   for(let i=headerIdx+1;i<rows.length;i++){
     const r = rows[i];
-    if(!r[dateCol] || !r[dateCol].trim()) continue;
-
-    const date = parseUKDate(r[dateCol]);
-    const initials = (r[initialsCol]||'').trim().toUpperCase();
-    const stairs = parseInt(r[stairsCol],10);
-    if(!date || !initials || isNaN(stairs)) continue;
-
-    const completedVal = (r[completedCol] || '').toString().trim().toUpperCase();
-    const isCompleted = completedVal === 'TRUE' || completedVal === 'YES' || completedVal === '1' || completedVal === '✓';
     
+    // ===== FORECAST: Look for rows with Delivery Date and Number of Stairs =====
+    // These rows might not have Start Date or Initials filled in yet
     const deliveryDate = deliveryDateCol > -1 ? parseUKDate(r[deliveryDateCol]) : null;
-
-    const parts = {
-      winderStringPlates: parseInt(r[winderStringPlatesCol],10) || 0,
-      smallStringPlates:  parseInt(r[smallStringPlatesCol],10) || 0,
-      straightStrings:    parseInt(r[straightStringsCol],10) || 0,
-      posts:               parseInt(r[postsCol],10) || 0,
-      winders:             parseInt(r[windersCol],10) || 0,
-      bullnose:            parseInt(r[bullnoseCol],10) || 0
-    };
-
-    const entry = {date, initials, stairs, parts, deliveryDate};
-
-    if(isCompleted) {
-      completed.push(entry);
-    } else {
-      // Only include in forecast if it has a delivery date
-      if(deliveryDate) {
-        forecast.push(entry);
+    const stairs = parseInt(r[stairsCol],10);
+    
+    if(deliveryDate && !isNaN(stairs) && stairs > 0) {
+      // Try to get initials if available
+      const initials = (r[initialsCol]||'').trim().toUpperCase();
+      // If no initials, check if it's assigned to someone or leave blank
+      const personInitials = initials || 'UNASSIGNED';
+      
+      // Check if it's completed
+      const completedVal = (r[completedCol] || '').toString().trim().toUpperCase();
+      const isCompleted = completedVal === 'TRUE' || completedVal === 'YES' || completedVal === '1' || completedVal === '✓';
+      
+      const parts = {
+        winderStringPlates: parseInt(r[winderStringPlatesCol],10) || 0,
+        smallStringPlates:  parseInt(r[smallStringPlatesCol],10) || 0,
+        straightStrings:    parseInt(r[straightStringsCol],10) || 0,
+        posts:               parseInt(r[postsCol],10) || 0,
+        winders:             parseInt(r[windersCol],10) || 0,
+        bullnose:            parseInt(r[bullnoseCol],10) || 0
+      };
+      
+      // Get date from Start Date column if available (for completed rows)
+      const date = parseUKDate(r[dateCol]);
+      
+      // If completed, store with full details
+      if(isCompleted && date && initials && PEOPLE.some(p => p.initials === initials)) {
+        completed.push({date, initials, stairs, parts, deliveryDate});
+      } else {
+        // For forecast: store with whatever info we have (even without start date or initials)
+        // But still need to know who it's for if possible
+        const personInitialsForEntry = initials && PEOPLE.some(p => p.initials === initials) ? initials : null;
+        // If we can't identify who it's for, we can still show it in the total forecast
+        // but we won't assign it to a person
+        forecast.push({
+          date: date || null,
+          initials: personInitialsForEntry,
+          stairs: stairs,
+          parts: parts,
+          deliveryDate: deliveryDate
+        });
       }
     }
   }
