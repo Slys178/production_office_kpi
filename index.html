@@ -149,6 +149,11 @@
     color:var(--amber);
     border:1px solid var(--amber);
   }
+  .nav-tile .tile-badge.danger{
+    background:rgba(231,76,60,0.15);
+    color:var(--red);
+    border-color:var(--red);
+  }
 
   .grid{
     display:grid;
@@ -410,7 +415,7 @@
   .forecast-note{color:var(--muted);font-size:0.78rem;margin-bottom:14px;}
   .forecast-week-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
     gap:14px;
   }
   .forecast-week-card{
@@ -420,6 +425,11 @@
     padding:16px;
   }
   .forecast-week-card.current-week{border-color:var(--blue);}
+  .forecast-week-card.danger-week{
+    border-color:var(--red) !important;
+    background:rgba(231,76,60,0.08) !important;
+    box-shadow:0 0 20px rgba(231,76,60,0.15);
+  }
   .forecast-week-card .fw-header{
     display:flex;
     justify-content:space-between;
@@ -432,6 +442,7 @@
     font-weight:700;
     color:var(--blue);
   }
+  .forecast-week-card .fw-header .fw-total.danger{color:var(--red);}
   .forecast-week-card .fw-header .fw-total .unit{font-size:0.7rem;color:var(--muted);font-weight:400;margin-left:2px;}
   .forecast-week-card .fw-breakdown{
     display:flex;
@@ -455,6 +466,51 @@
     color:var(--muted);
     padding:30px 0;
     font-style:italic;
+  }
+  .warning-badge{
+    padding:2px 10px;
+    border-radius:999px;
+    font-size:0.7rem;
+    font-weight:700;
+  }
+  .warning-badge.danger{background:rgba(231,76,60,0.2);color:var(--red);}
+  .warning-badge.warning{background:rgba(245,166,35,0.2);color:var(--amber);}
+  .warning-badge.ok{background:rgba(46,204,113,0.2);color:var(--green);}
+  .capacity-bar{
+    height:6px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.05);
+    margin:6px 0;
+    overflow:hidden;
+  }
+  .capacity-bar .fill{
+    height:100%;
+    border-radius:999px;
+    transition:width 0.3s ease;
+  }
+  .capacity-bar .fill.danger{background:var(--red);}
+  .capacity-bar .fill.warning{background:var(--amber);}
+  .capacity-bar .fill.ok{background:var(--green);}
+  .capacity-detail{
+    display:flex;
+    justify-content:space-between;
+    font-size:0.7rem;
+    color:var(--muted);
+    margin:2px 0;
+  }
+  .holiday-impact{
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--card-border);
+    font-size:0.72rem;
+    color:var(--amber);
+  }
+  .holiday-impact .chip{
+    background:rgba(245,166,35,0.1);
+    padding:1px 8px;
+    border-radius:4px;
+    display:inline-block;
+    margin:2px 2px 2px 0;
   }
 
   .detail-stats{
@@ -639,6 +695,16 @@
   .loading{text-align:center;color:var(--muted);padding:40px 0;font-size:1rem;}
   footer{text-align:center;color:var(--muted);font-size:0.7rem;margin-top:16px;}
   .parts-note{color:var(--muted);font-size:0.75rem;margin:-6px 0 14px 0;}
+  
+  /* Forecast tile badge animation */
+  .tile-badge.danger {
+    animation: pulse-red 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-red {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
 </style>
 </head>
 <body>
@@ -675,6 +741,7 @@
       <div class="tile-icon">📦</div>
       <div class="tile-label">FORECAST</div>
       <div class="tile-sub">Stairs due out, week by week</div>
+      <div class="tile-badge" id="tileForecastBadge" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -758,9 +825,9 @@
 <div id="forecastPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromForecast">← Production Office</button>
-    <h2>📦 Forecast</h2>
+    <h2>📦 Forecast &amp; Manpower Check</h2>
   </div>
-  <div class="forecast-note">Upcoming stairs grouped by delivery week, from completed program rows with a delivery date.</div>
+  <div class="forecast-note">Upcoming stairs grouped by delivery week. 🔴 = manpower shortage detected (holidays this week impact next week's capacity).</div>
   <div class="forecast-week-grid" id="forecastWeeks"></div>
 </div>
 
@@ -790,7 +857,7 @@ const HOURS = {
   AS: { MonThu: 9,   Fri: 6.5 },
   DF: { MonThu: 6,   Fri: 3.5 }
 };
-const BASE_RATE = 54 / 9;
+const BASE_RATE = 54 / 9; // Increased by 4 (was 50/9)
 const REFRESH_MS = 3 * 60 * 1000;
 const FORECAST_WEEKS = 8;
 const TREND_WEEKS = 4;
@@ -938,9 +1005,6 @@ function targetFor(initials, date, code){
   return Math.round(BASE_RATE * available);
 }
 
-/* Which holiday codes count as a genuine "off today" absence
-   (holiday / sickness / bank holiday) — Carrier runs and 2nd-fix
-   help are still working days, just off-site, so they don't count. */
 function isAbsenceCode(code){
   if(!code) return false;
   const c = code.toLowerCase();
@@ -960,8 +1024,6 @@ function statusLabel(code){
   return code;
 }
 
-/* Computes actual/target/credit/code for one person on one date.
-   Used everywhere so refreshes and detail/day pages stay in sync. */
 function computeDayStats(person, date, stairEntries, holidayIndex){
   const bucket = dayBucket(date);
   const code = getCodeForPerson(holidayIndex, person.holidayName, date);
@@ -975,30 +1037,8 @@ function computeDayStats(person, date, stairEntries, holidayIndex){
   return { actual, target, credit, code };
 }
 
-/* Weekly totals for a person over the last N weeks (oldest -> newest, this week last) */
-function getWeeklyTotals(person, stairEntries, holidayIndex, today, numWeeks){
-  const monday = mondayOf(today);
-  const weeks = [];
-  for(let i=numWeeks-1;i>=0;i--){
-    const wStart = new Date(monday); wStart.setDate(wStart.getDate()-(7*i));
-    const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate()+4);
-    let actual=0, target=0;
-    for(let d=new Date(wStart); d<=wEnd; d.setDate(d.getDate()+1)){
-      if(!dayBucket(d)) continue;
-      const stats = computeDayStats(person, new Date(d), stairEntries, holidayIndex);
-      actual += stats.actual;
-      target += stats.target;
-    }
-    weeks.push({ start:wStart, end:wEnd, actual, target, isCurrent: i===0 });
-  }
-  return weeks;
-}
-
 /* =========================================================
-   parseStairRows – only counts if Column D is ticked.
-   Also captures the "STAIR PARTS" columns (H, I, J, K, L, N)
-   and the Delivery Date, so we can show parts breakdowns and
-   a forecast of stairs due out.
+   PARSE STAIR ROWS
    ========================================================= */
 function parseStairRows(rows){
   let headerIdx = rows.findIndex(r => r.some(c => c.trim().toUpperCase()==='INITIALS'));
@@ -1009,7 +1049,6 @@ function parseStairRows(rows){
   const stairsCol = header.findIndex(c=>c.includes('NUMBER OF STAIRS'));
   const deliveryDateCol = header.findIndex(c=>c.includes('DELIVERY') && c.includes('DATE'));
 
-  // Stair-parts columns (H, I, J, K, L, N on the sheet)
   const winderStringPlatesCol = header.findIndex(c=>c.includes('WINDER') && c.includes('STRING') && c.includes('PLATES'));
   const smallStringPlatesCol  = header.findIndex(c=>c.includes('SMALL') && c.includes('STRING') && c.includes('PLATES'));
   const straightStringsCol    = header.findIndex(c=>c.includes('STRAIGHT') && c.includes('STRINGS'));
@@ -1017,30 +1056,21 @@ function parseStairRows(rows){
   const windersCol             = header.findIndex(c=>c.includes('WINDERS') && !c.includes('COMPLETED'));
   const bullnoseCol            = header.findIndex(c=>c.includes('BULLNOSE') && c.includes('ASSEMBLED'));
 
-  // Look for a "Completed" column – this is Column D
   let completedCol = header.findIndex(c => c.includes('COMPLETED') || c.includes('DONE') || c.includes('TICK'));
-  if(completedCol === -1) {
-    completedCol = 3;
-  }
+  if(completedCol === -1) completedCol = 3;
 
   const completed = [];
   const forecast = [];
 
   for(let i=headerIdx+1;i<rows.length;i++){
     const r = rows[i];
-    
-    // ===== FORECAST: Look for rows with Delivery Date and Number of Stairs =====
-    // These rows might not have Start Date or Initials filled in yet
     const deliveryDate = deliveryDateCol > -1 ? parseUKDate(r[deliveryDateCol]) : null;
     const stairs = parseInt(r[stairsCol],10);
     
     if(deliveryDate && !isNaN(stairs) && stairs > 0) {
-      // Try to get initials if available
       const initials = (r[initialsCol]||'').trim().toUpperCase();
-      // If no initials, check if it's assigned to someone or leave blank
       const personInitials = initials || 'UNASSIGNED';
       
-      // Check if it's completed
       const completedVal = (r[completedCol] || '').toString().trim().toUpperCase();
       const isCompleted = completedVal === 'TRUE' || completedVal === 'YES' || completedVal === '1' || completedVal === '✓';
       
@@ -1053,21 +1083,14 @@ function parseStairRows(rows){
         bullnose:            parseInt(r[bullnoseCol],10) || 0
       };
       
-      // Get date from Start Date column if available (for completed rows)
       const date = parseUKDate(r[dateCol]);
       
-      // If completed, store with full details
       if(isCompleted && date && initials && PEOPLE.some(p => p.initials === initials)) {
         completed.push({date, initials, stairs, parts, deliveryDate});
       } else {
-        // For forecast: store with whatever info we have (even without start date or initials)
-        // But still need to know who it's for if possible
-        const personInitialsForEntry = initials && PEOPLE.some(p => p.initials === initials) ? initials : null;
-        // If we can't identify who it's for, we can still show it in the total forecast
-        // but we won't assign it to a person
         forecast.push({
           date: date || null,
-          initials: personInitialsForEntry,
+          initials: initials || null,
           stairs: stairs,
           parts: parts,
           deliveryDate: deliveryDate
@@ -1079,7 +1102,7 @@ function parseStairRows(rows){
 }
 
 /* =========================================================
-   parseErrorRows – reads full error sheet
+   PARSE ERROR ROWS
    ========================================================= */
 function parseErrorRows(rows){
   let headerIdx = -1;
@@ -1179,7 +1202,6 @@ function drawDial(actual, target, colorClass){
   </svg>`;
 }
 
-/* Small 4-bar trend showing the last N weeks' stair totals vs target */
 function drawMiniTrend(weeks){
   const bars = weeks.map(w => {
     const pct = w.target>0 ? Math.min(1, w.actual/w.target) : (w.actual>0 ? 1 : 0);
@@ -1249,14 +1271,108 @@ function renderHolidayCalendar(holidayIndex, month, year) {
 }
 
 /* =========================================================
-   FORECAST — upcoming stairs by delivery week
+   CAPACITY & MANPOWER WARNINGS
    ========================================================= */
-function renderForecast(forecastEntries, today){
+function getPersonDailyCapacity(person) {
+  const fullDayHours = HOURS[person.initials]['MonThu'];
+  return Math.round(BASE_RATE * fullDayHours);
+}
+
+function getPersonCapacityForWeek(person, weekStart, weekEnd, holidayIndex) {
+  let availableDays = 0;
+  let holidayDays = 0;
+  let holidayDetails = [];
+  
+  for(let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+    const dCopy = new Date(d);
+    const bucket = dayBucket(dCopy);
+    if(!bucket) continue;
+    
+    const code = getCodeForPerson(holidayIndex, person.holidayName, dCopy);
+    const isHoliday = isAbsenceCode(code);
+    
+    if(isHoliday) {
+      holidayDays++;
+      holidayDetails.push({ date: new Date(dCopy), code: code });
+    } else {
+      availableDays++;
+    }
+  }
+  
+  const dailyCapacity = getPersonDailyCapacity(person);
+  return {
+    availableDays: availableDays,
+    holidayDays: holidayDays,
+    holidayDetails: holidayDetails,
+    capacity: availableDays * dailyCapacity,
+    dailyCapacity: dailyCapacity
+  };
+}
+
+function getEffectiveCapacityForForecastWeek(forecastWeekStart, forecastWeekEnd, currentWeekStart, currentWeekEnd, holidayIndex) {
+  let totalCapacity = 0;
+  let holidayImpacts = [];
+  
+  PEOPLE.forEach(person => {
+    // Check holidays in the CURRENT week (this is what impacts next week's capacity)
+    const currentWeekCapacity = getPersonCapacityForWeek(person, currentWeekStart, currentWeekEnd, holidayIndex);
+    
+    // Check if person is on holiday in the FORECAST week
+    const forecastWeekCapacity = getPersonCapacityForWeek(person, forecastWeekStart, forecastWeekEnd, holidayIndex);
+    
+    // If someone is on holiday this week, they lose capacity for next week
+    // because they're behind on preparation
+    let effectiveCapacity = forecastWeekCapacity.capacity;
+    let penalty = 0;
+    
+    if(currentWeekCapacity.holidayDays > 0) {
+      // Each holiday day this week reduces next week's capacity by 1 day
+      // (they lose a day of preparation/working time)
+      const dailyCap = getPersonDailyCapacity(person);
+      penalty = currentWeekCapacity.holidayDays * dailyCap;
+      effectiveCapacity = Math.max(0, forecastWeekCapacity.capacity - penalty);
+      
+      if(penalty > 0) {
+        holidayImpacts.push({
+          person: person,
+          holidayDays: currentWeekCapacity.holidayDays,
+          holidayDetails: currentWeekCapacity.holidayDetails,
+          penalty: penalty,
+          originalCapacity: forecastWeekCapacity.capacity,
+          effectiveCapacity: effectiveCapacity
+        });
+      }
+    }
+    
+    totalCapacity += effectiveCapacity;
+  });
+  
+  return {
+    totalCapacity: totalCapacity,
+    holidayImpacts: holidayImpacts,
+    hasHolidayImpact: holidayImpacts.length > 0
+  };
+}
+
+function getWarningLevel(forecast, capacity) {
+  if(capacity === 0) return { level: 'danger', label: '🔴 No capacity!', class: 'danger' };
+  const ratio = forecast / capacity;
+  if(ratio > 0.95) return { level: 'danger', label: '🔴 Critical!', class: 'danger' };
+  if(ratio > 0.75) return { level: 'warning', label: '🟡 Tight', class: 'warning' };
+  return { level: 'ok', label: '✅ OK', class: 'ok' };
+}
+
+/* =========================================================
+   RENDER FORECAST WITH CAPACITY CHECK
+   ========================================================= */
+function renderForecast(forecastEntries, holidayIndex, today) {
   const startMonday = mondayOf(today);
   const weeks = [];
   for(let i=0;i<FORECAST_WEEKS;i++){
-    const wStart = new Date(startMonday); wStart.setDate(wStart.getDate()+(7*i));
-    const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate()+6);
+    const wStart = new Date(startMonday);
+    wStart.setDate(wStart.getDate() + (7*i));
+    const wEnd = new Date(wStart);
+    wEnd.setDate(wStart.getDate() + 6);
     weeks.push({ start:wStart, end:wEnd, total:0, byPerson:{}, isCurrent:i===0 });
   }
   const lastWeekEnd = weeks[weeks.length-1].end;
@@ -1267,7 +1383,11 @@ function renderForecast(forecastEntries, today){
     const wk = weeks.find(w => e.deliveryDate >= w.start && e.deliveryDate <= w.end);
     if(!wk) return;
     wk.total += e.stairs;
-    wk.byPerson[e.initials] = (wk.byPerson[e.initials]||0) + e.stairs;
+    if(e.initials) {
+      wk.byPerson[e.initials] = (wk.byPerson[e.initials]||0) + e.stairs;
+    } else {
+      wk.byPerson['UNASSIGNED'] = (wk.byPerson['UNASSIGNED']||0) + e.stairs;
+    }
   });
 
   const container = document.getElementById('forecastWeeks');
@@ -1281,28 +1401,115 @@ function renderForecast(forecastEntries, today){
     return;
   }
 
-  container.innerHTML = displayWeeks.map(w => {
-    const chips = PEOPLE.filter(p => w.byPerson[p.initials]).map(p => `
-      <span class="fw-person-chip"><span class="dot" style="background:${p.color};"></span>${p.initials}: ${w.byPerson[p.initials]}</span>
-    `).join('');
+  // Get current week for holiday checking
+  const currentWeekStart = weeks[0].start;
+  const currentWeekEnd = weeks[0].end;
+
+  // Check if any week has a manpower warning
+  let hasManpowerWarning = false;
+
+  const html = displayWeeks.map(w => {
+    // Calculate effective capacity based on holidays in the current week
+    const capacityInfo = getEffectiveCapacityForForecastWeek(
+      w.start, w.end, 
+      currentWeekStart, currentWeekEnd, 
+      holidayIndex
+    );
+    
+    const warning = getWarningLevel(w.total, capacityInfo.totalCapacity);
+    
+    // Track if any week is in danger
+    if(warning.level === 'danger') hasManpowerWarning = true;
+    
+    const chips = [];
+    Object.keys(w.byPerson).forEach(initials => {
+      const person = PEOPLE.find(p => p.initials === initials);
+      const color = person ? person.color : '#8993ab';
+      const name = person ? initials : 'Unassigned';
+      chips.push(`<span class="fw-person-chip"><span class="dot" style="background:${color};"></span>${name}: ${w.byPerson[initials]}</span>`);
+    });
+    
+    // Show holiday impact from current week
+    let holidayWarning = '';
+    if(capacityInfo.hasHolidayImpact) {
+      holidayWarning = `<div class="holiday-impact">`;
+      holidayWarning += `⚠️ Current week holiday impact: `;
+      capacityInfo.holidayImpacts.forEach(p => {
+        const days = p.holidayDetails.map(h => fmtDateShort(h.date) + '(' + h.code + ')').join(', ');
+        holidayWarning += `<span class="chip">${p.person.initials} (${p.holidayDays} day${p.holidayDays>1?'s':''} off → -${p.penalty} stairs)</span>`;
+      });
+      holidayWarning += `</div>`;
+    }
+    
+    // Capacity bar
+    const capacityUsed = w.total > 0 ? Math.min(100, Math.round((w.total / capacityInfo.totalCapacity) * 100)) : 0;
+    const barClass = warning.level === 'danger' ? 'danger' : (warning.level === 'warning' ? 'warning' : 'ok');
+    
+    // Warning badge on the tile
+    let cardClass = 'forecast-week-card';
+    if(w.isCurrent) cardClass += ' current-week';
+    if(warning.level === 'danger') cardClass += ' danger-week';
+    
     return `
-      <div class="forecast-week-card ${w.isCurrent ? 'current-week' : ''}">
+      <div class="${cardClass}">
         <div class="fw-header">
           <span class="fw-label">${w.isCurrent ? 'This week' : 'W/C ' + fmtDateShort(w.start)}</span>
-          <span class="fw-total">${w.total}<span class="unit">stairs</span></span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="fw-total ${warning.level === 'danger' ? 'danger' : ''}">${w.total}<span class="unit">stairs</span></span>
+            <span class="warning-badge ${warning.class}">${warning.label}</span>
+          </div>
         </div>
-        <div class="fw-breakdown">${chips || '<span style="color:var(--muted);font-size:0.75rem;">Nothing due</span>'}</div>
+        <div class="capacity-detail">
+          <span>Effective capacity: ${capacityInfo.totalCapacity} stairs</span>
+          <span>${capacityUsed}% used</span>
+        </div>
+        <div class="capacity-bar">
+          <div class="fill ${barClass}" style="width:${Math.min(100, capacityUsed)}%;"></div>
+        </div>
+        <div class="fw-breakdown">${chips.join('')}</div>
+        ${holidayWarning}
+        ${warning.level === 'danger' ? `<div style="margin-top:6px;font-size:0.75rem;color:var(--red);font-weight:700;">⚠️ Manpower shortage! ${capacityInfo.totalCapacity} effective capacity vs ${w.total} required</div>` : ''}
+        ${warning.level === 'warning' ? `<div style="margin-top:6px;font-size:0.7rem;color:var(--amber);">⚠️ Getting tight - ${capacityInfo.totalCapacity} capacity vs ${w.total} required</div>` : ''}
       </div>
     `;
   }).join('');
+  
+  container.innerHTML = html;
+  
+  // Update the tile badge on landing page
+  const tileBadge = document.getElementById('tileForecastBadge');
+  if(hasManpowerWarning) {
+    tileBadge.style.display = 'inline-block';
+    tileBadge.textContent = '⚠️ Manpower alert!';
+    tileBadge.className = 'tile-badge danger';
+  } else {
+    tileBadge.style.display = 'none';
+  }
 }
 
 /* =========================================================
    PERSON DETAIL PAGE
    ========================================================= */
+function getWeeklyTotals(person, stairEntries, holidayIndex, today, numWeeks){
+  const monday = mondayOf(today);
+  const weeks = [];
+  for(let i=numWeeks-1;i>=0;i--){
+    const wStart = new Date(monday); wStart.setDate(wStart.getDate()-(7*i));
+    const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate()+4);
+    let actual=0, target=0;
+    for(let d=new Date(wStart); d<=wEnd; d.setDate(d.getDate()+1)){
+      if(!dayBucket(d)) continue;
+      const stats = computeDayStats(person, new Date(d), stairEntries, holidayIndex);
+      actual += stats.actual;
+      target += stats.target;
+    }
+    weeks.push({ start:wStart, end:wEnd, actual, target, isCurrent: i===0 });
+  }
+  return weeks;
+}
+
 function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, today, errorEntries) {
   const detailPage = document.getElementById('detailPage');
-  const mainPage = document.getElementById('kpiPage');
   document.getElementById('landingPage').classList.remove('active');
   document.getElementById('kpiPage').classList.remove('active');
   document.getElementById('holidaysPage').classList.remove('active');
@@ -1351,7 +1558,6 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
     const stairsOver = (actual + holidayCredit) - target;
     const netPoints = stairsOver + weekErrorPoints;
     
-    // Forecast for this week
     const forecastForWeek = forecastEntries
       .filter(e => e.initials === person.initials && e.deliveryDate && e.deliveryDate >= week.start && e.deliveryDate <= week.end)
       .reduce((s,e) => s + e.stairs, 0);
@@ -1458,7 +1664,6 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
     `;
   }).join('');
 
-  // Wire up clicks on each day card to open the parts-breakdown page
   document.querySelectorAll('#detailDays .detail-day-card').forEach(el => {
     el.addEventListener('click', function(){
       const idx = parseInt(this.dataset.dayIdx, 10);
@@ -1482,12 +1687,9 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
 }
 
 /* =========================================================
-   DAY DETAIL PAGE – parts breakdown for one person, one day.
-   Sums columns H, I, J, K, L, N from completed rows that match
-   this person's initials and this date.
+   DAY DETAIL PAGE
    ========================================================= */
 function showDayDetailPage(person, date, stairEntries, holidayIndex){
-  // Hide other views, show day detail
   document.getElementById('detailPage').classList.remove('active');
   document.getElementById('dayDetailPage').classList.add('active');
   
@@ -1548,7 +1750,7 @@ function showDayDetailPage(person, date, stairEntries, holidayIndex){
 }
 
 /* =========================================================
-   NAVIGATION — single source of truth for which page shows
+   NAVIGATION
    ========================================================= */
 const VIEW_IDS = {
   landing: 'landingPage',
@@ -1558,6 +1760,7 @@ const VIEW_IDS = {
   holidays: 'holidaysPage',
   forecast: 'forecastPage'
 };
+
 function setActiveView(view){
   window._currentView = view;
   Object.values(VIEW_IDS).forEach(id => document.getElementById(id).classList.remove('active'));
@@ -1575,7 +1778,7 @@ document.getElementById('tileHolidays').addEventListener('click', ()=>{
 });
 document.getElementById('tileForecast').addEventListener('click', ()=>{
   setActiveView('forecast');
-  if(window._stairEntries) renderForecast(window._forecastEntries, window._today);
+  if(window._forecastEntries) renderForecast(window._forecastEntries, window._holidayIndex, window._today);
 });
 document.getElementById('backToLandingFromKpi').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromHolidays').addEventListener('click', ()=> setActiveView('landing'));
@@ -1629,12 +1832,10 @@ async function loadAndRender(){
     const dialGrid = document.getElementById('dialGrid');
     dialGrid.innerHTML = '';
     const offToday = [];
-    let totalErrorPointsAllPeople = 0;
 
     PEOPLE.forEach(person => {
       const initials = person.initials;
       const todayCode = getCodeForPerson(holidayIndex, person.holidayName, today);
-      // Only show "off" if it's a genuine absence (not carrier)
       if(todayCode && isAbsenceCode(todayCode)) offToday.push({ person, code: todayCode });
       
       const todayTarget = targetFor(initials, today, todayCode);
@@ -1655,13 +1856,11 @@ async function loadAndRender(){
 
       const personErrors = errorEntries.filter(e => e.initials === initials);
       const totalErrorPoints = personErrors.reduce((sum, e) => sum + e.points, 0);
-      totalErrorPointsAllPeople += totalErrorPoints;
       let pointsBadgeClass = 'zero';
       let pointsLabel = '0 pts';
       if(totalErrorPoints < 0){ pointsBadgeClass = 'negative'; pointsLabel = totalErrorPoints + ' pts'; }
       else if(totalErrorPoints > 0){ pointsBadgeClass = ''; pointsLabel = '+' + totalErrorPoints + ' pts'; }
 
-      // Forecast badge - show next week's forecast for this person
       const nextMonday = new Date(monday);
       nextMonday.setDate(monday.getDate() + 7);
       const nextFriday = new Date(nextMonday);
@@ -1705,21 +1904,20 @@ async function loadAndRender(){
       bannerEl.innerHTML = `<div class="today-off-banner"><span class="title">📌 ALERT:</span>${chips}</div>`;
     } else bannerEl.innerHTML = '';
 
-    // landing tile badge — flag if anyone is off today
     const kpiBadge = document.getElementById('tileKpiBadge');
     if(offToday.length > 0){
       kpiBadge.style.display = 'inline-block';
       kpiBadge.textContent = offToday.length + ' off today';
+      kpiBadge.className = 'tile-badge';
     } else {
       kpiBadge.style.display = 'none';
     }
 
-    // keep holidays / forecast pages fresh if they're the ones currently open
+    // Render forecast to check for manpower warnings
+    renderForecast(forecastEntries, holidayIndex, today);
+
     if(window._currentView === 'holidays'){
       renderHolidayCalendar(holidayIndex, window._holidayMonth, window._holidayYear);
-    }
-    if(window._currentView === 'forecast'){
-      renderForecast(forecastEntries, today);
     }
 
     document.getElementById('errorBanner').innerHTML = '';
