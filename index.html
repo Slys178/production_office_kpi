@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Office</title>
+<title>Office Stair Tracker</title>
 <style>
   :root{
     --bg:#0e1420;
@@ -20,7 +19,6 @@
     --negative:#e74c3c;
     --over:#3498db;
     --gold:#ffd700;
-    --purple:#9b59b6;
   }
   *{box-sizing:border-box;}
   body{
@@ -63,94 +61,8 @@
     50%{opacity:0.4;}
     100%{opacity:1;}
   }
-
-  /* ===== generic page-view system ===== */
-  .page-view{display:none;animation:fadeIn 0.3s ease;}
-  .page-view.active{display:block;}
-  @keyframes fadeIn{
-    from{opacity:0;transform:translateY(10px);}
-    to{opacity:1;transform:translateY(0);}
-  }
-  .page-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:20px;
-    flex-wrap:wrap;
-    gap:12px;
-  }
-  .page-header .back-btn{
-    background:var(--card-border);
-    border:none;
-    color:var(--text);
-    padding:8px 16px;
-    border-radius:8px;
-    cursor:pointer;
-    font-size:0.9rem;
-    transition:background 0.2s;
-  }
-  .page-header .back-btn:hover{background:rgba(255,255,255,0.1);}
-  .page-header h2{margin:0;font-size:1.4rem;}
-  .page-header .person-color{
-    display:inline-block;
-    width:16px;
-    height:16px;
-    border-radius:50%;
-    margin-right:8px;
-  }
-
-  /* ===== landing page ===== */
-  .landing-title{
-    text-align:center;
-    margin-bottom:24px;
-  }
-  .landing-title h1{
-    font-size:1.8rem;
-    letter-spacing:1px;
-  }
-  .landing-title p{
-    color:var(--muted);
-    font-size:0.85rem;
-    margin-top:4px;
-  }
-  .tile-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-    gap:16px;
-    max-width:900px;
-    margin:0 auto;
-  }
-  .nav-tile{
-    background:var(--card);
-    border:1px solid var(--card-border);
-    border-radius:14px;
-    padding:28px 20px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    text-align:center;
-    cursor:pointer;
-    transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  }
-  .nav-tile:hover{
-    transform:translateY(-4px);
-    box-shadow:0 8px 24px rgba(0,0,0,0.35);
-    border-color:var(--blue);
-  }
-  .nav-tile .tile-icon{font-size:2.4rem;margin-bottom:10px;}
-  .nav-tile .tile-label{font-size:1.15rem;font-weight:700;letter-spacing:0.5px;}
-  .nav-tile .tile-sub{color:var(--muted);font-size:0.78rem;margin-top:6px;}
-  .nav-tile .tile-badge{
-    margin-top:10px;
-    padding:3px 12px;
-    border-radius:999px;
-    font-size:0.72rem;
-    font-weight:700;
-    background:rgba(245,166,35,0.15);
-    color:var(--amber);
-    border:1px solid var(--amber);
-  }
-
+  .main-page{display:block;}
+  .main-page.hidden{display:none;}
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
@@ -195,6 +107,16 @@
     color:var(--muted);
     background:rgba(137,147,171,0.1);
   }
+  .card .forecast-badge{
+    position:absolute;bottom:10px;right:10px;
+    background:rgba(52,152,219,0.15);
+    border:1px solid var(--blue);
+    color:var(--blue);
+    padding:2px 10px;
+    border-radius:999px;
+    font-size:0.7rem;
+    font-weight:600;
+  }
   .dial-wrap{
     position:relative;
     width:100%;
@@ -233,221 +155,213 @@
   .weekly-row div{text-align:center;flex:1;}
   .weekly-row .label{color:var(--muted);font-size:0.7rem;display:block;}
   .weekly-row .val{font-size:1rem;font-weight:700;}
-
-  /* ===== 4-week mini trend ===== */
-  .mini-trend{
-    width:100%;
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid var(--card-border);
-  }
-  .mini-trend .mini-trend-label{
-    color:var(--muted);
-    font-size:0.68rem;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
-    margin-bottom:6px;
-    text-align:center;
-  }
-  .mini-trend .bars{
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:8px;
-    height:54px;
-  }
-  .mini-trend .bar-col{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-end;
-    height:100%;
-  }
-  .mini-trend .bar-track{
-    width:100%;
-    max-width:22px;
-    height:100%;
-    display:flex;
-    align-items:flex-end;
-    background:rgba(255,255,255,0.04);
-    border-radius:4px;
-    overflow:hidden;
-  }
-  .mini-trend .bar-fill{
-    width:100%;
-    border-radius:4px 4px 0 0;
-    transition:height 0.3s ease;
-  }
-  .mini-trend .bar-col .bar-val{
-    font-size:0.62rem;
-    font-weight:700;
-    margin-top:3px;
-  }
-  .mini-trend .bar-col .bar-label{
-    font-size:0.58rem;
-    color:var(--muted);
-    margin-top:1px;
-  }
-
-  /* ===== holidays page ===== */
-  .holiday-page-inner{
+  
+  .holiday-compact{
     background:var(--card);
     border:1px solid var(--card-border);
     border-radius:12px;
     padding:16px 20px;
+    margin-top:20px;
     width:100%;
   }
-  .holiday-page-inner .holiday-header{
+  .holiday-compact .holiday-header{
     display:flex;
     justify-content:space-between;
     align-items:center;
     margin-bottom:12px;
   }
-  .holiday-page-inner .holiday-header h3{margin:0;font-size:1rem;color:var(--text);}
-  .holiday-page-inner .holiday-header .month-nav{
+  .holiday-compact .holiday-header h3{margin:0;font-size:1rem;color:var(--text);}
+  .holiday-compact .holiday-header .month-nav{
     display:flex;
     gap:6px;
     align-items:center;
   }
-  .holiday-page-inner .holiday-header .month-nav button{
+  .holiday-compact .holiday-header .month-nav button{
     background:var(--card-border);
     border:none;
     color:var(--text);
-    padding:5px 16px;
+    padding:3px 12px;
     border-radius:4px;
     cursor:pointer;
-    font-size:0.95rem;
+    font-size:0.85rem;
   }
-  .holiday-page-inner .holiday-header .month-nav .month-label{
-    font-size:1rem;
+  .holiday-compact .holiday-header .month-nav .month-label{
+    font-size:0.9rem;
     font-weight:600;
-    min-width:110px;
+    min-width:90px;
     text-align:center;
   }
-  .holiday-page-inner .holiday-grid{
+  .holiday-compact .holiday-grid{
     display:grid;
     grid-template-columns:repeat(7, 1fr);
-    gap:6px;
-    margin-bottom:14px;
+    gap:4px;
+    margin-bottom:10px;
   }
-  .holiday-page-inner .holiday-grid .day-header{
+  .holiday-compact .holiday-grid .day-header{
     text-align:center;
     color:var(--muted);
-    font-size:0.75rem;
+    font-size:0.7rem;
     font-weight:600;
     padding:4px;
   }
-  .holiday-page-inner .holiday-grid .day-cell{
+  .holiday-compact .holiday-grid .day-cell{
     display:flex;
     flex-direction:column;
     align-items:stretch;
     border-radius:6px;
     background:rgba(255,255,255,0.03);
     border:1px solid transparent;
-    padding:6px;
-    min-height:82px;
+    padding:4px;
+    min-height:64px;
     position:relative;
   }
-  .holiday-page-inner .holiday-grid .day-cell.weekend{
+  .holiday-compact .holiday-grid .day-cell.weekend{
     background:rgba(255,255,255,0.02);
     color:var(--muted);
   }
-  .holiday-page-inner .holiday-grid .day-cell.has-holiday{
+  .holiday-compact .holiday-grid .day-cell.has-holiday{
     border-color:var(--amber);
     background:rgba(245,166,35,0.08);
   }
-  .holiday-page-inner .holiday-grid .day-cell .day-number{
+  .holiday-compact .holiday-grid .day-cell .day-number{
     font-weight:600;
-    font-size:0.8rem;
-    margin-bottom:4px;
+    font-size:0.75rem;
+    margin-bottom:3px;
   }
-  .holiday-page-inner .holiday-grid .day-cell .code-line{
-    font-size:0.72rem;
+  .holiday-compact .holiday-grid .day-cell .code-line{
+    font-size:0.68rem;
     font-weight:700;
-    padding:2px 5px;
+    padding:1px 4px;
     border-radius:3px;
     margin-bottom:2px;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
-  .holiday-page-inner .holiday-legend{
+  .holiday-compact .holiday-legend{
     display:flex;
     gap:14px;
     flex-wrap:wrap;
     padding-top:10px;
     border-top:1px solid var(--card-border);
   }
-  .holiday-page-inner .holiday-legend .legend-item{
+  .holiday-compact .holiday-legend .legend-item{
     display:flex;
     align-items:center;
     gap:5px;
-    font-size:0.75rem;
+    font-size:0.72rem;
     color:var(--muted);
   }
-  .holiday-page-inner .holiday-legend .legend-item .color-dot{
+  .holiday-compact .holiday-legend .legend-item .color-dot{
     width:9px;
     height:9px;
     border-radius:50%;
     display:inline-block;
   }
-  .holiday-page-inner .holiday-legend .legend-item .color-dot.SF{background:#4a90e2;}
-  .holiday-page-inner .holiday-legend .legend-item .color-dot.LA{background:#2ecc71;}
-  .holiday-page-inner .holiday-legend .legend-item .color-dot.AS{background:#f5a623;}
-  .holiday-page-inner .holiday-legend .legend-item .color-dot.DF{background:#e74c3c;}
-
-  /* ===== forecast page ===== */
-  .forecast-note{color:var(--muted);font-size:0.78rem;margin-bottom:14px;}
-  .forecast-week-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
-    gap:14px;
-  }
-  .forecast-week-card{
+  .holiday-compact .holiday-legend .legend-item .color-dot.SF{background:#4a90e2;}
+  .holiday-compact .holiday-legend .legend-item .color-dot.LA{background:#2ecc71;}
+  .holiday-compact .holiday-legend .legend-item .color-dot.AS{background:#f5a623;}
+  .holiday-compact .holiday-legend .legend-item .color-dot.DF{background:#e74c3c;}
+  
+  /* Forecast section */
+  .forecast-section{
     background:var(--card);
     border:1px solid var(--card-border);
     border-radius:12px;
-    padding:16px;
+    padding:16px 20px;
+    margin-top:20px;
+    width:100%;
+  }
+  .forecast-section .forecast-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+  }
+  .forecast-section .forecast-header h3{margin:0;font-size:1rem;color:var(--text);}
+  .forecast-week-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:12px;
+  }
+  .forecast-week-card{
+    background:rgba(255,255,255,0.03);
+    border-radius:8px;
+    padding:12px;
+    border:1px solid var(--card-border);
   }
   .forecast-week-card.current-week{border-color:var(--blue);}
   .forecast-week-card .fw-header{
     display:flex;
     justify-content:space-between;
     align-items:baseline;
-    margin-bottom:10px;
+    margin-bottom:8px;
   }
-  .forecast-week-card .fw-header .fw-label{font-weight:700;font-size:0.95rem;}
+  .forecast-week-card .fw-header .fw-label{font-weight:700;font-size:0.85rem;}
   .forecast-week-card .fw-header .fw-total{
-    font-size:1.4rem;
+    font-size:1.2rem;
     font-weight:700;
     color:var(--blue);
   }
-  .forecast-week-card .fw-header .fw-total .unit{font-size:0.7rem;color:var(--muted);font-weight:400;margin-left:2px;}
+  .forecast-week-card .fw-header .fw-total .unit{font-size:0.65rem;color:var(--muted);font-weight:400;}
   .forecast-week-card .fw-breakdown{
     display:flex;
     flex-wrap:wrap;
-    gap:6px;
+    gap:4px;
   }
   .forecast-week-card .fw-person-chip{
     display:flex;
     align-items:center;
-    gap:5px;
+    gap:4px;
     background:rgba(255,255,255,0.04);
     border-radius:999px;
-    padding:3px 10px;
-    font-size:0.75rem;
+    padding:2px 8px;
+    font-size:0.7rem;
   }
   .forecast-week-card .fw-person-chip .dot{
-    width:8px;height:8px;border-radius:50%;display:inline-block;
+    width:6px;height:6px;border-radius:50%;display:inline-block;
   }
   .forecast-empty{
     text-align:center;
     color:var(--muted);
-    padding:30px 0;
+    padding:20px 0;
     font-style:italic;
+    font-size:0.85rem;
   }
-
+  
+  .detail-page{display:none;animation:fadeIn 0.3s ease;}
+  .detail-page.active{display:block;}
+  @keyframes fadeIn{
+    from{opacity:0;transform:translateY(10px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .detail-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .detail-header .back-btn{
+    background:var(--card-border);
+    border:none;
+    color:var(--text);
+    padding:8px 16px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:0.9rem;
+    transition:background 0.2s;
+  }
+  .detail-header .back-btn:hover{background:rgba(255,255,255,0.1);}
+  .detail-header h2{margin:0;font-size:1.4rem;}
+  .detail-header .person-color{
+    display:inline-block;
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    margin-right:8px;
+  }
   .detail-stats{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
@@ -467,7 +381,7 @@
   .detail-stat-card .value.negative{color:var(--negative);}
   .detail-stat-card .value.neutral{color:var(--muted);}
   .detail-stat-card .value.gold{color:var(--gold);}
-
+  
   .detail-section{
     background:var(--card);
     border:1px solid var(--card-border);
@@ -506,7 +420,14 @@
     color:var(--red);
     font-weight:600;
   }
-
+  .detail-week-card .forecast-row{
+    border-top:1px solid var(--card-border);
+    margin-top:4px;
+    padding-top:4px;
+    color:var(--blue);
+    font-weight:600;
+  }
+  
   .detail-daily-grid{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));
@@ -518,13 +439,6 @@
     padding:8px;
     text-align:center;
     border:1px solid var(--card-border);
-    cursor:pointer;
-    transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-  }
-  .detail-day-card:hover{
-    transform:scale(1.04);
-    box-shadow:0 3px 14px rgba(0,0,0,0.35);
-    border-color:var(--blue);
   }
   .detail-day-card .day-date{font-size:0.7rem;color:var(--muted);}
   .detail-day-card .day-stairs{font-size:1.1rem;font-weight:700;margin:4px 0;}
@@ -549,11 +463,6 @@
     border-radius:4px;
     display:inline-block;
     margin-top:2px;
-  }
-  .detail-day-card .tap-hint{
-    font-size:0.55rem;
-    color:var(--blue);
-    margin-top:4px;
   }
   .detail-errors{
     margin-top:4px;
@@ -622,13 +531,12 @@
   }
   .loading{text-align:center;color:var(--muted);padding:40px 0;font-size:1rem;}
   footer{text-align:center;color:var(--muted);font-size:0.7rem;margin-top:16px;}
-  .parts-note{color:var(--muted);font-size:0.75rem;margin:-6px 0 14px 0;}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🏢 Production Office</h1>
+  <h1>🏢 Stair Tracker</h1>
   <div class="status">
     <span class="dot"></span><span id="lastUpdated">Loading…</span>
   </div>
@@ -637,92 +545,29 @@
 <div id="errorBanner"></div>
 <div id="loadingMsg" class="loading">Loading live figures…</div>
 
-<!-- ============ LANDING PAGE ============ -->
-<div id="landingPage" class="page-view">
-  <div class="landing-title">
-    <h1>PRODUCTION OFFICE</h1>
-    <p>Choose a section</p>
-  </div>
-  <div class="tile-grid">
-    <div class="nav-tile" id="tileKpi">
-      <div class="tile-icon">📈</div>
-      <div class="tile-label">OFFICE KPI</div>
-      <div class="tile-sub">Daily &amp; weekly stair targets per person</div>
-      <div class="tile-badge" id="tileKpiBadge" style="display:none;"></div>
-    </div>
-    <div class="nav-tile" id="tileHolidays">
-      <div class="tile-icon">📅</div>
-      <div class="tile-label">HOLIDAYS</div>
-      <div class="tile-sub">Team holiday &amp; absence calendar</div>
-    </div>
-    <div class="nav-tile" id="tileForecast">
-      <div class="tile-icon">📦</div>
-      <div class="tile-label">FORECAST</div>
-      <div class="tile-sub">Stairs due out, week by week</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ OFFICE KPI PAGE ============ -->
-<div id="kpiPage" class="page-view">
-  <div class="page-header">
-    <button class="back-btn" id="backToLandingFromKpi">← Production Office</button>
-    <h2>📈 Office KPI</h2>
-  </div>
+<div id="mainPage" class="main-page" style="display:none;">
   <div id="todayOffBanner"></div>
   <div class="grid" id="dialGrid"></div>
-</div>
-
-<!-- ============ PERSON DETAIL PAGE ============ -->
-<div id="detailPage" class="page-view">
-  <div class="page-header">
-    <button class="back-btn" id="backToKpi">← Back to KPI</button>
-    <h2><span class="person-color" id="detailPersonColor"></span><span id="detailPersonName"></span></h2>
+  
+  <!-- Forecast Section -->
+  <div class="forecast-section" id="forecastSection">
+    <div class="forecast-header">
+      <h3>📦 Forecast (uncompleted stairs by week)</h3>
+      <span style="font-size:0.7rem;color:var(--muted);">based on rows with a delivery date</span>
+    </div>
+    <div id="forecastWeeks"></div>
   </div>
-  <div class="detail-stats" id="detailStats"></div>
-  <div class="detail-section">
-    <h3>📊 Weekly Breakdown (incl. error points)</h3>
-    <div class="detail-week-grid" id="detailWeeks"></div>
-  </div>
-  <div class="detail-section">
-    <h3>📅 Daily Details <span style="font-weight:400;color:var(--muted);font-size:0.75rem;">(tap a day for parts breakdown)</span></h3>
-    <div class="detail-daily-grid" id="detailDays"></div>
-  </div>
-  <div class="detail-section">
-    <h3>⚠️ Error Log</h3>
-    <div class="detail-errors" id="detailErrors"></div>
-  </div>
-</div>
-
-<!-- ============ DAY DETAIL PAGE ============ -->
-<div id="dayDetailPage" class="page-view">
-  <div class="page-header">
-    <button class="back-btn" id="backToDetail">← Back</button>
-    <h2><span class="person-color" id="dayDetailPersonColor"></span><span id="dayDetailPersonName"></span> — <span id="dayDetailDate"></span></h2>
-  </div>
-  <div class="detail-section">
-    <h3>🧩 Parts Breakdown</h3>
-    <div class="parts-note">Totals from completed rows for this person on this day (Columns H–N)</div>
-    <div class="detail-stats" id="dayDetailStats"></div>
-  </div>
-</div>
-
-<!-- ============ HOLIDAYS PAGE ============ -->
-<div id="holidaysPage" class="page-view">
-  <div class="page-header">
-    <button class="back-btn" id="backToLandingFromHolidays">← Production Office</button>
-    <h2>📅 Holidays</h2>
-  </div>
-  <div class="holiday-page-inner" id="holidayPageInner">
+  
+  <div class="holiday-compact" id="holidayCompact">
     <div class="holiday-header">
-      <h3>Team calendar</h3>
+      <h3>📅 Holidays</h3>
       <div class="month-nav">
-        <button id="prevMonth">◀</button>
-        <span class="month-label" id="monthLabel">Jan 2026</span>
-        <button id="nextMonth">▶</button>
+        <button id="prevMonthCompact">◀</button>
+        <span class="month-label" id="monthLabelCompact">Jan 2026</span>
+        <button id="nextMonthCompact">▶</button>
       </div>
     </div>
-    <div id="holidayGrid"></div>
+    <div id="holidayGridCompact"></div>
     <div class="holiday-legend">
       <div class="legend-item"><span class="color-dot SF"></span> SF</div>
       <div class="legend-item"><span class="color-dot LA"></span> LA</div>
@@ -738,14 +583,24 @@
   </div>
 </div>
 
-<!-- ============ FORECAST PAGE ============ -->
-<div id="forecastPage" class="page-view">
-  <div class="page-header">
-    <button class="back-btn" id="backToLandingFromForecast">← Production Office</button>
-    <h2>📦 Forecast</h2>
+<div id="detailPage" class="detail-page">
+  <div class="detail-header">
+    <button class="back-btn" id="backToMain">← Back to Dashboard</button>
+    <h2><span class="person-color" id="detailPersonColor"></span><span id="detailPersonName"></span></h2>
   </div>
-  <div class="forecast-note">Upcoming stairs grouped by delivery week, from completed program rows with a delivery date.</div>
-  <div class="forecast-week-grid" id="forecastWeeks"></div>
+  <div class="detail-stats" id="detailStats"></div>
+  <div class="detail-section">
+    <h3>📊 Weekly Breakdown (incl. error points & forecast)</h3>
+    <div class="detail-week-grid" id="detailWeeks"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📅 Daily Details</h3>
+    <div class="detail-daily-grid" id="detailDays"></div>
+  </div>
+  <div class="detail-section">
+    <h3>⚠️ Error Log</h3>
+    <div class="detail-errors" id="detailErrors"></div>
+  </div>
 </div>
 
 <footer>Live from Google Sheets · refreshes automatically</footer>
@@ -777,7 +632,6 @@ const HOURS = {
 const BASE_RATE = 50 / 9;
 const REFRESH_MS = 3 * 60 * 1000;
 const FORECAST_WEEKS = 8;
-const TREND_WEEKS = 4;
 
 /* =========================================================
    HELPERS
@@ -922,15 +776,6 @@ function targetFor(initials, date, code){
   return Math.round(BASE_RATE * available);
 }
 
-/* Which holiday codes count as a genuine "off today" absence
-   (holiday / sickness / bank holiday) — Carrier runs and 2nd-fix
-   help are still working days, just off-site, so they don't count. */
-function isAbsenceCode(code){
-  if(!code) return false;
-  const c = code.toLowerCase();
-  return c==='h' || c==='h/am' || c==='h/pm' || c==='b' || c==='o';
-}
-
 function statusLabel(code){
   if(!code) return null;
   const c = code.toLowerCase();
@@ -944,45 +789,16 @@ function statusLabel(code){
   return code;
 }
 
-/* Computes actual/target/credit/code for one person on one date.
-   Used everywhere so refreshes and detail/day pages stay in sync. */
-function computeDayStats(person, date, stairEntries, holidayIndex){
-  const bucket = dayBucket(date);
-  const code = getCodeForPerson(holidayIndex, person.holidayName, date);
-  if(!bucket) return { actual:0, target:0, credit:0, code };
-  const target = targetFor(person.initials, date, code);
-  const actual = stairEntries.filter(e=>e.initials===person.initials && sameDay(e.date, date))
-                              .reduce((s,e)=>s+e.stairs,0);
-  const fullDayHours = HOURS[person.initials][bucket];
-  const lostHours = creditableHoursLost(code, fullDayHours);
-  const credit = lostHours > 0 ? Math.round(BASE_RATE * lostHours) : 0;
-  return { actual, target, credit, code };
-}
-
-/* Weekly totals for a person over the last N weeks (oldest -> newest, this week last) */
-function getWeeklyTotals(person, stairEntries, holidayIndex, today, numWeeks){
-  const monday = mondayOf(today);
-  const weeks = [];
-  for(let i=numWeeks-1;i>=0;i--){
-    const wStart = new Date(monday); wStart.setDate(wStart.getDate()-(7*i));
-    const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate()+4);
-    let actual=0, target=0;
-    for(let d=new Date(wStart); d<=wEnd; d.setDate(d.getDate()+1)){
-      if(!dayBucket(d)) continue;
-      const stats = computeDayStats(person, new Date(d), stairEntries, holidayIndex);
-      actual += stats.actual;
-      target += stats.target;
-    }
-    weeks.push({ start:wStart, end:wEnd, actual, target, isCurrent: i===0 });
-  }
-  return weeks;
+// NEW: Check if a code is a genuine absence (not carrier or 2nd fix)
+function isAbsenceCode(code){
+  if(!code) return false;
+  const c = code.toLowerCase();
+  return c === 'h' || c === 'h/am' || c === 'h/pm' || c === 'b' || c === 'o';
 }
 
 /* =========================================================
    parseStairRows – only counts if Column D is ticked.
-   Also captures the "STAIR PARTS" columns (H, I, J, K, L, N)
-   and the Delivery Date, so we can show parts breakdowns and
-   a forecast of stairs due out.
+   Also captures Delivery Date for forecast.
    ========================================================= */
 function parseStairRows(rows){
   let headerIdx = rows.findIndex(r => r.some(c => c.trim().toUpperCase()==='INITIALS'));
@@ -993,50 +809,41 @@ function parseStairRows(rows){
   const stairsCol = header.findIndex(c=>c.includes('NUMBER OF STAIRS'));
   const deliveryDateCol = header.findIndex(c=>c.includes('DELIVERY') && c.includes('DATE'));
 
-  // Stair-parts columns (H, I, J, K, L, N on the sheet)
-  const winderStringPlatesCol = header.findIndex(c=>c.includes('WINDER') && c.includes('STRING') && c.includes('PLATES'));
-  const smallStringPlatesCol  = header.findIndex(c=>c.includes('SMALL') && c.includes('STRING') && c.includes('PLATES'));
-  const straightStringsCol    = header.findIndex(c=>c.includes('STRAIGHT') && c.includes('STRINGS'));
-  const postsCol               = header.findIndex(c=>c.includes('POSTS') && !c.includes('COMPLETED'));
-  const windersCol             = header.findIndex(c=>c.includes('WINDERS') && !c.includes('COMPLETED'));
-  const bullnoseCol            = header.findIndex(c=>c.includes('BULLNOSE') && c.includes('ASSEMBLED'));
-
   // Look for a "Completed" column – this is Column D
   let completedCol = header.findIndex(c => c.includes('COMPLETED') || c.includes('DONE') || c.includes('TICK'));
   if(completedCol === -1) {
-    // If no header found, fallback to index 3 (0-based) => Column D
     completedCol = 3;
   }
 
-  const out = [];
+  const completed = [];
+  const forecast = [];
+
   for(let i=headerIdx+1;i<rows.length;i++){
     const r = rows[i];
     if(!r[dateCol] || !r[dateCol].trim()) continue;
-
-    // Check if the task is completed (ticked)
-    const completedVal = (r[completedCol] || '').toString().trim().toUpperCase();
-    const isCompleted = completedVal === 'TRUE' || completedVal === 'YES' || completedVal === '1' || completedVal === '✓';
-    if (!isCompleted) continue; // Skip this row – not completed
 
     const date = parseUKDate(r[dateCol]);
     const initials = (r[initialsCol]||'').trim().toUpperCase();
     const stairs = parseInt(r[stairsCol],10);
     if(!date || !initials || isNaN(stairs)) continue;
 
+    const completedVal = (r[completedCol] || '').toString().trim().toUpperCase();
+    const isCompleted = completedVal === 'TRUE' || completedVal === 'YES' || completedVal === '1' || completedVal === '✓';
+    
     const deliveryDate = deliveryDateCol > -1 ? parseUKDate(r[deliveryDateCol]) : null;
 
-    const parts = {
-      winderStringPlates: parseInt(r[winderStringPlatesCol],10) || 0,
-      smallStringPlates:  parseInt(r[smallStringPlatesCol],10) || 0,
-      straightStrings:    parseInt(r[straightStringsCol],10) || 0,
-      posts:               parseInt(r[postsCol],10) || 0,
-      winders:             parseInt(r[windersCol],10) || 0,
-      bullnose:            parseInt(r[bullnoseCol],10) || 0
-    };
+    const entry = {date, initials, stairs, deliveryDate};
 
-    out.push({date, initials, stairs, parts, deliveryDate});
+    if(isCompleted) {
+      completed.push(entry);
+    } else {
+      // Only include in forecast if it has a delivery date
+      if(deliveryDate) {
+        forecast.push(entry);
+      }
+    }
   }
-  return out;
+  return { completed, forecast };
 }
 
 /* =========================================================
@@ -1124,7 +931,7 @@ function statusLabelText(status, code){
   return '';
 }
 
-function drawDial(actual, target, colorClass){
+function drawDial(svgId, actual, target, colorClass){
   const size=200, stroke=16, r=(size-stroke)/2, cx=size/2, cy=size/2;
   const circumference = 2*Math.PI*r;
   const pct = target>0 ? Math.min(1, actual/target) : (actual>0?1:0);
@@ -1140,36 +947,9 @@ function drawDial(actual, target, colorClass){
   </svg>`;
 }
 
-/* Small 4-bar trend showing the last N weeks' stair totals vs target */
-function drawMiniTrend(weeks){
-  const bars = weeks.map(w => {
-    const pct = w.target>0 ? Math.min(1, w.actual/w.target) : (w.actual>0 ? 1 : 0);
-    const heightPct = Math.max(4, Math.round(pct*100));
-    const status = statusForProgress(w.actual, w.target);
-    const colorMap = {green:'#2ecc71', over:'#3498db', amber:'#f5a623', red:'#e74c3c', off:'#8993ab'};
-    const color = colorMap[status] || '#4a90e2';
-    const label = w.isCurrent ? 'Now' : fmtDateShort(w.start);
-    return `
-      <div class="bar-col">
-        <div class="bar-track">
-          <div class="bar-fill" style="height:${heightPct}%;background:${color};"></div>
-        </div>
-        <div class="bar-val">${w.actual}</div>
-        <div class="bar-label">${label}</div>
-      </div>
-    `;
-  }).join('');
-  return `
-    <div class="mini-trend">
-      <div class="mini-trend-label">Last ${weeks.length} weeks</div>
-      <div class="bars">${bars}</div>
-    </div>
-  `;
-}
-
-function renderHolidayCalendar(holidayIndex, month, year) {
-  const container = document.getElementById('holidayGrid');
-  const monthLabel = document.getElementById('monthLabel');
+function renderCompactHolidayCalendar(holidayIndex, month, year) {
+  const container = document.getElementById('holidayGridCompact');
+  const monthLabel = document.getElementById('monthLabelCompact');
   monthLabel.textContent = new Date(year, month).toLocaleDateString('en-GB', { month:'short', year:'numeric' });
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -1210,19 +990,22 @@ function renderHolidayCalendar(holidayIndex, month, year) {
 }
 
 /* =========================================================
-   FORECAST — upcoming stairs by delivery week
+   RENDER FORECAST
    ========================================================= */
-function renderForecast(stairEntries, today){
+function renderForecast(forecastEntries, today){
   const startMonday = mondayOf(today);
   const weeks = [];
   for(let i=0;i<FORECAST_WEEKS;i++){
-    const wStart = new Date(startMonday); wStart.setDate(wStart.getDate()+(7*i));
-    const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate()+6);
+    const wStart = new Date(startMonday);
+    wStart.setDate(wStart.getDate() + (7*i));
+    const wEnd = new Date(wStart);
+    wEnd.setDate(wStart.getDate() + 6);
     weeks.push({ start:wStart, end:wEnd, total:0, byPerson:{}, isCurrent:i===0 });
   }
   const lastWeekEnd = weeks[weeks.length-1].end;
 
-  stairEntries.forEach(e=>{
+  // Only include forecast entries with a delivery date
+  forecastEntries.forEach(e=>{
     if(!e.deliveryDate) return;
     if(e.deliveryDate < startMonday || e.deliveryDate > lastWeekEnd) return;
     const wk = weeks.find(w => e.deliveryDate >= w.start && e.deliveryDate <= w.end);
@@ -1233,23 +1016,31 @@ function renderForecast(stairEntries, today){
 
   const container = document.getElementById('forecastWeeks');
   const weeksWithData = weeks.filter(w => w.total > 0);
+  
   if(weeksWithData.length === 0){
-    container.innerHTML = '<div class="forecast-empty">No upcoming delivery dates found in the sheet.</div>';
+    container.innerHTML = '<div class="forecast-empty">No upcoming stairs found with a delivery date.</div>';
     return;
   }
 
-  container.innerHTML = weeks.map(w => {
-    if(w.total === 0 && !w.isCurrent) return '';
+  // Also show next week if it's empty but within range
+  const displayWeeks = weeks.filter((w, i) => {
+    // Show this week, next week, and any week with data
+    if(i === 0 || i === 1) return true;
+    return w.total > 0;
+  });
+
+  container.innerHTML = displayWeeks.map(w => {
     const chips = PEOPLE.filter(p => w.byPerson[p.initials]).map(p => `
       <span class="fw-person-chip"><span class="dot" style="background:${p.color};"></span>${p.initials}: ${w.byPerson[p.initials]}</span>
     `).join('');
+    
     return `
       <div class="forecast-week-card ${w.isCurrent ? 'current-week' : ''}">
         <div class="fw-header">
           <span class="fw-label">${w.isCurrent ? 'This week' : 'W/C ' + fmtDateShort(w.start)}</span>
           <span class="fw-total">${w.total}<span class="unit">stairs</span></span>
         </div>
-        <div class="fw-breakdown">${chips || '<span style="color:var(--muted);font-size:0.75rem;">Nothing due</span>'}</div>
+        <div class="fw-breakdown">${chips || '<span style="color:var(--muted);font-size:0.7rem;">Nothing due</span>'}</div>
       </div>
     `;
   }).join('');
@@ -1258,12 +1049,26 @@ function renderForecast(stairEntries, today){
 /* =========================================================
    PERSON DETAIL PAGE
    ========================================================= */
-function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries) {
-  setActiveView('detail');
+function computeDayStats(person, date, stairEntries, holidayIndex){
+  const bucket = dayBucket(date);
+  const code = getCodeForPerson(holidayIndex, person.holidayName, date);
+  if(!bucket) return { actual:0, target:0, credit:0, code };
+  const target = targetFor(person.initials, date, code);
+  const actual = stairEntries.filter(e=>e.initials===person.initials && sameDay(e.date, date))
+                              .reduce((s,e)=>s+e.stairs,0);
+  const fullDayHours = HOURS[person.initials][bucket];
+  const lostHours = creditableHoursLost(code, fullDayHours);
+  const credit = lostHours > 0 ? Math.round(BASE_RATE * lostHours) : 0;
+  return { actual, target, credit, code };
+}
+
+function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, today, errorEntries) {
+  const detailPage = document.getElementById('detailPage');
+  const mainPage = document.getElementById('mainPage');
+  detailPage.classList.add('active');
+  mainPage.classList.add('hidden');
   document.getElementById('detailPersonColor').style.background = person.color;
   document.getElementById('detailPersonName').textContent = person.name;
-
-  window._currentPerson = person;
 
   const monday = mondayOf(today);
   const weeks = [];
@@ -1303,6 +1108,11 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
 
     const stairsOver = (actual + holidayCredit) - target;
     const netPoints = stairsOver + weekErrorPoints;
+    
+    // Forecast for this week
+    const forecastForWeek = forecastEntries
+      .filter(e => e.initials === person.initials && e.deliveryDate && e.deliveryDate >= week.start && e.deliveryDate <= week.end)
+      .reduce((s,e) => s + e.stairs, 0);
 
     totalActual += actual;
     totalTarget += target;
@@ -1317,6 +1127,7 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
       stairsOver: stairsOver,
       errorPoints: weekErrorPoints,
       netPoints: netPoints,
+      forecast: forecastForWeek,
       days: days,
       errors: weekErrors,
       start: week.start
@@ -1373,6 +1184,10 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
           <span><strong>Net points</strong></span>
           <span class="val ${netClass}"><strong>${w.netPoints > 0 ? '+' : ''}${w.netPoints}</strong></span>
         </div>
+        <div class="week-row forecast-row">
+          <span>📦 Forecast (uncompleted)</span>
+          <span class="val" style="color:var(--blue);">${w.forecast}</span>
+        </div>
         ${w.errors.length > 0 ? `<div style="font-size:0.65rem;color:var(--muted);margin-top:4px;">${w.errors.length} error(s) this week</div>` : ''}
       </div>
     `;
@@ -1380,7 +1195,7 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
 
   const allDays = [];
   weekData.forEach(w => w.days.forEach(d => { if(!d.isWeekend) allDays.push(d); }));
-  document.getElementById('detailDays').innerHTML = allDays.map((d, idx) => {
+  document.getElementById('detailDays').innerHTML = allDays.map(d => {
     const status = statusForProgress(d.actual, d.target);
     const total = d.actual + d.credit;
     const diff = total - d.target;
@@ -1388,7 +1203,7 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
     let diffDisplay = diff > 0 ? '+' + diff : diff;
     let diffClass = diff > 0 ? 'positive' : (diff < 0 ? 'negative' : 'neutral');
     return `
-      <div class="detail-day-card" data-day-idx="${idx}">
+      <div class="detail-day-card">
         <div class="day-date">${fmtDateShort(d.date)}</div>
         <div class="day-stairs">${d.actual}</div>
         <div class="day-target">/ ${d.target}</div>
@@ -1396,18 +1211,9 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
         ${codeLabel ? `<div class="holiday-badge">${codeLabel}</div>` : ''}
         <div class="day-status ${status}">${statusLabelText(status, d.code)}</div>
         <div style="font-size:0.65rem;margin-top:2px;color:var(--muted);">${diffDisplay}</div>
-        <div class="tap-hint">Tap for parts →</div>
       </div>
     `;
   }).join('');
-
-  document.querySelectorAll('#detailDays .detail-day-card').forEach(el => {
-    el.addEventListener('click', function(){
-      const idx = parseInt(this.dataset.dayIdx, 10);
-      const day = allDays[idx];
-      showDayDetailPage(person, day.date, stairEntries, holidayIndex);
-    });
-  });
 
   const personErrors = errorEntries.filter(e => e.initials === person.initials).sort((a,b) => b.date - a.date);
   document.getElementById('detailErrors').innerHTML = personErrors.length === 0 ?
@@ -1424,118 +1230,6 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
 }
 
 /* =========================================================
-   DAY DETAIL PAGE – parts breakdown for one person, one day.
-   Sums columns H, I, J, K, L, N from completed rows that match
-   this person's initials and this date.
-   ========================================================= */
-function showDayDetailPage(person, date, stairEntries, holidayIndex){
-  setActiveView('day');
-  window._currentDayDate = date;
-
-  document.getElementById('dayDetailPersonColor').style.background = person.color;
-  document.getElementById('dayDetailPersonName').textContent = person.name;
-  document.getElementById('dayDetailDate').textContent = fmtDate(date);
-
-  const stats = computeDayStats(person, date, stairEntries, holidayIndex);
-  const dayEntries = stairEntries.filter(e => e.initials === person.initials && sameDay(e.date, date));
-
-  const totals = {
-    winderStringPlates: 0,
-    smallStringPlates: 0,
-    straightStrings: 0,
-    posts: 0,
-    winders: 0,
-    bullnose: 0
-  };
-  dayEntries.forEach(e => {
-    totals.winderStringPlates += e.parts.winderStringPlates;
-    totals.smallStringPlates  += e.parts.smallStringPlates;
-    totals.straightStrings    += e.parts.straightStrings;
-    totals.posts               += e.parts.posts;
-    totals.winders             += e.parts.winders;
-    totals.bullnose            += e.parts.bullnose;
-  });
-
-  document.getElementById('dayDetailStats').innerHTML = `
-    <div class="detail-stat-card">
-      <div class="label">Stairs</div>
-      <div class="value">${stats.actual}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Winder String Plates</div>
-      <div class="value">${totals.winderStringPlates}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Small String Plates</div>
-      <div class="value">${totals.smallStringPlates}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Straight Strings</div>
-      <div class="value">${totals.straightStrings}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Posts</div>
-      <div class="value">${totals.posts}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Winders</div>
-      <div class="value">${totals.winders}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Assembled Bullnose</div>
-      <div class="value">${totals.bullnose}</div>
-    </div>
-  `;
-}
-
-/* =========================================================
-   NAVIGATION — single source of truth for which page shows
-   ========================================================= */
-const VIEW_IDS = {
-  landing: 'landingPage',
-  kpi: 'kpiPage',
-  detail: 'detailPage',
-  day: 'dayDetailPage',
-  holidays: 'holidaysPage',
-  forecast: 'forecastPage'
-};
-function setActiveView(view){
-  window._currentView = view;
-  Object.values(VIEW_IDS).forEach(id => document.getElementById(id).classList.remove('active'));
-  const activeEl = document.getElementById(VIEW_IDS[view]);
-  activeEl.classList.add('active');
-  activeEl.style.removeProperty('display'); // guard against any stray inline display:none
-}
-
-document.getElementById('tileKpi').addEventListener('click', ()=> setActiveView('kpi'));
-document.getElementById('tileHolidays').addEventListener('click', ()=>{
-  setActiveView('holidays');
-  if(window._holidayIndex){
-    renderHolidayCalendar(window._holidayIndex, window._holidayMonth, window._holidayYear);
-  }
-});
-document.getElementById('tileForecast').addEventListener('click', ()=>{
-  setActiveView('forecast');
-  if(window._stairEntries) renderForecast(window._stairEntries, window._today);
-});
-document.getElementById('backToLandingFromKpi').addEventListener('click', ()=> setActiveView('landing'));
-document.getElementById('backToLandingFromHolidays').addEventListener('click', ()=> setActiveView('landing'));
-document.getElementById('backToLandingFromForecast').addEventListener('click', ()=> setActiveView('landing'));
-document.getElementById('backToKpi').addEventListener('click', ()=> setActiveView('kpi'));
-document.getElementById('backToDetail').addEventListener('click', ()=> setActiveView('detail'));
-
-document.getElementById('prevMonth').addEventListener('click', function(){
-  window._holidayMonth--;
-  if(window._holidayMonth < 0){ window._holidayMonth = 11; window._holidayYear--; }
-  renderHolidayCalendar(window._holidayIndex, window._holidayMonth, window._holidayYear);
-});
-document.getElementById('nextMonth').addEventListener('click', function(){
-  window._holidayMonth++;
-  if(window._holidayMonth > 11){ window._holidayMonth = 0; window._holidayYear++; }
-  renderHolidayCalendar(window._holidayIndex, window._holidayMonth, window._holidayYear);
-});
-
-/* =========================================================
    MAIN LOAD
    ========================================================= */
 async function loadAndRender(){
@@ -1546,7 +1240,7 @@ async function loadAndRender(){
       fetchGvizRows(ERRORS_SHEET_ID, ERRORS_GID).catch(()=>[])
     ]);
 
-    const stairEntries = parseStairRows(trackingRows);
+    const { completed: stairEntries, forecast: forecastEntries } = parseStairRows(trackingRows);
     const holidayIndex = buildHolidayIndex(holidayRows);
     const errorEntries = parseErrorRows(errorRows);
 
@@ -1554,38 +1248,51 @@ async function loadAndRender(){
     const monday = mondayOf(today);
     const friday = new Date(monday); friday.setDate(monday.getDate()+4);
 
-    const wasFirstLoad = !window._loadedOnce;
-    window._loadedOnce = true;
-
-    if(wasFirstLoad){
-      window._holidayMonth = today.getMonth();
-      window._holidayYear = today.getFullYear();
-    }
-    window._holidayIndex = holidayIndex;
-    window._stairEntries = stairEntries;
-    window._errorEntries = errorEntries;
-    window._today = today;
-
     const dialGrid = document.getElementById('dialGrid');
     dialGrid.innerHTML = '';
     const offToday = [];
-    let totalErrorPointsAllPeople = 0;
+
+    let currentMonth = today.getMonth(), currentYear = today.getFullYear();
+    window._holidayMonth = currentMonth; window._holidayYear = currentYear; window._holidayIndex = holidayIndex;
+    renderCompactHolidayCalendar(holidayIndex, currentMonth, currentYear);
+    document.getElementById('prevMonthCompact').onclick = function(){
+      window._holidayMonth--;
+      if(window._holidayMonth < 0){ window._holidayMonth = 11; window._holidayYear--; }
+      renderCompactHolidayCalendar(window._holidayIndex, window._holidayMonth, window._holidayYear);
+    };
+    document.getElementById('nextMonthCompact').onclick = function(){
+      window._holidayMonth++;
+      if(window._holidayMonth > 11){ window._holidayMonth = 0; window._holidayYear++; }
+      renderCompactHolidayCalendar(window._holidayIndex, window._holidayMonth, window._holidayYear);
+    };
+
+    window._stairEntries = stairEntries;
+    window._forecastEntries = forecastEntries;
+    window._holidayIndex = holidayIndex;
+    window._errorEntries = errorEntries;
+    window._today = today;
+
+    // Render forecast
+    renderForecast(forecastEntries, today);
 
     PEOPLE.forEach(person => {
       const initials = person.initials;
       const todayCode = getCodeForPerson(holidayIndex, person.holidayName, today);
-      if(todayCode) offToday.push({ person, code: todayCode });
+      // Only show "off" if it's a genuine absence (not carrier)
+      if(todayCode && isAbsenceCode(todayCode)) offToday.push({ person, code: todayCode });
+      
       const todayTarget = targetFor(initials, today, todayCode);
       const todayActual = stairEntries.filter(e=>e.initials===initials && sameDay(e.date, today))
                                        .reduce((s,e)=>s+e.stairs,0);
       let weekActual = 0, weekTarget = 0;
       for(let d=new Date(monday); d<=friday; d.setDate(d.getDate()+1)){
-        const stats = computeDayStats(person, new Date(d), stairEntries, holidayIndex);
-        weekActual += stats.actual;
-        weekTarget += stats.target;
+        const dCopy = new Date(d);
+        const code = getCodeForPerson(holidayIndex, person.holidayName, dCopy);
+        weekTarget += targetFor(initials, dCopy, code);
+        weekActual += stairEntries.filter(e=>e.initials===initials && sameDay(e.date, dCopy))
+                                  .reduce((s,e)=>s+e.stairs,0);
       }
       const status = statusForProgress(weekActual, weekTarget);
-      const trendWeeks = getWeeklyTotals(person, stairEntries, holidayIndex, today, TREND_WEEKS);
 
       const card = document.createElement('div');
       card.className = 'card';
@@ -1593,18 +1300,28 @@ async function loadAndRender(){
 
       const personErrors = errorEntries.filter(e => e.initials === initials);
       const totalErrorPoints = personErrors.reduce((sum, e) => sum + e.points, 0);
-      totalErrorPointsAllPeople += totalErrorPoints;
       let pointsBadgeClass = 'zero';
       let pointsLabel = '0 pts';
       if(totalErrorPoints < 0){ pointsBadgeClass = 'negative'; pointsLabel = totalErrorPoints + ' pts'; }
       else if(totalErrorPoints > 0){ pointsBadgeClass = ''; pointsLabel = '+' + totalErrorPoints + ' pts'; }
 
+      // Forecast badge - show next week's forecast for this person
+      const nextMonday = mondayOf(today);
+      nextMonday.setDate(nextMonday.getDate() + 7);
+      const nextFriday = new Date(nextMonday);
+      nextFriday.setDate(nextMonday.getDate() + 4);
+      const personForecast = forecastEntries
+        .filter(e => e.initials === initials && e.deliveryDate && e.deliveryDate >= nextMonday && e.deliveryDate <= nextFriday)
+        .reduce((s,e) => s + e.stairs, 0);
+      const forecastBadge = personForecast > 0 ? `<div class="forecast-badge">🔮 ${personForecast} next wk</div>` : '';
+
       card.innerHTML = `
         <div class="points-badge ${pointsBadgeClass}">${pointsLabel}</div>
+        ${forecastBadge}
         <h2>${person.name}</h2>
         <div class="role">${initials}${todayCode ? ' · '+ (statusLabel(todayCode)||todayCode) : ''}</div>
         <div class="dial-wrap">
-          ${drawDial(weekActual, weekTarget, status)}
+          ${drawDial('dial-'+initials, weekActual, weekTarget, status)}
           <div class="dial-num">
             <div class="big">${weekActual}</div>
             <div class="small">of ${weekTarget} this week</div>
@@ -1615,11 +1332,10 @@ async function loadAndRender(){
           <div><span class="label">Today</span><span class="val">${todayActual}/${todayTarget}</span></div>
           <div><span class="label">Errors</span><span class="val" style="color:var(--red);">${personErrors.length}</span></div>
         </div>
-        ${drawMiniTrend(trendWeeks)}
       `;
       card.addEventListener('click', function(){
         const p = PEOPLE.find(p => p.initials === this.dataset.person);
-        if(p) showDetailPage(p, window._stairEntries, window._holidayIndex, window._today, window._errorEntries);
+        if(p) showDetailPage(p, window._stairEntries, window._forecastEntries, window._holidayIndex, window._today, window._errorEntries);
       });
       dialGrid.appendChild(card);
     });
@@ -1632,37 +1348,9 @@ async function loadAndRender(){
       bannerEl.innerHTML = `<div class="today-off-banner"><span class="title">📌 ALERT:</span>${chips}</div>`;
     } else bannerEl.innerHTML = '';
 
-    // landing tile badge — flag if anyone is off today
-    const kpiBadge = document.getElementById('tileKpiBadge');
-    if(offToday.length > 0){
-      kpiBadge.style.display = 'inline-block';
-      kpiBadge.textContent = offToday.length + ' off today';
-    } else {
-      kpiBadge.style.display = 'none';
-    }
-
-    // keep holidays / forecast pages fresh if they're the ones currently open
-    if(window._currentView === 'holidays'){
-      renderHolidayCalendar(holidayIndex, window._holidayMonth, window._holidayYear);
-    }
-    if(window._currentView === 'forecast'){
-      renderForecast(stairEntries, today);
-    }
-    // keep an open person/day drill-down fresh too
-    if(window._currentView === 'detail' && window._currentPerson){
-      showDetailPage(window._currentPerson, stairEntries, holidayIndex, today, errorEntries);
-    }
-    if(window._currentView === 'day' && window._currentPerson && window._currentDayDate){
-      showDayDetailPage(window._currentPerson, window._currentDayDate, stairEntries, holidayIndex);
-    }
-
     document.getElementById('errorBanner').innerHTML = '';
     document.getElementById('loadingMsg').style.display = 'none';
-
-    if(wasFirstLoad){
-      setActiveView('landing');
-    }
-
+    document.getElementById('mainPage').style.removeProperty('display');
     document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB');
 
   } catch(err){
@@ -1670,9 +1358,14 @@ async function loadAndRender(){
     document.getElementById('errorBanner').innerHTML =
       `<div class="error-banner">Couldn't load live data: ${err.message}. Make sure sheets are shared as "Anyone with the link can view".</div>`;
     document.getElementById('loadingMsg').style.display = 'none';
-    if(!window._loadedOnce) setActiveView('landing');
+    document.getElementById('mainPage').style.removeProperty('display');
   }
 }
+
+document.getElementById('backToMain').addEventListener('click', function(){
+  document.getElementById('detailPage').classList.remove('active');
+  document.getElementById('mainPage').classList.remove('hidden');
+});
 
 loadAndRender();
 setInterval(loadAndRender, REFRESH_MS);
