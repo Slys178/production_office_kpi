@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -107,6 +106,16 @@
     border-color:var(--muted);
     color:var(--muted);
     background:rgba(137,147,171,0.1);
+  }
+  .card .forecast-badge{
+    position:absolute;bottom:10px;right:10px;
+    background:rgba(52,152,219,0.15);
+    border:1px solid var(--blue);
+    color:var(--blue);
+    padding:2px 10px;
+    border-radius:999px;
+    font-size:0.7rem;
+    font-weight:600;
   }
   .dial-wrap{
     position:relative;
@@ -345,6 +354,13 @@
     color:var(--red);
     font-weight:600;
   }
+  .detail-week-card .forecast-row{
+    border-top:1px solid var(--card-border);
+    margin-top:4px;
+    padding-top:4px;
+    color:var(--blue);
+    font-weight:600;
+  }
   
   .detail-daily-grid{
     display:grid;
@@ -357,6 +373,13 @@
     padding:8px;
     text-align:center;
     border:1px solid var(--card-border);
+    cursor:pointer;
+    transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .detail-day-card:hover{
+    transform:scale(1.04);
+    box-shadow:0 3px 14px rgba(0,0,0,0.35);
+    border-color:var(--blue);
   }
   .detail-day-card .day-date{font-size:0.7rem;color:var(--muted);}
   .detail-day-card .day-stairs{font-size:1.1rem;font-weight:700;margin:4px 0;}
@@ -381,6 +404,11 @@
     border-radius:4px;
     display:inline-block;
     margin-top:2px;
+  }
+  .detail-day-card .tap-hint{
+    font-size:0.55rem;
+    color:var(--blue);
+    margin-top:4px;
   }
   .detail-errors{
     margin-top:4px;
@@ -449,6 +477,7 @@
   }
   .loading{text-align:center;color:var(--muted);padding:40px 0;font-size:1rem;}
   footer{text-align:center;color:var(--muted);font-size:0.7rem;margin-top:16px;}
+  .parts-note{color:var(--muted);font-size:0.75rem;margin:-6px 0 14px 0;}
 </style>
 </head>
 <body>
@@ -498,16 +527,28 @@
   </div>
   <div class="detail-stats" id="detailStats"></div>
   <div class="detail-section">
-    <h3>📊 Weekly Breakdown (incl. error points)</h3>
+    <h3>📊 Weekly Breakdown (incl. error points & forecast)</h3>
     <div class="detail-week-grid" id="detailWeeks"></div>
   </div>
   <div class="detail-section">
-    <h3>📅 Daily Details</h3>
+    <h3>📅 Daily Details <span style="font-weight:400;color:var(--muted);font-size:0.75rem;">(tap a day for parts breakdown)</span></h3>
     <div class="detail-daily-grid" id="detailDays"></div>
   </div>
   <div class="detail-section">
     <h3>⚠️ Error Log</h3>
     <div class="detail-errors" id="detailErrors"></div>
+  </div>
+</div>
+
+<div id="dayDetailPage" class="detail-page">
+  <div class="detail-header">
+    <button class="back-btn" id="backToDetail">← Back</button>
+    <h2><span class="person-color" id="dayDetailPersonColor"></span><span id="dayDetailPersonName"></span> — <span id="dayDetailDate"></span></h2>
+  </div>
+  <div class="detail-section">
+    <h3>🧩 Parts Breakdown</h3>
+    <div class="parts-note">Totals from completed rows for this person on this day (Columns H–N)</div>
+    <div class="detail-stats" id="dayDetailStats"></div>
   </div>
 </div>
 
@@ -697,10 +738,17 @@ function statusLabel(code){
   return code;
 }
 
+// Check if a code should be considered "off" (holiday/sickness/other leave, not carrier)
+function isOffCode(code){
+  if(!code) return false;
+  const c = code.toLowerCase();
+  return c === 'h' || c === 'h/am' || c === 'h/pm' || c === 'b' || c === 'o';
+}
+
 /* =========================================================
-   NEW parseStairRows – only counts if Column D is ticked
+   parseAllStairRows – returns both completed and forecast
    ========================================================= */
-function parseStairRows(rows){
+function parseAllStairRows(rows){
   let headerIdx = rows.findIndex(r => r.some(c => c.trim().toUpperCase()==='INITIALS'));
   if(headerIdx === -1) throw new Error("Could not find INITIALS header in Project Tracking sheet");
   const header = rows[headerIdx].map(c=>c.trim().toUpperCase());
@@ -708,30 +756,48 @@ function parseStairRows(rows){
   const initialsCol = header.findIndex(c=>c==='INITIALS');
   const stairsCol = header.findIndex(c=>c.includes('NUMBER OF STAIRS'));
 
-  // Look for a "Completed" column – this is Column D
-  let completedCol = header.findIndex(c => c.includes('COMPLETED') || c.includes('DONE') || c.includes('TICK'));
-  if(completedCol === -1) {
-    // If no header found, fallback to index 3 (0-based) => Column D
-    completedCol = 3;
-  }
+  // Stair-parts columns (H, I, J, K, L, N)
+  const winderStringPlatesCol = header.findIndex(c=>c.includes('WINDER') && c.includes('STRING') && c.includes('PLATES'));
+  const smallStringPlatesCol  = header.findIndex(c=>c.includes('SMALL') && c.includes('STRING') && c.includes('PLATES'));
+  const straightStringsCol    = header.findIndex(c=>c.includes('STRAIGHT') && c.includes('STRINGS'));
+  const postsCol               = header.findIndex(c=>c.includes('POSTS') && !c.includes('COMPLETED'));
+  const windersCol             = header.findIndex(c=>c.includes('WINDERS') && !c.includes('COMPLETED'));
+  const bullnoseCol            = header.findIndex(c=>c.includes('BULLNOSE') && c.includes('ASSEMBLED'));
 
-  const out = [];
+  // Completed column (Column D)
+  let completedCol = header.findIndex(c => c.includes('COMPLETED') || c.includes('DONE') || c.includes('TICK'));
+  if(completedCol === -1) completedCol = 3;
+
+  const completed = [];
+  const forecast = [];
+
   for(let i=headerIdx+1;i<rows.length;i++){
     const r = rows[i];
     if(!r[dateCol] || !r[dateCol].trim()) continue;
+    const date = parseUKDate(r[dateCol]);
+    if(!date) continue;
+    const initials = (r[initialsCol]||'').trim().toUpperCase();
+    if(!PEOPLE.some(p=>p.initials===initials)) continue;
+    const stairs = parseInt(r[stairsCol],10);
+    if(isNaN(stairs)) continue;
 
-    // Check if the task is completed (ticked)
     const completedVal = (r[completedCol] || '').toString().trim().toUpperCase();
     const isCompleted = completedVal === 'TRUE' || completedVal === 'YES' || completedVal === '1' || completedVal === '✓';
-    if (!isCompleted) continue; // Skip this row – not completed
 
-    const date = parseUKDate(r[dateCol]);
-    const initials = (r[initialsCol]||'').trim().toUpperCase();
-    const stairs = parseInt(r[stairsCol],10);
-    if(!date || !initials || isNaN(stairs)) continue;
-    out.push({date, initials, stairs});
+    const parts = {
+      winderStringPlates: parseInt(r[winderStringPlatesCol],10) || 0,
+      smallStringPlates:  parseInt(r[smallStringPlatesCol],10) || 0,
+      straightStrings:    parseInt(r[straightStringsCol],10) || 0,
+      posts:               parseInt(r[postsCol],10) || 0,
+      winders:             parseInt(r[windersCol],10) || 0,
+      bullnose:            parseInt(r[bullnoseCol],10) || 0
+    };
+
+    const entry = { date, initials, stairs, parts, completed: isCompleted };
+    if(isCompleted) completed.push(entry);
+    else forecast.push(entry);
   }
-  return out;
+  return { completed, forecast };
 }
 
 /* =========================================================
@@ -877,13 +943,17 @@ function renderCompactHolidayCalendar(holidayIndex, month, year) {
   container.innerHTML = html;
 }
 
-function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries) {
+function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, today, errorEntries) {
   const detailPage = document.getElementById('detailPage');
   const mainPage = document.getElementById('mainPage');
+  const dayDetailPage = document.getElementById('dayDetailPage');
+  dayDetailPage.classList.remove('active');
   detailPage.classList.add('active');
   mainPage.classList.add('hidden');
   document.getElementById('detailPersonColor').style.background = person.color;
   document.getElementById('detailPersonName').textContent = person.name;
+
+  window._currentPerson = person;
 
   const monday = new Date(today);
   const dow = (today.getDay()+6)%7;
@@ -933,6 +1003,11 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
     const stairsOver = (actual + holidayCredit) - target;
     const netPoints = stairsOver + weekErrorPoints;
 
+    // Forecast for this week: sum of stairs from uncompleted rows
+    const forecastForWeek = forecastEntries
+      .filter(e => e.initials === person.initials && e.date >= week.start && e.date <= week.end)
+      .reduce((s,e) => s + e.stairs, 0);
+
     totalActual += actual;
     totalTarget += target;
     totalHolidayCredit += holidayCredit;
@@ -946,6 +1021,7 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
       stairsOver: stairsOver,
       errorPoints: weekErrorPoints,
       netPoints: netPoints,
+      forecast: forecastForWeek,
       days: days,
       errors: weekErrors,
       start: week.start
@@ -1002,6 +1078,10 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
           <span><strong>Net points</strong></span>
           <span class="val ${netClass}"><strong>${w.netPoints > 0 ? '+' : ''}${w.netPoints}</strong></span>
         </div>
+        <div class="week-row forecast-row">
+          <span>🔮 Forecast (uncompleted)</span>
+          <span class="val" style="color:var(--blue);">${w.forecast}</span>
+        </div>
         ${w.errors.length > 0 ? `<div style="font-size:0.65rem;color:var(--muted);margin-top:4px;">${w.errors.length} error(s) this week</div>` : ''}
       </div>
     `;
@@ -1009,7 +1089,7 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
 
   const allDays = [];
   weekData.forEach(w => w.days.forEach(d => { if(!d.isWeekend) allDays.push(d); }));
-  document.getElementById('detailDays').innerHTML = allDays.map(d => {
+  document.getElementById('detailDays').innerHTML = allDays.map((d, idx) => {
     const status = statusForProgress(d.actual, d.target);
     const total = d.actual + d.credit;
     const diff = total - d.target;
@@ -1017,7 +1097,7 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
     let diffDisplay = diff > 0 ? '+' + diff : diff;
     let diffClass = diff > 0 ? 'positive' : (diff < 0 ? 'negative' : 'neutral');
     return `
-      <div class="detail-day-card">
+      <div class="detail-day-card" data-day-idx="${idx}">
         <div class="day-date">${fmtDateShort(d.date)}</div>
         <div class="day-stairs">${d.actual}</div>
         <div class="day-target">/ ${d.target}</div>
@@ -1025,9 +1105,19 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
         ${codeLabel ? `<div class="holiday-badge">${codeLabel}</div>` : ''}
         <div class="day-status ${status}">${statusLabelText(status, d.code)}</div>
         <div style="font-size:0.65rem;margin-top:2px;color:var(--muted);">${diffDisplay}</div>
+        <div class="tap-hint">Tap for parts →</div>
       </div>
     `;
   }).join('');
+
+  // Wire up clicks on each day card to open the parts-breakdown page
+  document.querySelectorAll('#detailDays .detail-day-card').forEach(el => {
+    el.addEventListener('click', function(){
+      const idx = parseInt(this.dataset.dayIdx, 10);
+      const day = allDays[idx];
+      showDayDetailPage(person, day, stairEntries);
+    });
+  });
 
   const personErrors = errorEntries.filter(e => e.initials === person.initials).sort((a,b) => b.date - a.date);
   document.getElementById('detailErrors').innerHTML = personErrors.length === 0 ?
@@ -1044,6 +1134,73 @@ function showDetailPage(person, stairEntries, holidayIndex, today, errorEntries)
 }
 
 /* =========================================================
+   showDayDetailPage – parts breakdown
+   ========================================================= */
+function showDayDetailPage(person, day, stairEntries){
+  const mainPage = document.getElementById('mainPage');
+  const detailPage = document.getElementById('detailPage');
+  const dayDetailPage = document.getElementById('dayDetailPage');
+
+  mainPage.classList.add('hidden');
+  detailPage.classList.remove('active');
+  dayDetailPage.classList.add('active');
+
+  document.getElementById('dayDetailPersonColor').style.background = person.color;
+  document.getElementById('dayDetailPersonName').textContent = person.name;
+  document.getElementById('dayDetailDate').textContent = fmtDate(day.date);
+
+  const dayEntries = stairEntries.filter(e => e.initials === person.initials && sameDay(e.date, day.date));
+
+  const totals = {
+    winderStringPlates: 0,
+    smallStringPlates: 0,
+    straightStrings: 0,
+    posts: 0,
+    winders: 0,
+    bullnose: 0
+  };
+  dayEntries.forEach(e => {
+    totals.winderStringPlates += e.parts.winderStringPlates;
+    totals.smallStringPlates  += e.parts.smallStringPlates;
+    totals.straightStrings    += e.parts.straightStrings;
+    totals.posts               += e.parts.posts;
+    totals.winders             += e.parts.winders;
+    totals.bullnose            += e.parts.bullnose;
+  });
+
+  document.getElementById('dayDetailStats').innerHTML = `
+    <div class="detail-stat-card">
+      <div class="label">Stairs</div>
+      <div class="value">${day.actual}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Winder String Plates</div>
+      <div class="value">${totals.winderStringPlates}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Small String Plates</div>
+      <div class="value">${totals.smallStringPlates}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Straight Strings</div>
+      <div class="value">${totals.straightStrings}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Posts</div>
+      <div class="value">${totals.posts}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Winders</div>
+      <div class="value">${totals.winders}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Assembled Bullnose</div>
+      <div class="value">${totals.bullnose}</div>
+    </div>
+  `;
+}
+
+/* =========================================================
    MAIN LOAD
    ========================================================= */
 async function loadAndRender(){
@@ -1054,13 +1211,28 @@ async function loadAndRender(){
       fetchGvizRows(ERRORS_SHEET_ID, ERRORS_GID).catch(()=>[])
     ]);
 
-    const stairEntries = parseStairRows(trackingRows);
+    // Parse both completed and forecast
+    const { completed: stairEntries, forecast: forecastEntries } = parseAllStairRows(trackingRows);
     const holidayIndex = buildHolidayIndex(holidayRows);
     const errorEntries = parseErrorRows(errorRows);
 
     const today = new Date(); today.setHours(0,0,0,0);
     const monday = new Date(today); const dow = (today.getDay()+6)%7; monday.setDate(today.getDate()-dow);
     const friday = new Date(monday); friday.setDate(monday.getDate()+4);
+
+    // Calculate forecast for next week (uncompleted entries with dates >= next monday)
+    const nextMonday = new Date(monday);
+    nextMonday.setDate(monday.getDate() + 7);
+    const nextFriday = new Date(nextMonday);
+    nextFriday.setDate(nextMonday.getDate() + 4);
+
+    const forecastNextWeek = {};
+    PEOPLE.forEach(p => forecastNextWeek[p.initials] = 0);
+    forecastEntries.forEach(e => {
+      if (e.date >= nextMonday && e.date <= nextFriday) {
+        forecastNextWeek[e.initials] += e.stairs;
+      }
+    });
 
     const dialGrid = document.getElementById('dialGrid');
     dialGrid.innerHTML = '';
@@ -1081,6 +1253,7 @@ async function loadAndRender(){
     };
 
     window._stairEntries = stairEntries;
+    window._forecastEntries = forecastEntries;
     window._holidayIndex = holidayIndex;
     window._errorEntries = errorEntries;
     window._today = today;
@@ -1088,7 +1261,9 @@ async function loadAndRender(){
     PEOPLE.forEach(person => {
       const initials = person.initials;
       const todayCode = getCodeForPerson(holidayIndex, person.holidayName, today);
-      if(todayCode) offToday.push({ person, code: todayCode });
+      // Only flag as "off" if it's a genuine off code (not carrier)
+      if(todayCode && isOffCode(todayCode)) offToday.push({ person, code: todayCode });
+      
       const todayTarget = targetFor(initials, today, todayCode);
       const todayActual = stairEntries.filter(e=>e.initials===initials && sameDay(e.date, today))
                                        .reduce((s,e)=>s+e.stairs,0);
@@ -1113,8 +1288,13 @@ async function loadAndRender(){
       if(totalErrorPoints < 0){ pointsBadgeClass = 'negative'; pointsLabel = totalErrorPoints + ' pts'; }
       else if(totalErrorPoints > 0){ pointsBadgeClass = ''; pointsLabel = '+' + totalErrorPoints + ' pts'; }
 
+      // Forecast badge for next week
+      const forecastVal = forecastNextWeek[initials] || 0;
+      const forecastBadge = forecastVal > 0 ? `<div class="forecast-badge">🔮 ${forecastVal} next wk</div>` : '';
+
       card.innerHTML = `
         <div class="points-badge ${pointsBadgeClass}">${pointsLabel}</div>
+        ${forecastBadge}
         <h2>${person.name}</h2>
         <div class="role">${initials}${todayCode ? ' · '+ (statusLabel(todayCode)||todayCode) : ''}</div>
         <div class="dial-wrap">
@@ -1132,7 +1312,7 @@ async function loadAndRender(){
       `;
       card.addEventListener('click', function(){
         const p = PEOPLE.find(p => p.initials === this.dataset.person);
-        if(p) showDetailPage(p, window._stairEntries, window._holidayIndex, window._today, window._errorEntries);
+        if(p) showDetailPage(p, window._stairEntries, window._forecastEntries, window._holidayIndex, window._today, window._errorEntries);
       });
       dialGrid.appendChild(card);
     });
@@ -1161,7 +1341,13 @@ async function loadAndRender(){
 
 document.getElementById('backToMain').addEventListener('click', function(){
   document.getElementById('detailPage').classList.remove('active');
+  document.getElementById('dayDetailPage').classList.remove('active');
   document.getElementById('mainPage').classList.remove('hidden');
+});
+
+document.getElementById('backToDetail').addEventListener('click', function(){
+  document.getElementById('dayDetailPage').classList.remove('active');
+  document.getElementById('detailPage').classList.add('active');
 });
 
 loadAndRender();
