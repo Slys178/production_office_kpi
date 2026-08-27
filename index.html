@@ -2325,7 +2325,7 @@ async function loadAndRender(){
       const chips = offToday.map(o =>
         `<span class="chip"><span class="dot" style="background:${o.person.color};"></span>${o.person.name} — ${statusLabel(o.code) || o.code}</span>`
       ).join('');
-      bannerEl.innerHTML = `<div class="today-off-banner"><span class="title">📌 Off today:</span>${chips}</div>`;
+      bannerEl.innerHTML = `<div class="today-off-banner"><span class="title">📌 ALERT:</span>${chips}</div>`;
     } else bannerEl.innerHTML = '';
 
     document.getElementById('errorBanner').innerHTML = '';
