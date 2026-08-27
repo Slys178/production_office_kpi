@@ -151,19 +151,17 @@
     background:var(--card);
     border:1px solid var(--card-border);
     border-radius:12px;
-    padding:12px 16px;
+    padding:16px 20px;
     margin-top:20px;
-    max-width:340px;
-    margin-left:auto;
-    margin-right:auto;
+    width:100%;
   }
   .holiday-compact .holiday-header{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    margin-bottom:8px;
+    margin-bottom:12px;
   }
-  .holiday-compact .holiday-header h3{margin:0;font-size:0.85rem;color:var(--text);}
+  .holiday-compact .holiday-header h3{margin:0;font-size:1rem;color:var(--text);}
   .holiday-compact .holiday-header .month-nav{
     display:flex;
     gap:6px;
@@ -173,42 +171,39 @@
     background:var(--card-border);
     border:none;
     color:var(--text);
-    padding:1px 8px;
+    padding:3px 12px;
     border-radius:4px;
     cursor:pointer;
-    font-size:0.7rem;
+    font-size:0.85rem;
   }
   .holiday-compact .holiday-header .month-nav .month-label{
-    font-size:0.75rem;
+    font-size:0.9rem;
     font-weight:600;
-    min-width:76px;
+    min-width:90px;
     text-align:center;
   }
   .holiday-compact .holiday-grid{
     display:grid;
     grid-template-columns:repeat(7, 1fr);
-    gap:2px;
-    margin-bottom:6px;
+    gap:4px;
+    margin-bottom:10px;
   }
   .holiday-compact .holiday-grid .day-header{
     text-align:center;
     color:var(--muted);
-    font-size:0.55rem;
+    font-size:0.7rem;
     font-weight:600;
-    padding:2px;
+    padding:4px;
   }
   .holiday-compact .holiday-grid .day-cell{
-    aspect-ratio:1;
     display:flex;
     flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    border-radius:4px;
-    font-size:0.6rem;
+    align-items:stretch;
+    border-radius:6px;
     background:rgba(255,255,255,0.03);
     border:1px solid transparent;
-    padding:1px;
-    min-height:20px;
+    padding:4px;
+    min-height:64px;
     position:relative;
   }
   .holiday-compact .holiday-grid .day-cell.weekend{
@@ -219,43 +214,38 @@
     border-color:var(--amber);
     background:rgba(245,166,35,0.08);
   }
-  .holiday-compact .holiday-grid .day-cell .day-number{font-weight:600;font-size:0.6rem;}
-  .holiday-compact .holiday-grid .day-cell .dot-row{
-    display:flex;
-    gap:2px;
-    flex-wrap:wrap;
-    justify-content:center;
-    align-items:center;
-    max-width:100%;
+  .holiday-compact .holiday-grid .day-cell .day-number{
+    font-weight:600;
+    font-size:0.75rem;
+    margin-bottom:3px;
   }
-  .holiday-compact .holiday-grid .day-cell .holiday-dot{
-    width:5px;
-    height:5px;
-    border-radius:50%;
-    display:inline-block;
-    flex-shrink:0;
+  .holiday-compact .holiday-grid .day-cell .code-line{
+    font-size:0.68rem;
+    font-weight:700;
+    padding:1px 4px;
+    border-radius:3px;
+    margin-bottom:2px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
-  .holiday-compact .holiday-grid .day-cell .holiday-dot.SF{background:#4a90e2;}
-  .holiday-compact .holiday-grid .day-cell .holiday-dot.LA{background:#2ecc71;}
-  .holiday-compact .holiday-grid .day-cell .holiday-dot.AS{background:#f5a623;}
-  .holiday-compact .holiday-grid .day-cell .holiday-dot.DF{background:#e74c3c;}
   .holiday-compact .holiday-legend{
     display:flex;
-    gap:8px;
+    gap:14px;
     flex-wrap:wrap;
-    padding-top:6px;
+    padding-top:10px;
     border-top:1px solid var(--card-border);
   }
   .holiday-compact .holiday-legend .legend-item{
     display:flex;
     align-items:center;
-    gap:4px;
-    font-size:0.6rem;
+    gap:5px;
+    font-size:0.72rem;
     color:var(--muted);
   }
   .holiday-compact .holiday-legend .legend-item .color-dot{
-    width:8px;
-    height:8px;
+    width:9px;
+    height:9px;
     border-radius:50%;
     display:inline-block;
   }
@@ -491,6 +481,12 @@
       <div class="legend-item"><span class="color-dot LA"></span> LA</div>
       <div class="legend-item"><span class="color-dot AS"></span> AS</div>
       <div class="legend-item"><span class="color-dot DF"></span> DF</div>
+      <div class="legend-item">H = Full day holiday</div>
+      <div class="legend-item">h/am, h/pm = Half day</div>
+      <div class="legend-item">C = Carrier</div>
+      <div class="legend-item">B = Bank holiday</div>
+      <div class="legend-item">O = Other</div>
+      <div class="legend-item">2nd = 2nd Fix help</div>
     </div>
   </div>
 </div>
@@ -853,11 +849,11 @@ function renderCompactHolidayCalendar(holidayIndex, month, year) {
     holidayData[day] = [];
     PEOPLE.forEach(person => {
       const code = getCodeForPerson(holidayIndex, person.holidayName, date);
-      if(code) holidayData[day].push({ initials: person.initials, code: code });
+      if(code) holidayData[day].push({ initials: person.initials, code: code, color: person.color });
     });
   }
   let html = '<div class="holiday-grid">';
-  const dayNames = ['S','M','T','W','T','F','S'];
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   dayNames.forEach(name => html += `<div class="day-header">${name}</div>`);
   for(let i=0; i<startDayOfWeek; i++) html += `<div class="day-cell"></div>`;
   for(let day=1; day<=daysInMonth; day++){
@@ -871,11 +867,9 @@ function renderCompactHolidayCalendar(holidayIndex, month, year) {
     html += `<div class="${cellClass}">`;
     html += `<div class="day-number">${day}</div>`;
     if(hasHoliday){
-      html += '<div class="dot-row">';
       holidays.forEach(h=>{
-        html += `<span class="holiday-dot ${h.initials}" title="${h.initials}: ${statusLabel(h.code) || h.code}"></span>`;
+        html += `<div class="code-line" style="background:${h.color}22;color:${h.color};" title="${h.initials}: ${statusLabel(h.code) || h.code}">${h.initials}: ${h.code}</div>`;
       });
-      html += '</div>';
     }
     html += '</div>';
   }
