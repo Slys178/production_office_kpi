@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -827,7 +828,7 @@
     <button class="back-btn" id="backToLandingFromForecast">← Production Office</button>
     <h2>📦 Forecast &amp; Manpower Check</h2>
   </div>
-  <div class="forecast-note">Upcoming stairs grouped by delivery week. 🔴 = manpower shortage detected (holidays this week impact next week's capacity).</div>
+  <div class="forecast-note">Upcoming stairs grouped by delivery week. Capacity for each week is based on who's available the week before (the week the team would actually be building it). 🔴 = shortfall — may need overtime.</div>
   <div class="forecast-week-grid" id="forecastWeeks"></div>
 </div>
 
@@ -1271,87 +1272,29 @@ function renderHolidayCalendar(holidayIndex, month, year) {
 }
 
 /* =========================================================
-   CAPACITY & MANPOWER WARNINGS
+   CAPACITY & MANPOWER — based on the PREVIOUS week's attendance
+   (the week the team would actually be building the stairs due
+   out in the forecast week).
    ========================================================= */
-function getPersonDailyCapacity(person) {
-  const fullDayHours = HOURS[person.initials]['MonThu'];
-  return Math.round(BASE_RATE * fullDayHours);
-}
+function getPrevWeekCapacity(person, forecastWeekStart, holidayIndex){
+  const prevWeekStart = new Date(forecastWeekStart);
+  prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+  const prevWeekEnd = new Date(prevWeekStart);
+  prevWeekEnd.setDate(prevWeekStart.getDate() + 4);
 
-function getPersonCapacityForWeek(person, weekStart, weekEnd, holidayIndex) {
-  let availableDays = 0;
-  let holidayDays = 0;
-  let holidayDetails = [];
-  
-  for(let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+  let capacity = 0;
+  const offDays = [];
+  for(let d = new Date(prevWeekStart); d <= prevWeekEnd; d.setDate(d.getDate()+1)){
     const dCopy = new Date(d);
-    const bucket = dayBucket(dCopy);
-    if(!bucket) continue;
-    
+    if(!dayBucket(dCopy)) continue;
     const code = getCodeForPerson(holidayIndex, person.holidayName, dCopy);
-    const isHoliday = isAbsenceCode(code);
-    
-    if(isHoliday) {
-      holidayDays++;
-      holidayDetails.push({ date: new Date(dCopy), code: code });
-    } else {
-      availableDays++;
+    if(isAbsenceCode(code)){
+      offDays.push({ date: new Date(dCopy), code });
+      continue; // no capacity from a day off
     }
+    capacity += targetFor(person.initials, dCopy, code);
   }
-  
-  const dailyCapacity = getPersonDailyCapacity(person);
-  return {
-    availableDays: availableDays,
-    holidayDays: holidayDays,
-    holidayDetails: holidayDetails,
-    capacity: availableDays * dailyCapacity,
-    dailyCapacity: dailyCapacity
-  };
-}
-
-function getEffectiveCapacityForForecastWeek(forecastWeekStart, forecastWeekEnd, currentWeekStart, currentWeekEnd, holidayIndex) {
-  let totalCapacity = 0;
-  let holidayImpacts = [];
-  
-  PEOPLE.forEach(person => {
-    // Check holidays in the CURRENT week (this is what impacts next week's capacity)
-    const currentWeekCapacity = getPersonCapacityForWeek(person, currentWeekStart, currentWeekEnd, holidayIndex);
-    
-    // Check if person is on holiday in the FORECAST week
-    const forecastWeekCapacity = getPersonCapacityForWeek(person, forecastWeekStart, forecastWeekEnd, holidayIndex);
-    
-    // If someone is on holiday this week, they lose capacity for next week
-    // because they're behind on preparation
-    let effectiveCapacity = forecastWeekCapacity.capacity;
-    let penalty = 0;
-    
-    if(currentWeekCapacity.holidayDays > 0) {
-      // Each holiday day this week reduces next week's capacity by 1 day
-      // (they lose a day of preparation/working time)
-      const dailyCap = getPersonDailyCapacity(person);
-      penalty = currentWeekCapacity.holidayDays * dailyCap;
-      effectiveCapacity = Math.max(0, forecastWeekCapacity.capacity - penalty);
-      
-      if(penalty > 0) {
-        holidayImpacts.push({
-          person: person,
-          holidayDays: currentWeekCapacity.holidayDays,
-          holidayDetails: currentWeekCapacity.holidayDetails,
-          penalty: penalty,
-          originalCapacity: forecastWeekCapacity.capacity,
-          effectiveCapacity: effectiveCapacity
-        });
-      }
-    }
-    
-    totalCapacity += effectiveCapacity;
-  });
-  
-  return {
-    totalCapacity: totalCapacity,
-    holidayImpacts: holidayImpacts,
-    hasHolidayImpact: holidayImpacts.length > 0
-  };
+  return { prevWeekStart, prevWeekEnd, capacity, offDays };
 }
 
 function getWarningLevel(forecast, capacity) {
@@ -1398,29 +1341,30 @@ function renderForecast(forecastEntries, holidayIndex, today) {
   
   if(displayWeeks.length === 0 || displayWeeks.every(w => w.total === 0)){
     container.innerHTML = '<div class="forecast-empty">No upcoming stairs found with a delivery date.</div>';
+    const tileBadge = document.getElementById('tileForecastBadge');
+    tileBadge.style.display = 'none';
     return;
   }
 
-  // Get current week for holiday checking
-  const currentWeekStart = weeks[0].start;
-  const currentWeekEnd = weeks[0].end;
-
-  // Check if any week has a manpower warning
   let hasManpowerWarning = false;
 
   const html = displayWeeks.map(w => {
-    // Calculate effective capacity based on holidays in the current week
-    const capacityInfo = getEffectiveCapacityForForecastWeek(
-      w.start, w.end, 
-      currentWeekStart, currentWeekEnd, 
-      holidayIndex
-    );
-    
-    const warning = getWarningLevel(w.total, capacityInfo.totalCapacity);
-    
-    // Track if any week is in danger
+    // Capacity is based purely on the PREVIOUS week's attendance —
+    // that's the week the team would actually be building this
+    // delivery week's stairs.
+    let totalCapacity = 0;
+    const holidayImpacts = [];
+    PEOPLE.forEach(person => {
+      const cap = getPrevWeekCapacity(person, w.start, holidayIndex);
+      totalCapacity += cap.capacity;
+      if(cap.offDays.length > 0){
+        holidayImpacts.push({ person, offDays: cap.offDays });
+      }
+    });
+
+    const warning = getWarningLevel(w.total, totalCapacity);
     if(warning.level === 'danger') hasManpowerWarning = true;
-    
+
     const chips = [];
     Object.keys(w.byPerson).forEach(initials => {
       const person = PEOPLE.find(p => p.initials === initials);
@@ -1428,28 +1372,24 @@ function renderForecast(forecastEntries, holidayIndex, today) {
       const name = person ? initials : 'Unassigned';
       chips.push(`<span class="fw-person-chip"><span class="dot" style="background:${color};"></span>${name}: ${w.byPerson[initials]}</span>`);
     });
-    
-    // Show holiday impact from current week
+
     let holidayWarning = '';
-    if(capacityInfo.hasHolidayImpact) {
-      holidayWarning = `<div class="holiday-impact">`;
-      holidayWarning += `⚠️ Current week holiday impact: `;
-      capacityInfo.holidayImpacts.forEach(p => {
-        const days = p.holidayDetails.map(h => fmtDateShort(h.date) + '(' + h.code + ')').join(', ');
-        holidayWarning += `<span class="chip">${p.person.initials} (${p.holidayDays} day${p.holidayDays>1?'s':''} off → -${p.penalty} stairs)</span>`;
+    if(holidayImpacts.length > 0) {
+      holidayWarning = `<div class="holiday-impact">⚠️ Previous week absences: `;
+      holidayImpacts.forEach(p => {
+        const days = p.offDays.map(o => fmtDateShort(o.date) + ' (' + o.code + ')').join(', ');
+        holidayWarning += `<span class="chip">${p.person.initials}: ${days}</span>`;
       });
       holidayWarning += `</div>`;
     }
-    
-    // Capacity bar
-    const capacityUsed = w.total > 0 ? Math.min(100, Math.round((w.total / capacityInfo.totalCapacity) * 100)) : 0;
+
+    const capacityUsed = w.total > 0 && totalCapacity > 0 ? Math.min(100, Math.round((w.total / totalCapacity) * 100)) : (w.total > 0 ? 100 : 0);
     const barClass = warning.level === 'danger' ? 'danger' : (warning.level === 'warning' ? 'warning' : 'ok');
-    
-    // Warning badge on the tile
+
     let cardClass = 'forecast-week-card';
     if(w.isCurrent) cardClass += ' current-week';
     if(warning.level === 'danger') cardClass += ' danger-week';
-    
+
     return `
       <div class="${cardClass}">
         <div class="fw-header">
@@ -1460,7 +1400,7 @@ function renderForecast(forecastEntries, holidayIndex, today) {
           </div>
         </div>
         <div class="capacity-detail">
-          <span>Effective capacity: ${capacityInfo.totalCapacity} stairs</span>
+          <span>Prev-week capacity: ${totalCapacity} stairs</span>
           <span>${capacityUsed}% used</span>
         </div>
         <div class="capacity-bar">
@@ -1468,15 +1408,14 @@ function renderForecast(forecastEntries, holidayIndex, today) {
         </div>
         <div class="fw-breakdown">${chips.join('')}</div>
         ${holidayWarning}
-        ${warning.level === 'danger' ? `<div style="margin-top:6px;font-size:0.75rem;color:var(--red);font-weight:700;">⚠️ Manpower shortage! ${capacityInfo.totalCapacity} effective capacity vs ${w.total} required</div>` : ''}
-        ${warning.level === 'warning' ? `<div style="margin-top:6px;font-size:0.7rem;color:var(--amber);">⚠️ Getting tight - ${capacityInfo.totalCapacity} capacity vs ${w.total} required</div>` : ''}
+        ${warning.level === 'danger' ? `<div style="margin-top:6px;font-size:0.75rem;color:var(--red);font-weight:700;">⚠️ Manpower shortage — ${totalCapacity} capacity vs ${w.total} required. May need overtime.</div>` : ''}
+        ${warning.level === 'warning' ? `<div style="margin-top:6px;font-size:0.7rem;color:var(--amber);">⚠️ Getting tight — ${totalCapacity} capacity vs ${w.total} required.</div>` : ''}
       </div>
     `;
   }).join('');
-  
+
   container.innerHTML = html;
-  
-  // Update the tile badge on landing page
+
   const tileBadge = document.getElementById('tileForecastBadge');
   if(hasManpowerWarning) {
     tileBadge.style.display = 'inline-block';
