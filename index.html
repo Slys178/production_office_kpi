@@ -726,6 +726,7 @@
     <h1>PRODUCTION OFFICE</h1>
     <p>Choose a section</p>
   </div>
+  <div id="lookaheadBanner"></div>
   <div class="tile-grid">
     <div class="nav-tile" id="tileKpi">
       <div class="tile-icon">📈</div>
@@ -830,6 +831,10 @@
   </div>
   <div class="forecast-note">Upcoming stairs grouped by delivery week. Capacity for each week is based on who's available the week before (the week the team would actually be building it). 🔴 = shortfall — may need overtime.</div>
   <div class="forecast-week-grid" id="forecastWeeks"></div>
+  <div class="detail-section" style="margin-top:16px;">
+    <h3>📊 Past 4 Weeks — Forecast Accuracy</h3>
+    <div class="detail-week-grid" id="forecastAccuracy"></div>
+  </div>
 </div>
 
 <footer>Live from Google Sheets · refreshes automatically</footer>
@@ -1426,6 +1431,78 @@ function renderForecast(forecastEntries, holidayIndex, today) {
   }
 }
 
+/* Single-line landing page banner: is next week's forecast covered
+   by the capacity we'd have based on this week's attendance? */
+function renderLookaheadBanner(forecastEntries, holidayIndex, today){
+  const container = document.getElementById('lookaheadBanner');
+  if(!container) return;
+  const startMonday = mondayOf(today);
+  const nextWeekStart = new Date(startMonday); nextWeekStart.setDate(nextWeekStart.getDate()+7);
+  const nextWeekEnd = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate()+6);
+
+  const nextWeekTotal = forecastEntries
+    .filter(e => e.deliveryDate && e.deliveryDate >= nextWeekStart && e.deliveryDate <= nextWeekEnd)
+    .reduce((s,e) => s + e.stairs, 0);
+
+  if(nextWeekTotal === 0){ container.innerHTML = ''; return; }
+
+  let capacity = 0;
+  PEOPLE.forEach(person => {
+    capacity += getPrevWeekCapacity(person, nextWeekStart, holidayIndex).capacity;
+  });
+
+  const diff = capacity - nextWeekTotal;
+  const short = diff < 0;
+  const color = short ? 'var(--red)' : 'var(--green)';
+  const bg = short ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)';
+  const msg = short
+    ? `Next week needs ${nextWeekTotal} stairs, capacity is ${capacity} — ${Math.abs(diff)} short`
+    : `Next week needs ${nextWeekTotal} stairs, capacity is ${capacity} — comfortable`;
+  container.innerHTML = `<div style="background:${bg};border:1px solid ${color};border-radius:10px;padding:10px 16px;margin-bottom:16px;text-align:center;font-size:0.9rem;font-weight:600;color:${color};max-width:900px;margin-left:auto;margin-right:auto;">${short?'⚠️':'✅'} ${msg}</div>`;
+}
+
+/* Past-weeks accuracy: for each past week, compares stairs that were
+   actually completed (deliveryDate in that week, ticked) against
+   stairs that were forecast for that week but NEVER got ticked
+   (still sitting in the forecast list even though the delivery date
+   has passed) — a live proxy for "is the sheet being kept up to date". */
+function renderForecastAccuracy(stairEntries, forecastEntries, today){
+  const container = document.getElementById('forecastAccuracy');
+  if(!container) return;
+  const startMonday = mondayOf(today);
+  let html = '';
+  for(let i=1; i<=4; i++){
+    const wStart = new Date(startMonday); wStart.setDate(wStart.getDate() - (7*i));
+    const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate()+6);
+
+    const completedTotal = stairEntries
+      .filter(e => e.deliveryDate && e.deliveryDate >= wStart && e.deliveryDate <= wEnd)
+      .reduce((s,e) => s + e.stairs, 0);
+    const outstandingTotal = forecastEntries
+      .filter(e => e.deliveryDate && e.deliveryDate >= wStart && e.deliveryDate <= wEnd)
+      .reduce((s,e) => s + e.stairs, 0);
+    const predictedTotal = completedTotal + outstandingTotal;
+    if(predictedTotal === 0) continue;
+
+    const onTimePct = Math.round((completedTotal/predictedTotal)*100);
+    const pctClass = onTimePct >= 95 ? 'positive' : (onTimePct >= 75 ? 'gold' : 'negative');
+
+    html += `
+      <div class="detail-week-card">
+        <div class="week-label">W/C ${fmtDateShort(wStart)}</div>
+        <div class="week-row"><span>Predicted (due that week)</span><span class="val">${predictedTotal}</span></div>
+        <div class="week-row"><span>Actually completed</span><span class="val positive">${completedTotal}</span></div>
+        <div class="week-row"><span>Still outstanding</span><span class="val negative">${outstandingTotal}</span></div>
+        <div class="week-row" style="border-top:1px solid var(--card-border);padding-top:4px;margin-top:4px;">
+          <span><strong>On-time rate</strong></span>
+          <span class="val ${pctClass}"><strong>${onTimePct}%</strong></span>
+        </div>
+      </div>
+    `;
+  }
+  container.innerHTML = html || '<div class="forecast-empty">No past weeks with delivery dates yet.</div>';
+}
+
 /* =========================================================
    PERSON DETAIL PAGE
    ========================================================= */
@@ -1717,7 +1794,10 @@ document.getElementById('tileHolidays').addEventListener('click', ()=>{
 });
 document.getElementById('tileForecast').addEventListener('click', ()=>{
   setActiveView('forecast');
-  if(window._forecastEntries) renderForecast(window._forecastEntries, window._holidayIndex, window._today);
+  if(window._forecastEntries) {
+    renderForecast(window._forecastEntries, window._holidayIndex, window._today);
+    renderForecastAccuracy(window._stairEntries, window._forecastEntries, window._today);
+  }
 });
 document.getElementById('backToLandingFromKpi').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromHolidays').addEventListener('click', ()=> setActiveView('landing'));
@@ -1854,6 +1934,8 @@ async function loadAndRender(){
 
     // Render forecast to check for manpower warnings
     renderForecast(forecastEntries, holidayIndex, today);
+    renderLookaheadBanner(forecastEntries, holidayIndex, today);
+    renderForecastAccuracy(stairEntries, forecastEntries, today);
 
     if(window._currentView === 'holidays'){
       renderHolidayCalendar(holidayIndex, window._holidayMonth, window._holidayYear);
