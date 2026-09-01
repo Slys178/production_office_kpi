@@ -20,6 +20,7 @@
     --over:#3498db;
     --gold:#ffd700;
     --purple:#9b59b6;
+    --teal:#00A99D;
   }
   *{box-sizing:border-box;}
   body{
@@ -37,43 +38,34 @@
     flex-wrap:wrap;
     gap:8px;
   }
-  /* ===== BRANDING ===== */
+  /* ===== BRANDING with cross logo ===== */
   .brand{
     display:flex;
     align-items:center;
     gap:12px;
   }
   .brand-logo{
-    width:40px;
-    height:40px;
-    background:linear-gradient(135deg, #4a90e2, #2ecc71);
-    border-radius:10px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:900;
-    font-size:1.2rem;
-    color:#fff;
-    letter-spacing:-0.5px;
+    width:42px;
+    height:42px;
     flex-shrink:0;
+  }
+  .brand-text{
+    display:flex;
+    flex-direction:column;
+    line-height:1.2;
   }
   .brand-name{
     font-size:1.3rem;
     font-weight:700;
-    letter-spacing:1px;
-    background:linear-gradient(90deg, #4a90e2, #2ecc71);
-    -webkit-background-clip:text;
-    -webkit-text-fill-color:transparent;
-    background-clip:text;
+    letter-spacing:0.04em;
+    color:#eef2fb;
   }
-  .brand-name .sub{
-    font-size:0.6rem;
-    font-weight:400;
-    color:var(--muted);
-    -webkit-text-fill-color:var(--muted);
-    letter-spacing:0.5px;
-    display:block;
-    margin-top:-2px;
+  .brand-sub{
+    font-size:0.65rem;
+    font-weight:500;
+    color:var(--teal);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
   }
   h1{
     font-size:1.5rem;
@@ -792,12 +784,18 @@
 <body>
 
 <header>
-  <!-- ===== BRANDING ===== -->
+  <!-- ===== BRANDING with cross logo ===== -->
   <div class="brand">
-    <div class="brand-logo">SC</div>
-    <div class="brand-name">
-      STAIRCRAFT
-      <span class="sub">PRODUCTION OFFICE</span>
+    <svg class="brand-logo" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="98" fill="#00A99D"/>
+      <rect x="2" y="58" width="133" height="20" fill="white"/>
+      <rect x="58" y="2" width="20" height="133" fill="white"/>
+      <rect x="65" y="122" width="133" height="20" fill="white"/>
+      <rect x="122" y="65" width="20" height="133" fill="white"/>
+    </svg>
+    <div class="brand-text">
+      <span class="brand-name">STAIRCRAFT</span>
+      <span class="brand-sub">Production Office</span>
     </div>
   </div>
   <!-- ===== END BRANDING ===== -->
