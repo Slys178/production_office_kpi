@@ -789,6 +789,11 @@
       <div class="tile-sub">Stairs due out, week by week</div>
       <div class="tile-badge" id="tileForecastBadge" style="display:none;"></div>
     </div>
+    <div class="nav-tile" id="tileErrors">
+      <div class="tile-icon">⚠️</div>
+      <div class="tile-label">ERROR LOG</div>
+      <div class="tile-sub">Trends, patterns &amp; points over time</div>
+    </div>
   </div>
 </div>
 
@@ -879,6 +884,35 @@
   <div class="detail-section" style="margin-top:16px;">
     <h3>📊 Past 4 Weeks — Forecast Accuracy</h3>
     <div class="detail-week-grid" id="forecastAccuracy"></div>
+  </div>
+</div>
+
+<!-- ============ ERROR LOG TRENDS PAGE ============ -->
+<div id="errorsPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromErrors">← Production Office</button>
+    <h2>⚠️ Error Log — Trends</h2>
+  </div>
+  <div class="detail-section">
+    <h3>📈 Error Points — Last 6 Months</h3>
+    <div class="parts-note">Monthly total of error points logged. More negative = worse month.</div>
+    <div id="errorPointsTrend"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📅 Error Count — Last 6 Months</h3>
+    <div id="errorCountTrend"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📍 Top Sections</h3>
+    <div class="leaderboard" id="topSections"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📍 Top Plots</h3>
+    <div class="leaderboard" id="topPlots"></div>
+  </div>
+  <div class="detail-section">
+    <h3>👤 By Person</h3>
+    <div class="leaderboard" id="errorsByPerson"></div>
   </div>
 </div>
 
@@ -1603,6 +1637,92 @@ function renderForecastAccuracy(stairEntries, forecastEntries, today){
 }
 
 /* =========================================================
+   ERROR LOG TRENDS — office-wide patterns, not per-person.
+   Reuses the .mini-trend bar markup (no new CSS needed).
+   ========================================================= */
+function renderErrorTrends(errorEntries, today){
+  // ----- last 6 months, points & count -----
+  const months = [];
+  for(let i=5; i>=0; i--){
+    const d = new Date(today.getFullYear(), today.getMonth()-i, 1);
+    months.push({ year:d.getFullYear(), month:d.getMonth(), label:d.toLocaleDateString('en-GB',{month:'short'}), count:0, points:0 });
+  }
+  errorEntries.forEach(e=>{
+    const m = months.find(m2 => m2.year===e.date.getFullYear() && m2.month===e.date.getMonth());
+    if(m){ m.count++; m.points += e.points; }
+  });
+
+  const maxAbsPoints = Math.max(1, ...months.map(m => Math.abs(m.points)));
+  const pointsBars = months.map(m => {
+    const heightPct = Math.max(4, Math.round((Math.abs(m.points)/maxAbsPoints)*100));
+    const color = m.points < 0 ? '#e74c3c' : (m.points > 0 ? '#2ecc71' : '#8993ab');
+    return `
+      <div class="bar-col">
+        <div class="bar-track"><div class="bar-fill" style="height:${heightPct}%;background:${color};"></div></div>
+        <div class="bar-val">${m.points}</div>
+        <div class="bar-label">${m.label}</div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('errorPointsTrend').innerHTML = `<div class="mini-trend" style="border-top:none;padding-top:0;margin-top:0;"><div class="bars">${pointsBars}</div></div>`;
+
+  const maxCount = Math.max(1, ...months.map(m => m.count));
+  const countBars = months.map(m => {
+    const heightPct = Math.max(4, Math.round((m.count/maxCount)*100));
+    return `
+      <div class="bar-col">
+        <div class="bar-track"><div class="bar-fill" style="height:${heightPct}%;background:#4a90e2;"></div></div>
+        <div class="bar-val">${m.count}</div>
+        <div class="bar-label">${m.label}</div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('errorCountTrend').innerHTML = `<div class="mini-trend" style="border-top:none;padding-top:0;margin-top:0;"><div class="bars">${countBars}</div></div>`;
+
+  // ----- top sections / plots -----
+  function topBreakdown(field, limit){
+    const map = {};
+    errorEntries.forEach(e => {
+      const key = (e[field]||'').trim() || 'Unspecified';
+      if(!map[key]) map[key] = { count:0, points:0 };
+      map[key].count++;
+      map[key].points += e.points;
+    });
+    return Object.entries(map).sort((a,b) => b[1].count - a[1].count).slice(0, limit);
+  }
+  function renderBreakdownList(containerId, breakdown){
+    const container = document.getElementById(containerId);
+    if(breakdown.length === 0){ container.innerHTML = '<div class="forecast-empty">No data yet.</div>'; return; }
+    container.innerHTML = breakdown.map(([name, stats], idx) => `
+      <div class="lb-row">
+        <span class="lb-rank">${idx+1}</span>
+        <span class="lb-name">${name}</span>
+        <span class="lb-figures">${stats.count} error${stats.count===1?'':'s'}</span>
+        <span class="lb-pct ${stats.points<0?'negative':(stats.points>0?'positive':'neutral')}">${stats.points} pts</span>
+      </div>
+    `).join('');
+  }
+  renderBreakdownList('topSections', topBreakdown('section', 5));
+  renderBreakdownList('topPlots', topBreakdown('plot', 5));
+
+  // ----- by person -----
+  const byPerson = PEOPLE.map(p => {
+    const entries = errorEntries.filter(e => e.initials === p.initials);
+    const points = entries.reduce((s,e) => s + e.points, 0);
+    return { person:p, count: entries.length, points };
+  }).sort((a,b) => a.points - b.points);
+  document.getElementById('errorsByPerson').innerHTML = byPerson.map((d, idx) => `
+    <div class="lb-row">
+      <span class="lb-rank">${idx+1}</span>
+      <span class="lb-dot" style="background:${d.person.color};"></span>
+      <span class="lb-name">${d.person.name}</span>
+      <span class="lb-figures">${d.count} error${d.count===1?'':'s'}</span>
+      <span class="lb-pct ${d.points<0?'negative':(d.points>0?'positive':'neutral')}">${d.points} pts</span>
+    </div>
+  `).join('');
+}
+
+/* =========================================================
    PERSON DETAIL PAGE
    ========================================================= */
 function getWeeklyTotals(person, stairEntries, holidayIndex, today, numWeeks){
@@ -1873,7 +1993,8 @@ const VIEW_IDS = {
   detail: 'detailPage',
   day: 'dayDetailPage',
   holidays: 'holidaysPage',
-  forecast: 'forecastPage'
+  forecast: 'forecastPage',
+  errors: 'errorsPage'
 };
 
 function setActiveView(view){
@@ -1898,6 +2019,11 @@ document.getElementById('tileForecast').addEventListener('click', ()=>{
     renderForecastAccuracy(window._stairEntries, window._forecastEntries, window._today);
   }
 });
+document.getElementById('tileErrors').addEventListener('click', ()=>{
+  setActiveView('errors');
+  if(window._errorEntries) renderErrorTrends(window._errorEntries, window._today);
+});
+document.getElementById('backToLandingFromErrors').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromKpi').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromHolidays').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromForecast').addEventListener('click', ()=> setActiveView('landing'));
@@ -2042,6 +2168,9 @@ async function loadAndRender(){
 
     if(window._currentView === 'holidays'){
       renderHolidayCalendar(holidayIndex, window._holidayMonth, window._holidayYear);
+    }
+    if(window._currentView === 'errors'){
+      renderErrorTrends(errorEntries, today);
     }
 
     document.getElementById('errorBanner').innerHTML = '';
