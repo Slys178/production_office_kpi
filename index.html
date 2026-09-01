@@ -5,12 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Production Office</title>
 <style>
+  /* ===== THEME VARIABLES ===== */
   :root{
+    /* Dark theme (default) */
     --bg:#0e1420;
     --card:#161d2e;
     --card-border:#232c42;
     --text:#eef2fb;
     --muted:#8993ab;
+    --card-hover:rgba(255,255,255,0.05);
+    --shadow:0 8px 24px rgba(0,0,0,0.35);
+    --section-bg:rgba(255,255,255,0.03);
+    --input-bg:rgba(255,255,255,0.06);
     --green:#2ecc71;
     --amber:#f5a623;
     --red:#e74c3c;
@@ -21,7 +27,25 @@
     --gold:#ffd700;
     --purple:#9b59b6;
     --teal:#00A99D;
+    --toggle-bg:#2a2a3a;
+    --toggle-dot:#eef2fb;
   }
+  
+  /* Light theme */
+  [data-theme="light"] {
+    --bg:#f0f2f5;
+    --card:#ffffff;
+    --card-border:#d0d5dd;
+    --text:#1a1a2e;
+    --muted:#6b7280;
+    --card-hover:rgba(0,0,0,0.03);
+    --shadow:0 8px 24px rgba(0,0,0,0.12);
+    --section-bg:rgba(0,0,0,0.02);
+    --input-bg:rgba(0,0,0,0.04);
+    --toggle-bg:#d0d5dd;
+    --toggle-dot:#ffffff;
+  }
+
   *{box-sizing:border-box;}
   body{
     margin:0;
@@ -29,7 +53,15 @@
     color:var(--text);
     font-family:'Segoe UI', Arial, sans-serif;
     padding:12px;
+    transition:background 0.3s ease, color 0.3s ease;
   }
+  
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-track{background:var(--card);}
+  ::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:3px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--teal);}
+
   header{
     display:flex;
     justify-content:space-between;
@@ -38,16 +70,21 @@
     flex-wrap:wrap;
     gap:8px;
   }
-  /* ===== BRANDING with cross logo ===== */
+  
+  /* ===== BRANDING ===== */
   .brand{
     display:flex;
     align-items:center;
     gap:12px;
   }
   .brand-logo{
-    width:42px;
-    height:42px;
+    width:44px;
+    height:44px;
     flex-shrink:0;
+    transition:transform 0.3s ease;
+  }
+  .brand-logo:hover{
+    transform:scale(1.05) rotate(-5deg);
   }
   .brand-text{
     display:flex;
@@ -55,27 +92,35 @@
     line-height:1.2;
   }
   .brand-name{
-    font-size:1.3rem;
-    font-weight:700;
+    font-size:1.4rem;
+    font-weight:800;
     letter-spacing:0.04em;
-    color:#eef2fb;
+    background:linear-gradient(135deg, var(--teal), #2ecc71);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
   }
   .brand-sub{
     font-size:0.65rem;
     font-weight:500;
-    color:var(--teal);
-    letter-spacing:0.06em;
+    color:var(--muted);
+    letter-spacing:0.08em;
     text-transform:uppercase;
   }
-  h1{
-    font-size:1.5rem;
-    margin:0;
-    letter-spacing:0.5px;
+  
+  /* ===== HEADER RIGHT ===== */
+  .header-right{
+    display:flex;
+    align-items:center;
+    gap:12px;
   }
   .status{
-    font-size:0.8rem;
+    font-size:0.75rem;
     color:var(--muted);
     text-align:right;
+    display:flex;
+    align-items:center;
+    gap:6px;
   }
   .status .dot{
     display:inline-block;
@@ -83,7 +128,6 @@
     height:8px;
     border-radius:50%;
     background:var(--green);
-    margin-right:4px;
     box-shadow:0 0 8px var(--green);
     animation:pulse 2s infinite;
   }
@@ -93,11 +137,55 @@
     100%{opacity:1;}
   }
 
-  /* ===== generic page-view system ===== */
-  .page-view{display:none;animation:fadeIn 0.3s ease;}
+  /* ===== THEME TOGGLE ===== */
+  .theme-toggle{
+    position:relative;
+    width:44px;
+    height:24px;
+    background:var(--toggle-bg);
+    border-radius:12px;
+    cursor:pointer;
+    transition:background 0.3s ease;
+    flex-shrink:0;
+    border:1px solid var(--card-border);
+  }
+  .theme-toggle .dot{
+    position:absolute;
+    top:2px;
+    left:2px;
+    width:18px;
+    height:18px;
+    background:var(--toggle-dot);
+    border-radius:50%;
+    transition:transform 0.3s ease, background 0.3s ease;
+  }
+  [data-theme="light"] .theme-toggle .dot{
+    transform:translateX(20px);
+  }
+  .theme-toggle .icon{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:0.65rem;
+    pointer-events:none;
+    opacity:0.6;
+  }
+  .theme-toggle .icon.sun{left:4px;}
+  .theme-toggle .icon.moon{right:4px;}
+  [data-theme="light"] .theme-toggle .icon.sun{opacity:1;}
+  [data-theme="dark"] .theme-toggle .icon.moon{opacity:1;}
+
+  h1{
+    font-size:1.5rem;
+    margin:0;
+    letter-spacing:0.5px;
+  }
+
+  /* ===== PAGE VIEWS ===== */
+  .page-view{display:none;animation:fadeIn 0.4s ease;}
   .page-view.active{display:block;}
   @keyframes fadeIn{
-    from{opacity:0;transform:translateY(10px);}
+    from{opacity:0;transform:translateY(12px);}
     to{opacity:1;transform:translateY(0);}
   }
   .page-header{
@@ -116,35 +204,47 @@
     border-radius:8px;
     cursor:pointer;
     font-size:0.9rem;
-    transition:background 0.2s;
+    transition:all 0.2s;
   }
-  .page-header .back-btn:hover{background:rgba(255,255,255,0.1);}
-  .page-header h2{margin:0;font-size:1.4rem;}
+  .page-header .back-btn:hover{
+    background:var(--teal);
+    transform:scale(1.02);
+  }
+  .page-header h2{
+    margin:0;
+    font-size:1.4rem;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
   .page-header .person-color{
     display:inline-block;
     width:16px;
     height:16px;
     border-radius:50%;
-    margin-right:8px;
   }
 
-  /* ===== landing page ===== */
+  /* ===== LANDING PAGE ===== */
   .landing-title{
     text-align:center;
-    margin-bottom:24px;
+    margin-bottom:28px;
   }
   .landing-title h1{
-    font-size:1.8rem;
+    font-size:2rem;
     letter-spacing:1px;
+    background:linear-gradient(135deg, var(--teal), #2ecc71);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
   }
   .landing-title p{
     color:var(--muted);
-    font-size:0.85rem;
+    font-size:0.9rem;
     margin-top:4px;
   }
   .tile-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
     gap:16px;
     max-width:900px;
     margin:0 auto;
@@ -159,86 +259,146 @@
     align-items:center;
     text-align:center;
     cursor:pointer;
-    transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition:all 0.25s ease;
+    position:relative;
+    overflow:hidden;
+  }
+  .nav-tile::before{
+    content:'';
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:linear-gradient(135deg, var(--teal), transparent);
+    opacity:0;
+    transition:opacity 0.3s ease;
+  }
+  .nav-tile:hover::before{
+    opacity:0.08;
   }
   .nav-tile:hover{
-    transform:translateY(-4px);
-    box-shadow:0 8px 24px rgba(0,0,0,0.35);
-    border-color:var(--blue);
+    transform:translateY(-6px);
+    box-shadow:var(--shadow);
+    border-color:var(--teal);
   }
-  .nav-tile .tile-icon{font-size:2.4rem;margin-bottom:10px;}
-  .nav-tile .tile-label{font-size:1.15rem;font-weight:700;letter-spacing:0.5px;}
-  .nav-tile .tile-sub{color:var(--muted);font-size:0.78rem;margin-top:6px;}
+  .nav-tile .tile-icon{font-size:2.6rem;margin-bottom:10px;position:relative;z-index:1;}
+  .nav-tile .tile-label{font-size:1.1rem;font-weight:700;letter-spacing:0.5px;position:relative;z-index:1;}
+  .nav-tile .tile-sub{color:var(--muted);font-size:0.75rem;margin-top:6px;position:relative;z-index:1;}
   .nav-tile .tile-badge{
     margin-top:10px;
     padding:3px 12px;
     border-radius:999px;
-    font-size:0.72rem;
+    font-size:0.7rem;
     font-weight:700;
     background:rgba(245,166,35,0.15);
     color:var(--amber);
     border:1px solid var(--amber);
+    position:relative;
+    z-index:1;
   }
   .nav-tile .tile-badge.danger{
     background:rgba(231,76,60,0.15);
     color:var(--red);
     border-color:var(--red);
+    animation:pulse-red 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-red{
+    0%{opacity:1;}
+    50%{opacity:0.5;}
+    100%{opacity:1;}
   }
 
+  /* ===== CARDS GRID ===== */
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
-    gap:12px;
+    gap:14px;
     margin-bottom:20px;
   }
   .card{
     background:var(--card);
-    border:1px solid var(--card-border);
-    border-radius:12px;
-    padding:16px;
+    border:2px solid var(--card-border);
+    border-radius:14px;
+    padding:18px 16px 14px;
     display:flex;
     flex-direction:column;
     align-items:center;
     cursor:pointer;
-    transition:transform 0.2s ease, box-shadow 0.2s ease;
+    transition:all 0.25s ease;
     position:relative;
   }
   .card:hover{
-    transform:scale(1.02);
-    box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    transform:translateY(-4px) scale(1.01);
+    box-shadow:var(--shadow);
   }
-  .card h2{margin:0 0 2px 0;font-size:1.2rem;}
-  .card .role{color:var(--muted);font-size:0.8rem;margin-bottom:8px;}
+  /* Color-coded card borders */
+  .card.status-green{border-color:var(--green);}
+  .card.status-over{border-color:var(--over);}
+  .card.status-amber{border-color:var(--amber);}
+  .card.status-red{border-color:var(--red);}
+  .card.status-off{border-color:var(--muted);opacity:0.6;}
+  
+  .card .status-indicator{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:3px;
+    border-radius:14px 14px 0 0;
+  }
+  .card.status-green .status-indicator{background:var(--green);}
+  .card.status-over .status-indicator{background:var(--over);}
+  .card.status-amber .status-indicator{background:var(--amber);}
+  .card.status-red .status-indicator{background:var(--red);}
+  .card.status-off .status-indicator{background:var(--muted);}
+
+  .card h2{
+    margin:0 0 2px 0;
+    font-size:1.2rem;
+    font-weight:700;
+  }
+  .card .role{
+    color:var(--muted);
+    font-size:0.75rem;
+    margin-bottom:8px;
+    font-weight:500;
+  }
   .card .points-badge{
-    position:absolute;top:10px;right:10px;
-    background:rgba(255,215,0,0.15);
+    position:absolute;
+    top:10px;
+    right:10px;
+    background:rgba(255,215,0,0.12);
     border:1px solid var(--gold);
     color:var(--gold);
     padding:2px 10px;
     border-radius:999px;
-    font-size:0.75rem;
+    font-size:0.7rem;
     font-weight:700;
   }
   .card .points-badge.negative{
     border-color:var(--red);
     color:var(--red);
-    background:rgba(231,76,60,0.15);
+    background:rgba(231,76,60,0.12);
   }
   .card .points-badge.zero{
     border-color:var(--muted);
     color:var(--muted);
-    background:rgba(137,147,171,0.1);
+    background:rgba(137,147,171,0.08);
   }
   .card .forecast-badge{
-    position:absolute;bottom:10px;right:10px;
-    background:rgba(52,152,219,0.15);
+    position:absolute;
+    bottom:10px;
+    right:10px;
+    background:rgba(52,152,219,0.12);
     border:1px solid var(--blue);
     color:var(--blue);
     padding:2px 10px;
     border-radius:999px;
-    font-size:0.7rem;
+    font-size:0.65rem;
     font-weight:600;
   }
+  
   .dial-wrap{
     position:relative;
     width:100%;
@@ -251,35 +411,38 @@
     transform:translate(-50%,-50%);
     text-align:center;
     width:100%;
+    pointer-events:none;
   }
   .dial-num .big{
     font-size:2rem;
-    font-weight:700;
+    font-weight:800;
     line-height:1;
   }
   .dial-num .small{
-    font-size:0.8rem;
+    font-size:0.75rem;
     color:var(--muted);
     margin-top:2px;
   }
   .dial-num .projected{
-    font-size:0.65rem;
+    font-size:0.6rem;
     color:var(--muted);
     margin-top:1px;
-    opacity:0.7;
+    opacity:0.6;
   }
   .badge{
     margin-top:8px;
-    padding:4px 12px;
+    padding:4px 14px;
     border-radius:999px;
     font-weight:600;
-    font-size:0.85rem;
+    font-size:0.8rem;
+    transition:all 0.3s ease;
   }
   .badge.green{background:rgba(46,204,113,0.15);color:var(--green);}
   .badge.over{background:rgba(52,152,219,0.15);color:var(--over);}
   .badge.amber{background:rgba(245,166,35,0.15);color:var(--amber);}
   .badge.red{background:rgba(231,76,60,0.15);color:var(--red);}
-  .badge.off{background:rgba(137,147,171,0.15);color:var(--muted);}
+  .badge.off{background:rgba(137,147,171,0.12);color:var(--muted);}
+  
   .weekly-row{
     display:flex;
     justify-content:space-between;
@@ -287,13 +450,26 @@
     margin-top:10px;
     padding-top:10px;
     border-top:1px solid var(--card-border);
-    font-size:0.85rem;
+    font-size:0.8rem;
   }
   .weekly-row div{text-align:center;flex:1;}
-  .weekly-row .label{color:var(--muted);font-size:0.7rem;display:block;}
-  .weekly-row .val{font-size:1rem;font-weight:700;}
+  .weekly-row .label{
+    color:var(--muted);
+    font-size:0.65rem;
+    display:block;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .weekly-row .val{
+    font-size:1rem;
+    font-weight:700;
+    margin-top:2px;
+  }
+  .weekly-row .val .error-count{
+    color:var(--red);
+  }
 
-  /* ===== 4-week mini trend ===== */
+  /* ===== MINI TREND ===== */
   .mini-trend{
     width:100%;
     margin-top:10px;
@@ -302,7 +478,7 @@
   }
   .mini-trend .mini-trend-label{
     color:var(--muted);
-    font-size:0.68rem;
+    font-size:0.6rem;
     text-transform:uppercase;
     letter-spacing:0.5px;
     margin-bottom:6px;
@@ -312,8 +488,8 @@
     display:flex;
     align-items:flex-end;
     justify-content:space-between;
-    gap:8px;
-    height:54px;
+    gap:6px;
+    height:50px;
   }
   .mini-trend .bar-col{
     flex:1;
@@ -325,38 +501,38 @@
   }
   .mini-trend .bar-track{
     width:100%;
-    max-width:22px;
+    max-width:20px;
     height:100%;
     display:flex;
     align-items:flex-end;
     background:rgba(255,255,255,0.04);
-    border-radius:4px;
+    border-radius:3px;
     overflow:hidden;
     position:relative;
   }
   .mini-trend .bar-fill{
     width:100%;
-    border-radius:4px 4px 0 0;
-    transition:height 0.3s ease;
+    border-radius:3px 3px 0 0;
+    transition:height 0.4s ease;
   }
   .mini-trend .bar-fill.faded{
-    opacity:0.3;
+    opacity:0.25;
     position:absolute;
     bottom:0;
     left:0;
-    border-radius:4px 4px 0 0;
+    border-radius:3px 3px 0 0;
   }
   .mini-trend .bar-fill.solid{
     position:relative;
     z-index:1;
   }
   .mini-trend .bar-col .bar-val{
-    font-size:0.62rem;
+    font-size:0.6rem;
     font-weight:700;
     margin-top:3px;
   }
   .mini-trend .bar-col .bar-label{
-    font-size:0.58rem;
+    font-size:0.55rem;
     color:var(--muted);
     margin-top:1px;
   }
@@ -365,25 +541,134 @@
     top:0;
     bottom:0;
     width:1px;
-    background:rgba(255,255,255,0.3);
+    background:rgba(255,255,255,0.2);
     z-index:2;
   }
+  [data-theme="light"] .mini-trend .bar-target-line{
+    background:rgba(0,0,0,0.2);
+  }
 
-  /* ===== holidays page ===== */
+  /* ===== TEAM SUMMARY ===== */
+  .team-summary-wrap{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:16px;
+    margin-bottom:20px;
+  }
+  .team-dial-card{
+    background:var(--card);
+    border:2px solid var(--purple);
+    border-radius:14px;
+    padding:18px 16px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    transition:all 0.3s ease;
+  }
+  .team-dial-card:hover{
+    box-shadow:var(--shadow);
+    transform:translateY(-2px);
+  }
+  .team-dial-card h3{
+    margin:0 0 2px 0;
+    font-size:1.05rem;
+  }
+  .team-dial-card .team-sub{
+    color:var(--muted);
+    font-size:0.7rem;
+    margin-bottom:4px;
+  }
+  .leaderboard-card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:14px;
+    padding:18px 16px;
+    transition:all 0.3s ease;
+  }
+  .leaderboard-card:hover{
+    box-shadow:var(--shadow);
+  }
+  .leaderboard-card h3{
+    margin:0 0 12px 0;
+    font-size:0.95rem;
+    color:var(--muted);
+    font-weight:600;
+  }
+  .leaderboard{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .leaderboard .lb-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--section-bg);
+    border-radius:8px;
+    padding:6px 12px;
+    font-size:0.8rem;
+    transition:all 0.2s ease;
+  }
+  .leaderboard .lb-row:hover{
+    background:var(--card-hover);
+    transform:translateX(4px);
+  }
+  .leaderboard .lb-rank{
+    font-weight:700;
+    color:var(--muted);
+    width:16px;
+    text-align:center;
+    flex-shrink:0;
+    font-size:0.7rem;
+  }
+  .leaderboard .lb-dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    flex-shrink:0;
+  }
+  .leaderboard .lb-name{
+    flex:1;
+    font-weight:600;
+    min-width:60px;
+  }
+  .leaderboard .lb-figures{
+    color:var(--muted);
+    font-size:0.7rem;
+    white-space:nowrap;
+  }
+  .leaderboard .lb-pct{
+    font-weight:700;
+    min-width:44px;
+    text-align:right;
+    font-size:0.8rem;
+  }
+  .leaderboard .lb-pct.positive{color:var(--green);}
+  .leaderboard .lb-pct.negative{color:var(--red);}
+  .leaderboard .lb-pct.neutral{color:var(--muted);}
+
+  /* ===== HOLIDAYS ===== */
   .holiday-page-inner{
     background:var(--card);
     border:1px solid var(--card-border);
-    border-radius:12px;
+    border-radius:14px;
     padding:16px 20px;
     width:100%;
+    transition:all 0.3s ease;
   }
   .holiday-page-inner .holiday-header{
     display:flex;
     justify-content:space-between;
     align-items:center;
     margin-bottom:12px;
+    flex-wrap:wrap;
+    gap:8px;
   }
-  .holiday-page-inner .holiday-header h3{margin:0;font-size:1rem;color:var(--text);}
+  .holiday-page-inner .holiday-header h3{
+    margin:0;
+    font-size:1rem;
+    color:var(--text);
+  }
   .holiday-page-inner .holiday-header .month-nav{
     display:flex;
     gap:6px;
@@ -393,27 +678,31 @@
     background:var(--card-border);
     border:none;
     color:var(--text);
-    padding:5px 16px;
+    padding:4px 14px;
     border-radius:4px;
     cursor:pointer;
-    font-size:0.95rem;
+    font-size:0.9rem;
+    transition:all 0.2s ease;
+  }
+  .holiday-page-inner .holiday-header .month-nav button:hover{
+    background:var(--teal);
   }
   .holiday-page-inner .holiday-header .month-nav .month-label{
-    font-size:1rem;
+    font-size:0.95rem;
     font-weight:600;
-    min-width:110px;
+    min-width:100px;
     text-align:center;
   }
   .holiday-page-inner .holiday-grid{
     display:grid;
     grid-template-columns:repeat(7, 1fr);
-    gap:6px;
+    gap:4px;
     margin-bottom:14px;
   }
   .holiday-page-inner .holiday-grid .day-header{
     text-align:center;
     color:var(--muted);
-    font-size:0.75rem;
+    font-size:0.7rem;
     font-weight:600;
     padding:4px;
   }
@@ -422,38 +711,39 @@
     flex-direction:column;
     align-items:stretch;
     border-radius:6px;
-    background:rgba(255,255,255,0.03);
+    background:rgba(255,255,255,0.02);
     border:1px solid transparent;
-    padding:6px;
-    min-height:82px;
+    padding:4px 6px;
+    min-height:70px;
     position:relative;
+    transition:all 0.2s ease;
   }
   .holiday-page-inner .holiday-grid .day-cell.weekend{
-    background:rgba(255,255,255,0.02);
+    background:rgba(255,255,255,0.01);
     color:var(--muted);
   }
   .holiday-page-inner .holiday-grid .day-cell.has-holiday{
     border-color:var(--amber);
-    background:rgba(245,166,35,0.08);
+    background:rgba(245,166,35,0.06);
   }
   .holiday-page-inner .holiday-grid .day-cell .day-number{
     font-weight:600;
-    font-size:0.8rem;
-    margin-bottom:4px;
+    font-size:0.75rem;
+    margin-bottom:2px;
   }
   .holiday-page-inner .holiday-grid .day-cell .code-line{
-    font-size:0.72rem;
+    font-size:0.65rem;
     font-weight:700;
-    padding:2px 5px;
+    padding:1px 4px;
     border-radius:3px;
-    margin-bottom:2px;
+    margin-bottom:1px;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
   .holiday-page-inner .holiday-legend{
     display:flex;
-    gap:14px;
+    gap:12px;
     flex-wrap:wrap;
     padding-top:10px;
     border-top:1px solid var(--card-border);
@@ -461,13 +751,13 @@
   .holiday-page-inner .holiday-legend .legend-item{
     display:flex;
     align-items:center;
-    gap:5px;
-    font-size:0.75rem;
+    gap:4px;
+    font-size:0.7rem;
     color:var(--muted);
   }
   .holiday-page-inner .holiday-legend .legend-item .color-dot{
-    width:9px;
-    height:9px;
+    width:8px;
+    height:8px;
     border-radius:50%;
     display:inline-block;
   }
@@ -476,8 +766,16 @@
   .holiday-page-inner .holiday-legend .legend-item .color-dot.AS{background:#f5a623;}
   .holiday-page-inner .holiday-legend .legend-item .color-dot.DF{background:#e74c3c;}
 
-  /* ===== forecast page ===== */
-  .forecast-note{color:var(--muted);font-size:0.78rem;margin-bottom:14px;}
+  /* ===== FORECAST ===== */
+  .forecast-note{
+    color:var(--muted);
+    font-size:0.75rem;
+    margin-bottom:14px;
+    padding:10px 14px;
+    background:var(--section-bg);
+    border-radius:8px;
+    border-left:3px solid var(--blue);
+  }
   .forecast-week-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
@@ -488,12 +786,19 @@
     border:1px solid var(--card-border);
     border-radius:12px;
     padding:16px;
+    transition:all 0.3s ease;
   }
-  .forecast-week-card.current-week{border-color:var(--blue);}
+  .forecast-week-card:hover{
+    box-shadow:var(--shadow);
+    transform:translateY(-2px);
+  }
+  .forecast-week-card.current-week{
+    border-color:var(--blue);
+  }
   .forecast-week-card.danger-week{
     border-color:var(--red) !important;
-    background:rgba(231,76,60,0.08) !important;
-    box-shadow:0 0 20px rgba(231,76,60,0.15);
+    background:rgba(231,76,60,0.06) !important;
+    box-shadow:0 0 20px rgba(231,76,60,0.1);
   }
   .forecast-week-card .fw-header{
     display:flex;
@@ -501,30 +806,38 @@
     align-items:baseline;
     margin-bottom:10px;
   }
-  .forecast-week-card .fw-header .fw-label{font-weight:700;font-size:0.95rem;}
+  .forecast-week-card .fw-header .fw-label{
+    font-weight:700;
+    font-size:0.9rem;
+  }
   .forecast-week-card .fw-header .fw-total{
-    font-size:1.4rem;
+    font-size:1.3rem;
     font-weight:700;
     color:var(--blue);
   }
   .forecast-week-card .fw-header .fw-total.danger{color:var(--red);}
-  .forecast-week-card .fw-header .fw-total .unit{font-size:0.7rem;color:var(--muted);font-weight:400;margin-left:2px;}
+  .forecast-week-card .fw-header .fw-total .unit{
+    font-size:0.65rem;
+    color:var(--muted);
+    font-weight:400;
+    margin-left:2px;
+  }
   .forecast-week-card .fw-breakdown{
     display:flex;
     flex-wrap:wrap;
-    gap:6px;
+    gap:4px;
   }
   .forecast-week-card .fw-person-chip{
     display:flex;
     align-items:center;
-    gap:5px;
-    background:rgba(255,255,255,0.04);
+    gap:4px;
+    background:var(--section-bg);
     border-radius:999px;
-    padding:3px 10px;
-    font-size:0.75rem;
+    padding:2px 10px;
+    font-size:0.7rem;
   }
   .forecast-week-card .fw-person-chip .dot{
-    width:8px;height:8px;border-radius:50%;display:inline-block;
+    width:7px;height:7px;border-radius:50%;display:inline-block;
   }
   .forecast-empty{
     text-align:center;
@@ -535,14 +848,14 @@
   .warning-badge{
     padding:2px 10px;
     border-radius:999px;
-    font-size:0.7rem;
+    font-size:0.65rem;
     font-weight:700;
   }
-  .warning-badge.danger{background:rgba(231,76,60,0.2);color:var(--red);}
-  .warning-badge.warning{background:rgba(245,166,35,0.2);color:var(--amber);}
-  .warning-badge.ok{background:rgba(46,204,113,0.2);color:var(--green);}
+  .warning-badge.danger{background:rgba(231,76,60,0.15);color:var(--red);}
+  .warning-badge.warning{background:rgba(245,166,35,0.15);color:var(--amber);}
+  .warning-badge.ok{background:rgba(46,204,113,0.15);color:var(--green);}
   .capacity-bar{
-    height:6px;
+    height:5px;
     border-radius:999px;
     background:rgba(255,255,255,0.05);
     margin:6px 0;
@@ -551,7 +864,7 @@
   .capacity-bar .fill{
     height:100%;
     border-radius:999px;
-    transition:width 0.3s ease;
+    transition:width 0.4s ease;
   }
   .capacity-bar .fill.danger{background:var(--red);}
   .capacity-bar .fill.warning{background:var(--amber);}
@@ -559,7 +872,7 @@
   .capacity-detail{
     display:flex;
     justify-content:space-between;
-    font-size:0.7rem;
+    font-size:0.65rem;
     color:var(--muted);
     margin:2px 0;
   }
@@ -567,32 +880,47 @@
     margin-top:8px;
     padding-top:8px;
     border-top:1px solid var(--card-border);
-    font-size:0.72rem;
+    font-size:0.68rem;
     color:var(--amber);
   }
   .holiday-impact .chip{
-    background:rgba(245,166,35,0.1);
+    background:rgba(245,166,35,0.08);
     padding:1px 8px;
     border-radius:4px;
     display:inline-block;
     margin:2px 2px 2px 0;
   }
 
+  /* ===== DETAIL PAGES ===== */
   .detail-stats{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
-    gap:12px;
-    margin-bottom:24px;
+    grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));
+    gap:10px;
+    margin-bottom:20px;
   }
   .detail-stat-card{
     background:var(--card);
     border:1px solid var(--card-border);
     border-radius:10px;
-    padding:14px;
+    padding:12px 14px;
     text-align:center;
+    transition:all 0.3s ease;
   }
-  .detail-stat-card .label{color:var(--muted);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;}
-  .detail-stat-card .value{font-size:1.6rem;font-weight:700;margin-top:4px;}
+  .detail-stat-card:hover{
+    transform:translateY(-2px);
+    box-shadow:var(--shadow);
+  }
+  .detail-stat-card .label{
+    color:var(--muted);
+    font-size:0.65rem;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .detail-stat-card .value{
+    font-size:1.5rem;
+    font-weight:700;
+    margin-top:2px;
+  }
   .detail-stat-card .value.positive{color:var(--positive);}
   .detail-stat-card .value.negative{color:var(--negative);}
   .detail-stat-card .value.neutral{color:var(--muted);}
@@ -603,25 +931,43 @@
     border:1px solid var(--card-border);
     border-radius:12px;
     padding:16px;
-    margin-bottom:16px;
+    margin-bottom:14px;
+    transition:all 0.3s ease;
   }
-  .detail-section h3{margin:0 0 12px 0;font-size:1rem;color:var(--muted);}
+  .detail-section:hover{
+    box-shadow:var(--shadow);
+  }
+  .detail-section h3{
+    margin:0 0 12px 0;
+    font-size:0.95rem;
+    color:var(--muted);
+    font-weight:600;
+  }
   .detail-week-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-    gap:12px;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:10px;
   }
   .detail-week-card{
-    background:rgba(255,255,255,0.03);
+    background:var(--section-bg);
     border-radius:8px;
-    padding:12px;
+    padding:10px 12px;
     border:1px solid var(--card-border);
+    transition:all 0.2s ease;
   }
-  .detail-week-card .week-label{font-weight:600;font-size:0.85rem;margin-bottom:6px;color:var(--text);}
+  .detail-week-card:hover{
+    border-color:var(--teal);
+  }
+  .detail-week-card .week-label{
+    font-weight:600;
+    font-size:0.8rem;
+    margin-bottom:4px;
+    color:var(--text);
+  }
   .detail-week-card .week-row{
     display:flex;
     justify-content:space-between;
-    font-size:0.8rem;
+    font-size:0.75rem;
     padding:2px 0;
     color:var(--muted);
   }
@@ -646,89 +992,112 @@
 
   .detail-daily-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));
-    gap:8px;
+    grid-template-columns:repeat(auto-fill, minmax(110px, 1fr));
+    gap:6px;
   }
   .detail-day-card{
-    background:rgba(255,255,255,0.03);
+    background:var(--section-bg);
     border-radius:6px;
-    padding:8px;
+    padding:6px 8px;
     text-align:center;
     border:1px solid var(--card-border);
     cursor:pointer;
-    transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition:all 0.2s ease;
   }
   .detail-day-card:hover{
     transform:scale(1.04);
-    box-shadow:0 3px 14px rgba(0,0,0,0.35);
+    box-shadow:var(--shadow);
     border-color:var(--blue);
   }
-  .detail-day-card .day-date{font-size:0.7rem;color:var(--muted);}
-  .detail-day-card .day-stairs{font-size:1.1rem;font-weight:700;margin:4px 0;}
-  .detail-day-card .day-target{font-size:0.7rem;color:var(--muted);}
-  .detail-day-card .day-status{
-    font-size:0.6rem;
-    padding:2px 6px;
-    border-radius:4px;
-    display:inline-block;
-    margin-top:4px;
+  .detail-day-card .day-date{
+    font-size:0.65rem;
+    color:var(--muted);
   }
-  .detail-day-card .day-status.green{background:rgba(46,204,113,0.2);color:var(--green);}
-  .detail-day-card .day-status.over{background:rgba(52,152,219,0.2);color:var(--over);}
-  .detail-day-card .day-status.amber{background:rgba(245,166,35,0.2);color:var(--amber);}
-  .detail-day-card .day-status.red{background:rgba(231,76,60,0.2);color:var(--red);}
-  .detail-day-card .day-status.off{background:rgba(137,147,171,0.2);color:var(--muted);}
-  .detail-day-card .holiday-badge{
+  .detail-day-card .day-stairs{
+    font-size:1rem;
+    font-weight:700;
+    margin:2px 0;
+  }
+  .detail-day-card .day-target{
+    font-size:0.65rem;
+    color:var(--muted);
+  }
+  .detail-day-card .day-status{
     font-size:0.55rem;
-    color:var(--amber);
-    background:rgba(245,166,35,0.1);
     padding:1px 6px;
     border-radius:4px;
     display:inline-block;
     margin-top:2px;
   }
+  .detail-day-card .day-status.green{background:rgba(46,204,113,0.15);color:var(--green);}
+  .detail-day-card .day-status.over{background:rgba(52,152,219,0.15);color:var(--over);}
+  .detail-day-card .day-status.amber{background:rgba(245,166,35,0.15);color:var(--amber);}
+  .detail-day-card .day-status.red{background:rgba(231,76,60,0.15);color:var(--red);}
+  .detail-day-card .day-status.off{background:rgba(137,147,171,0.12);color:var(--muted);}
+  .detail-day-card .holiday-badge{
+    font-size:0.5rem;
+    color:var(--amber);
+    background:rgba(245,166,35,0.08);
+    padding:1px 4px;
+    border-radius:3px;
+    display:inline-block;
+    margin-top:1px;
+  }
   .detail-day-card .tap-hint{
-    font-size:0.55rem;
+    font-size:0.5rem;
     color:var(--blue);
-    margin-top:4px;
+    margin-top:2px;
+    opacity:0.6;
   }
-  .detail-errors{
-    margin-top:4px;
-  }
+
+  .detail-errors{margin-top:4px;}
   .detail-error-item{
-    padding:8px 0;
+    padding:6px 0;
     border-bottom:1px solid var(--card-border);
-    font-size:0.85rem;
+    font-size:0.8rem;
     display:flex;
     justify-content:space-between;
     align-items:center;
     flex-wrap:wrap;
     gap:4px;
+    transition:all 0.2s ease;
+  }
+  .detail-error-item:hover{
+    background:var(--section-bg);
+    padding-left:8px;
+    border-radius:4px;
   }
   .detail-error-item:last-child{border-bottom:none;}
-  .detail-error-item .error-left{flex:1;min-width:150px;}
-  .detail-error-item .error-date{color:var(--muted);font-size:0.75rem;}
-  .detail-error-item .error-desc{font-size:0.8rem;margin-top:2px;}
+  .detail-error-item .error-left{flex:1;min-width:120px;}
+  .detail-error-item .error-date{
+    color:var(--muted);
+    font-size:0.7rem;
+  }
+  .detail-error-item .error-desc{
+    font-size:0.75rem;
+    margin-top:1px;
+  }
   .detail-error-item .error-points{
     color:var(--red);
     font-weight:700;
-    font-size:0.9rem;
+    font-size:0.8rem;
     padding:2px 10px;
-    background:rgba(231,76,60,0.1);
+    background:rgba(231,76,60,0.08);
     border-radius:4px;
     white-space:nowrap;
   }
+
   .error-banner{
-    background:rgba(231,76,60,0.15);
+    background:rgba(231,76,60,0.12);
     border:1px solid var(--red);
     color:var(--red);
     padding:10px 14px;
     border-radius:8px;
     margin-bottom:16px;
-    font-size:0.85rem;
+    font-size:0.8rem;
   }
   .today-off-banner{
-    background:rgba(245,166,35,0.1);
+    background:rgba(245,166,35,0.08);
     border:1px solid var(--amber);
     border-radius:10px;
     padding:10px 16px;
@@ -737,89 +1106,79 @@
     align-items:center;
     gap:10px;
     flex-wrap:wrap;
-    font-size:0.9rem;
+    font-size:0.85rem;
   }
-  .today-off-banner .title{font-weight:700;color:var(--amber);white-space:nowrap;}
+  .today-off-banner .title{
+    font-weight:700;
+    color:var(--amber);
+    white-space:nowrap;
+  }
   .today-off-banner .chip{
-    background:rgba(255,255,255,0.06);
+    background:rgba(255,255,255,0.04);
     border-radius:999px;
-    padding:3px 10px;
-    font-size:0.8rem;
+    padding:2px 10px;
+    font-size:0.75rem;
     display:inline-flex;
     align-items:center;
-    gap:5px;
+    gap:4px;
   }
   .today-off-banner .chip .dot{
-    width:8px;
-    height:8px;
+    width:7px;
+    height:7px;
     border-radius:50%;
     display:inline-block;
     box-shadow:none;
     animation:none;
   }
-  .loading{text-align:center;color:var(--muted);padding:40px 0;font-size:1rem;}
-  footer{text-align:center;color:var(--muted);font-size:0.7rem;margin-top:16px;}
-  .parts-note{color:var(--muted);font-size:0.75rem;margin:-6px 0 14px 0;}
-  
-  /* Forecast tile badge animation */
-  .tile-badge.danger {
-    animation: pulse-red 1.5s ease-in-out infinite;
+  .loading{
+    text-align:center;
+    color:var(--muted);
+    padding:40px 0;
+    font-size:1rem;
   }
-  @keyframes pulse-red {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:0.65rem;
+    margin-top:16px;
+    padding-top:12px;
+    border-top:1px solid var(--card-border);
+  }
+  .parts-note{
+    color:var(--muted);
+    font-size:0.7rem;
+    margin:-4px 0 12px 0;
   }
 
-  /* ===== team summary: whole-office dial + leaderboard ===== */
-  .team-summary-wrap{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
-    gap:16px;
-    margin-bottom:20px;
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 600px){
+    body{padding:8px;}
+    .brand-name{font-size:1.1rem;}
+    .brand-logo{width:34px;height:34px;}
+    .header-right .status{font-size:0.65rem;}
+    .grid{grid-template-columns:1fr;}
+    .tile-grid{grid-template-columns:1fr 1fr;}
+    .detail-stats{grid-template-columns:repeat(2,1fr);}
+    .detail-week-grid{grid-template-columns:1fr;}
+    .detail-daily-grid{grid-template-columns:repeat(3,1fr);}
+    .forecast-week-grid{grid-template-columns:1fr;}
+    .team-summary-wrap{grid-template-columns:1fr;}
+    .holiday-page-inner .holiday-grid .day-cell{min-height:55px;padding:2px 4px;}
+    .holiday-page-inner .holiday-grid .day-cell .day-number{font-size:0.65rem;}
+    .dial-wrap{max-width:150px;}
+    .dial-num .big{font-size:1.5rem;}
   }
-  .team-dial-card{
-    background:var(--card);
-    border:1px solid var(--purple);
-    border-radius:12px;
-    padding:16px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
+  @media (max-width: 400px){
+    .tile-grid{grid-template-columns:1fr;}
+    .detail-stats{grid-template-columns:1fr;}
+    .detail-daily-grid{grid-template-columns:repeat(2,1fr);}
   }
-  .team-dial-card h3{margin:0 0 4px 0;font-size:1.05rem;}
-  .team-dial-card .team-sub{color:var(--muted);font-size:0.75rem;margin-bottom:4px;}
-  .leaderboard-card{
-    background:var(--card);
-    border:1px solid var(--card-border);
-    border-radius:12px;
-    padding:16px;
-  }
-  .leaderboard-card h3{margin:0 0 12px 0;font-size:1rem;color:var(--muted);}
-  .leaderboard{display:flex;flex-direction:column;gap:8px;}
-  .leaderboard .lb-row{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    background:rgba(255,255,255,0.03);
-    border-radius:8px;
-    padding:8px 12px;
-    font-size:0.85rem;
-  }
-  .leaderboard .lb-rank{font-weight:700;color:var(--muted);width:16px;text-align:center;flex-shrink:0;}
-  .leaderboard .lb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-  .leaderboard .lb-name{flex:1;font-weight:600;min-width:60px;}
-  .leaderboard .lb-figures{color:var(--muted);font-size:0.75rem;white-space:nowrap;}
-  .leaderboard .lb-pct{font-weight:700;min-width:48px;text-align:right;}
-  .leaderboard .lb-pct.positive{color:var(--green);}
-  .leaderboard .lb-pct.negative{color:var(--red);}
-  .leaderboard .lb-pct.neutral{color:var(--muted);}
 </style>
 </head>
 <body>
 
 <header>
-  <!-- ===== BRANDING with cross logo ===== -->
+  <!-- ===== BRANDING ===== -->
   <div class="brand">
     <svg class="brand-logo" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="100" cy="100" r="98" fill="#00A99D"/>
@@ -833,9 +1192,19 @@
       <span class="brand-sub">Production Office</span>
     </div>
   </div>
-  <!-- ===== END BRANDING ===== -->
-  <div class="status">
-    <span class="dot"></span><span id="lastUpdated">Loading…</span>
+  
+  <!-- ===== HEADER RIGHT ===== -->
+  <div class="header-right">
+    <div class="status">
+      <span class="dot"></span>
+      <span id="lastUpdated">Loading…</span>
+    </div>
+    <!-- Theme Toggle -->
+    <div class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">
+      <span class="icon sun">☀️</span>
+      <span class="icon moon">🌙</span>
+      <div class="dot"></div>
+    </div>
   </div>
 </header>
 
@@ -898,7 +1267,7 @@
     <div class="detail-week-grid" id="detailWeeks"></div>
   </div>
   <div class="detail-section">
-    <h3>📅 Daily Details <span style="font-weight:400;color:var(--muted);font-size:0.75rem;">(tap a day for parts breakdown)</span></h3>
+    <h3>📅 Daily Details <span style="font-weight:400;color:var(--muted);font-size:0.7rem;">(tap a day for parts breakdown)</span></h3>
     <div class="detail-daily-grid" id="detailDays"></div>
   </div>
   <div class="detail-section">
@@ -997,6 +1366,20 @@
 <footer>Live from Google Sheets · refreshes automatically</footer>
 
 <script>
+/* =========================================================
+   THEME TOGGLE
+   ========================================================= */
+const themeToggle = document.getElementById('themeToggle');
+let currentTheme = localStorage.getItem('theme') || 'dark';
+document.documentElement.setAttribute('data-theme', currentTheme);
+
+themeToggle.addEventListener('click', function() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+});
+
 /* =========================================================
    CONFIG
    ========================================================= */
@@ -1349,12 +1732,11 @@ function statusLabelText(status, code){
   return '';
 }
 
-/* ===== NEW DIAL: Shows actual + projected finish ===== */
+/* ===== PROJECTED DIAL ===== */
 function drawProjectedDial(actual, projected, target, colorClass){
   const size=200, stroke=16, r=(size-stroke)/2, cx=size/2, cy=size/2;
   const circumference = 2*Math.PI*r;
   
-  // Clamp values
   const maxVal = Math.max(target, projected, actual);
   const displayMax = Math.max(maxVal, target * 1.2);
   
@@ -1368,7 +1750,6 @@ function drawProjectedDial(actual, projected, target, colorClass){
   const colorMap = {green:'#2ecc71', over:'#3498db', amber:'#f5a623', red:'#e74c3c', off:'#8993ab'};
   const color = colorMap[colorClass] || '#4a90e2';
   
-  // Determine status text
   let statusText = '';
   let statusColor = color;
   if(target > 0 && projected >= target) {
@@ -1376,9 +1757,9 @@ function drawProjectedDial(actual, projected, target, colorClass){
     statusColor = '#2ecc71';
   } else if(target > 0 && projected < target && projected > 0) {
     const pctOfTarget = Math.round((projected / target) * 100);
-    if(pctOfTarget >= 85) { statusText = `⚠️ ${pctOfTarget}% of target`; statusColor = '#f5a623'; }
-    else if(pctOfTarget >= 60) { statusText = `⚠️ ${pctOfTarget}% of target`; statusColor = '#f5a623'; }
-    else { statusText = `❌ ${pctOfTarget}% of target`; statusColor = '#e74c3c'; }
+    if(pctOfTarget >= 85) { statusText = `⚠️ ${pctOfTarget}%`; statusColor = '#f5a623'; }
+    else if(pctOfTarget >= 60) { statusText = `⚠️ ${pctOfTarget}%`; statusColor = '#f5a623'; }
+    else { statusText = `❌ ${pctOfTarget}%`; statusColor = '#e74c3c'; }
   } else if(target > 0 && projected === 0) {
     statusText = '📌 No projection';
     statusColor = '#8993ab';
@@ -1386,26 +1767,22 @@ function drawProjectedDial(actual, projected, target, colorClass){
   
   return `
     <svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:200px;">
-      <!-- Background ring -->
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#232c42" stroke-width="${stroke}"/>
-      <!-- Projected (faded) ring -->
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--card-border)" stroke-width="${stroke}"/>
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
         stroke-dasharray="${dashProjected} ${circumference}" stroke-linecap="round"
-        opacity="0.3"
+        opacity="0.25"
         transform="rotate(-90 ${cx} ${cy})"/>
-      <!-- Actual (solid) ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
         stroke-dasharray="${dashActual} ${circumference}" stroke-linecap="round"
         transform="rotate(-90 ${cx} ${cy})"/>
-      <!-- Target marker (tick) -->
       <line x1="${cx + (r-4) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y1="${cy - (r-4) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
             x2="${cx + (r+6) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y2="${cy - (r+6) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-            stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"/>
       <circle cx="${cx + r * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
               cy="${cy - r * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-              r="3" fill="#ffffff" opacity="0.5"/>
+              r="3.5" fill="var(--text)" opacity="0.4"/>
     </svg>
     <div class="dial-num">
       <div class="big" style="color:${statusColor};">${actual}</div>
@@ -1416,10 +1793,9 @@ function drawProjectedDial(actual, projected, target, colorClass){
   `;
 }
 
-/* ===== MINI TREND with projected finish bars ===== */
+/* ===== MINI TREND PROJECTED ===== */
 function drawMiniTrendProjected(weeks, person, stairEntries, holidayIndex, today){
   const bars = weeks.map(w => {
-    // Calculate actual and target for this week
     let actual = 0, target = 0;
     for(let d = new Date(w.start); d <= w.end; d.setDate(d.getDate()+1)){
       if(!dayBucket(d)) continue;
@@ -1427,12 +1803,10 @@ function drawMiniTrendProjected(weeks, person, stairEntries, holidayIndex, today
       actual += stats.actual;
       target += stats.target;
     }
-    // Calculate projected: actual + remaining days' targets
     let projected = actual;
     const todayCopy = new Date(today);
     const isCurrentWeek = w.isCurrent;
     if(isCurrentWeek){
-      // Add remaining days' targets
       for(let d = new Date(todayCopy); d <= w.end; d.setDate(d.getDate()+1)){
         const dCopy = new Date(d);
         if(!dayBucket(dCopy)) continue;
@@ -1456,12 +1830,9 @@ function drawMiniTrendProjected(weeks, person, stairEntries, holidayIndex, today
     return `
       <div class="bar-col">
         <div class="bar-track">
-          <!-- Projected (faded) -->
-          <div class="bar-fill" style="height:${heightProjected}%;background:${color};opacity:0.3;border-radius:4px 4px 0 0;position:absolute;bottom:0;left:0;width:100%;"></div>
-          <!-- Actual (solid) -->
-          <div class="bar-fill" style="height:${heightActual}%;background:${color};border-radius:4px 4px 0 0;position:relative;z-index:1;width:100%;"></div>
-          <!-- Target line -->
-          <div style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3);z-index:2;left:50%;"></div>
+          <div class="bar-fill faded" style="height:${heightProjected}%;background:${color};"></div>
+          <div class="bar-fill solid" style="height:${heightActual}%;background:${color};"></div>
+          <div class="bar-target-line" style="bottom:${Math.round((1 - Math.min(1, target/Math.max(target, actual, projected))) * 100)}%;"></div>
         </div>
         <div class="bar-val">${actual}</div>
         <div class="bar-label">${label}</div>
@@ -1476,6 +1847,7 @@ function drawMiniTrendProjected(weeks, person, stairEntries, holidayIndex, today
   `;
 }
 
+/* ===== RENDER TEAM SUMMARY ===== */
 function renderTeamSummary(leaderboardData){
   const container = document.getElementById('teamSummary');
   if(!container) return;
@@ -1525,6 +1897,7 @@ function renderTeamSummary(leaderboardData){
   `;
 }
 
+/* ===== RENDER HOLIDAY CALENDAR ===== */
 function renderHolidayCalendar(holidayIndex, month, year) {
   const container = document.getElementById('holidayGrid');
   const monthLabel = document.getElementById('monthLabel');
@@ -1568,7 +1941,7 @@ function renderHolidayCalendar(holidayIndex, month, year) {
 }
 
 /* =========================================================
-   CAPACITY & MANPOWER — based on the PREVIOUS week's attendance
+   CAPACITY & MANPOWER
    ========================================================= */
 function getPrevWeekCapacity(person, forecastWeekStart, holidayIndex){
   const prevWeekStart = new Date(forecastWeekStart);
@@ -1696,8 +2069,8 @@ function renderForecast(forecastEntries, holidayIndex, today) {
         </div>
         <div class="fw-breakdown">${chips.join('')}</div>
         ${holidayWarning}
-        ${warning.level === 'danger' ? `<div style="margin-top:6px;font-size:0.75rem;color:var(--red);font-weight:700;">⚠️ Manpower shortage — ${totalCapacity} capacity vs ${w.total} required. May need overtime.</div>` : ''}
-        ${warning.level === 'warning' ? `<div style="margin-top:6px;font-size:0.7rem;color:var(--amber);">⚠️ Getting tight — ${totalCapacity} capacity vs ${w.total} required.</div>` : ''}
+        ${warning.level === 'danger' ? `<div style="margin-top:6px;font-size:0.7rem;color:var(--red);font-weight:700;">⚠️ Manpower shortage — ${totalCapacity} capacity vs ${w.total} required. May need overtime.</div>` : ''}
+        ${warning.level === 'warning' ? `<div style="margin-top:6px;font-size:0.65rem;color:var(--amber);">⚠️ Getting tight — ${totalCapacity} capacity vs ${w.total} required.</div>` : ''}
       </div>
     `;
   }).join('');
@@ -1735,11 +2108,11 @@ function renderLookaheadBanner(forecastEntries, holidayIndex, today){
   const diff = capacity - nextWeekTotal;
   const short = diff < 0;
   const color = short ? 'var(--red)' : 'var(--green)';
-  const bg = short ? 'rgba(231,76,60,0.1)' : 'rgba(46,204,113,0.1)';
+  const bg = short ? 'rgba(231,76,60,0.08)' : 'rgba(46,204,113,0.08)';
   const msg = short
     ? `Next week needs ${nextWeekTotal} stairs, capacity is ${capacity} — ${Math.abs(diff)} short`
     : `Next week needs ${nextWeekTotal} stairs, capacity is ${capacity} — comfortable`;
-  container.innerHTML = `<div style="background:${bg};border:1px solid ${color};border-radius:10px;padding:10px 16px;margin-bottom:16px;text-align:center;font-size:0.9rem;font-weight:600;color:${color};max-width:900px;margin-left:auto;margin-right:auto;">${short?'⚠️':'✅'} ${msg}</div>`;
+  container.innerHTML = `<div style="background:${bg};border:1px solid ${color};border-radius:10px;padding:10px 16px;margin-bottom:16px;text-align:center;font-size:0.85rem;font-weight:600;color:${color};max-width:900px;margin-left:auto;margin-right:auto;">${short?'⚠️':'✅'} ${msg}</div>`;
 }
 
 function renderForecastAccuracy(stairEntries, forecastEntries, today){
@@ -2010,7 +2383,7 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
           <span>📦 Forecast (uncompleted)</span>
           <span class="val" style="color:var(--blue);">${w.forecast}</span>
         </div>
-        ${w.errors.length > 0 ? `<div style="font-size:0.65rem;color:var(--muted);margin-top:4px;">${w.errors.length} error(s) this week</div>` : ''}
+        ${w.errors.length > 0 ? `<div style="font-size:0.6rem;color:var(--muted);margin-top:4px;">${w.errors.length} error(s) this week</div>` : ''}
       </div>
     `;
   }).join('');
@@ -2032,7 +2405,7 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
         ${d.credit > 0 ? `<div class="holiday-badge">+${d.credit}</div>` : ''}
         ${codeLabel ? `<div class="holiday-badge">${codeLabel}</div>` : ''}
         <div class="day-status ${status}">${statusLabelText(status, d.code)}</div>
-        <div style="font-size:0.65rem;margin-top:2px;color:var(--muted);">${diffDisplay}</div>
+        <div style="font-size:0.6rem;margin-top:2px;color:var(--muted);">${diffDisplay}</div>
         <div class="tap-hint">Tap for parts →</div>
       </div>
     `;
@@ -2232,7 +2605,6 @@ async function loadAndRender(){
         weekTarget += stats.target;
       }
       
-      // Calculate projected finish for this person
       let weekProjected = weekActual;
       const todayCopy = new Date(today);
       for(let d = new Date(todayCopy); d <= friday; d.setDate(d.getDate()+1)){
@@ -2249,7 +2621,7 @@ async function loadAndRender(){
       leaderboardData.push({ person, weekActual, weekProjected, weekTarget });
 
       const card = document.createElement('div');
-      card.className = 'card';
+      card.className = `card status-${status}`;
       card.dataset.person = initials;
 
       const personErrors = errorEntries.filter(e => e.initials === initials);
@@ -2269,6 +2641,7 @@ async function loadAndRender(){
       const forecastBadge = personForecast > 0 ? `<div class="forecast-badge">🔮 ${personForecast} next wk</div>` : '';
 
       card.innerHTML = `
+        <div class="status-indicator"></div>
         <div class="points-badge ${pointsBadgeClass}">${pointsLabel}</div>
         ${forecastBadge}
         <h2>${person.name}</h2>
@@ -2279,7 +2652,7 @@ async function loadAndRender(){
         <span class="badge ${status}">${statusLabelText(status, weekTarget===0 ? todayCode : null)}</span>
         <div class="weekly-row">
           <div><span class="label">Today</span><span class="val">${todayActual}/${todayTarget}</span></div>
-          <div><span class="label">Errors</span><span class="val" style="color:var(--red);">${personErrors.length}</span></div>
+          <div><span class="label">Errors</span><span class="val"><span class="error-count">${personErrors.length}</span></span></div>
         </div>
         ${drawMiniTrendProjected(trendWeeks, person, stairEntries, holidayIndex, today)}
       `;
