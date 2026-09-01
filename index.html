@@ -706,6 +706,50 @@
     50% { opacity: 0.5; }
     100% { opacity: 1; }
   }
+
+  /* ===== team summary: whole-office dial + leaderboard ===== */
+  .team-summary-wrap{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:16px;
+    margin-bottom:20px;
+  }
+  .team-dial-card{
+    background:var(--card);
+    border:1px solid var(--purple);
+    border-radius:12px;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .team-dial-card h3{margin:0 0 4px 0;font-size:1.05rem;}
+  .team-dial-card .team-sub{color:var(--muted);font-size:0.75rem;margin-bottom:4px;}
+  .leaderboard-card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    padding:16px;
+  }
+  .leaderboard-card h3{margin:0 0 12px 0;font-size:1rem;color:var(--muted);}
+  .leaderboard{display:flex;flex-direction:column;gap:8px;}
+  .leaderboard .lb-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:rgba(255,255,255,0.03);
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:0.85rem;
+  }
+  .leaderboard .lb-rank{font-weight:700;color:var(--muted);width:16px;text-align:center;flex-shrink:0;}
+  .leaderboard .lb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .leaderboard .lb-name{flex:1;font-weight:600;min-width:60px;}
+  .leaderboard .lb-figures{color:var(--muted);font-size:0.75rem;white-space:nowrap;}
+  .leaderboard .lb-pct{font-weight:700;min-width:48px;text-align:right;}
+  .leaderboard .lb-pct.positive{color:var(--green);}
+  .leaderboard .lb-pct.negative{color:var(--red);}
+  .leaderboard .lb-pct.neutral{color:var(--muted);}
 </style>
 </head>
 <body>
@@ -755,6 +799,7 @@
     <h2>📈 Office KPI</h2>
   </div>
   <div id="todayOffBanner"></div>
+  <div id="teamSummary"></div>
   <div class="grid" id="dialGrid"></div>
 </div>
 
@@ -1230,6 +1275,60 @@ function drawMiniTrend(weeks){
     <div class="mini-trend">
       <div class="mini-trend-label">Last ${weeks.length} weeks</div>
       <div class="bars">${bars}</div>
+    </div>
+  `;
+}
+
+/* Whole-office combined dial + leaderboard ranking everyone by
+   how close (or over/under) they are to their own weekly target. */
+function renderTeamSummary(leaderboardData){
+  const container = document.getElementById('teamSummary');
+  if(!container) return;
+
+  const teamActual = leaderboardData.reduce((s,d) => s + d.weekActual, 0);
+  const teamTarget = leaderboardData.reduce((s,d) => s + d.weekTarget, 0);
+  const teamStatus = statusForProgress(teamActual, teamTarget);
+
+  const ranked = [...leaderboardData].sort((a,b) => {
+    const pctA = a.weekTarget > 0 ? a.weekActual / a.weekTarget : (a.weekActual > 0 ? 2 : -1);
+    const pctB = b.weekTarget > 0 ? b.weekActual / b.weekTarget : (b.weekActual > 0 ? 2 : -1);
+    return pctB - pctA;
+  });
+
+  const lbRows = ranked.map((d, idx) => {
+    const pct = d.weekTarget > 0 ? Math.round((d.weekActual / d.weekTarget) * 100) : (d.weekActual > 0 ? 100 : null);
+    const diff = d.weekActual - d.weekTarget;
+    const pctClass = diff > 0 ? 'positive' : (diff < 0 ? 'negative' : 'neutral');
+    const pctLabel = pct === null ? '—' : pct + '%';
+    return `
+      <div class="lb-row">
+        <span class="lb-rank">${idx+1}</span>
+        <span class="lb-dot" style="background:${d.person.color};"></span>
+        <span class="lb-name">${d.person.name}</span>
+        <span class="lb-figures">${d.weekActual}/${d.weekTarget}</span>
+        <span class="lb-pct ${pctClass}">${pctLabel}</span>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="team-summary-wrap">
+      <div class="team-dial-card">
+        <h3>🏢 Whole Office</h3>
+        <div class="team-sub">Combined this week</div>
+        <div class="dial-wrap">
+          ${drawDial(teamActual, teamTarget, teamStatus)}
+          <div class="dial-num">
+            <div class="big">${teamActual}</div>
+            <div class="small">of ${teamTarget} this week</div>
+          </div>
+        </div>
+        <span class="badge ${teamStatus}">${statusLabelText(teamStatus, null)}</span>
+      </div>
+      <div class="leaderboard-card">
+        <h3>🏆 This Week's Leaderboard</h3>
+        <div class="leaderboard">${lbRows}</div>
+      </div>
     </div>
   `;
 }
@@ -1851,6 +1950,7 @@ async function loadAndRender(){
     const dialGrid = document.getElementById('dialGrid');
     dialGrid.innerHTML = '';
     const offToday = [];
+    const leaderboardData = [];
 
     PEOPLE.forEach(person => {
       const initials = person.initials;
@@ -1868,6 +1968,7 @@ async function loadAndRender(){
       }
       const status = statusForProgress(weekActual, weekTarget);
       const trendWeeks = getWeeklyTotals(person, stairEntries, holidayIndex, today, TREND_WEEKS);
+      leaderboardData.push({ person, weekActual, weekTarget });
 
       const card = document.createElement('div');
       card.className = 'card';
@@ -1914,6 +2015,8 @@ async function loadAndRender(){
       });
       dialGrid.appendChild(card);
     });
+
+    renderTeamSummary(leaderboardData);
 
     const bannerEl = document.getElementById('todayOffBanner');
     if(offToday.length > 0){
