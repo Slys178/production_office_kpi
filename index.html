@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Production Office</title>
 <style>
-  /* ===== THEME VARIABLES ===== */
   :root{
-    /* Dark theme (default) */
     --bg:#0e1420;
     --card:#161d2e;
     --card-border:#232c42;
@@ -31,7 +29,6 @@
     --toggle-dot:#eef2fb;
   }
   
-  /* Light theme */
   [data-theme="light"] {
     --bg:#f0f2f5;
     --card:#ffffff;
@@ -56,7 +53,6 @@
     transition:background 0.3s ease, color 0.3s ease;
   }
   
-  /* ===== SCROLLBAR ===== */
   ::-webkit-scrollbar{width:6px;}
   ::-webkit-scrollbar-track{background:var(--card);}
   ::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:3px;}
@@ -71,7 +67,6 @@
     gap:8px;
   }
   
-  /* ===== BRANDING ===== */
   .brand{
     display:flex;
     align-items:center;
@@ -108,7 +103,6 @@
     text-transform:uppercase;
   }
   
-  /* ===== HEADER RIGHT ===== */
   .header-right{
     display:flex;
     align-items:center;
@@ -137,7 +131,6 @@
     100%{opacity:1;}
   }
 
-  /* ===== THEME TOGGLE ===== */
   .theme-toggle{
     position:relative;
     width:44px;
@@ -175,19 +168,13 @@
   [data-theme="light"] .theme-toggle .icon.sun{opacity:1;}
   [data-theme="dark"] .theme-toggle .icon.moon{opacity:1;}
 
-  h1{
-    font-size:1.5rem;
-    margin:0;
-    letter-spacing:0.5px;
-  }
-
-  /* ===== PAGE VIEWS ===== */
   .page-view{display:none;animation:fadeIn 0.4s ease;}
   .page-view.active{display:block;}
   @keyframes fadeIn{
     from{opacity:0;transform:translateY(12px);}
     to{opacity:1;transform:translateY(0);}
   }
+  
   .page-header{
     display:flex;
     justify-content:space-between;
@@ -244,7 +231,7 @@
   }
   .tile-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
     gap:16px;
     max-width:900px;
     margin:0 auto;
@@ -309,7 +296,329 @@
     100%{opacity:1;}
   }
 
-  /* ===== CARDS GRID ===== */
+  /* ===== LOADS SYSTEM STYLES ===== */
+  .loads-controls{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:16px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
+  }
+  .loads-controls .loads-search{
+    flex:1;
+    min-width:180px;
+  }
+  .loads-controls .loads-search input{
+    width:100%;
+    padding:8px 14px;
+    border:1px solid var(--card-border);
+    border-radius:8px;
+    background:var(--input-bg);
+    color:var(--text);
+    font-size:0.9rem;
+    transition:border-color 0.2s;
+  }
+  .loads-controls .loads-search input:focus{
+    border-color:var(--teal);
+    outline:none;
+  }
+  .loads-controls .loads-filters{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .loads-controls .loads-filters select{
+    padding:8px 14px;
+    border:1px solid var(--card-border);
+    border-radius:8px;
+    background:var(--input-bg);
+    color:var(--text);
+    font-size:0.85rem;
+    cursor:pointer;
+    transition:border-color 0.2s;
+  }
+  .loads-controls .loads-filters select:focus{
+    border-color:var(--teal);
+    outline:none;
+  }
+  .loads-controls .loads-stats{
+    font-size:0.8rem;
+    color:var(--muted);
+    white-space:nowrap;
+    margin-left:auto;
+  }
+  .loads-controls .loads-stats .highlight{
+    color:var(--text);
+    font-weight:600;
+  }
+
+  .loads-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .load-card{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    padding:14px 16px;
+    transition:all 0.25s ease;
+    position:relative;
+    cursor:pointer;
+  }
+  .load-card:hover{
+    transform:translateY(-3px);
+    box-shadow:var(--shadow);
+    border-color:var(--teal);
+  }
+  .load-card .load-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:8px;
+  }
+  .load-card .load-number{
+    font-weight:700;
+    font-size:1.1rem;
+    color:var(--text);
+  }
+  .load-card .load-status{
+    font-size:0.65rem;
+    padding:2px 10px;
+    border-radius:999px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .load-card .load-status.status-in-progress{background:rgba(52,152,219,0.15);color:var(--blue);}
+  .load-card .load-status.status-completed{background:rgba(46,204,113,0.15);color:var(--green);}
+  .load-card .load-status.status-delayed{background:rgba(231,76,60,0.15);color:var(--red);}
+  .load-card .load-status.status-pending{background:rgba(245,166,35,0.15);color:var(--amber);}
+  
+  .load-card .load-details{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 16px;
+    font-size:0.8rem;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .load-card .load-details span{
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  .load-card .load-details .person-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    display:inline-block;
+  }
+  .load-card .load-description{
+    font-size:0.85rem;
+    color:var(--text);
+    margin-bottom:8px;
+    line-height:1.4;
+  }
+  .load-card .load-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    padding-top:8px;
+    border-top:1px solid var(--card-border);
+  }
+  .load-card .load-actions a,
+  .load-card .load-actions button{
+    font-size:0.7rem;
+    padding:4px 12px;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    transition:all 0.2s;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+  }
+  .load-card .load-actions .drive-link{
+    background:rgba(0,169,157,0.12);
+    color:var(--teal);
+  }
+  .load-card .load-actions .drive-link:hover{
+    background:var(--teal);
+    color:#fff;
+  }
+  .load-card .load-actions .edit-btn{
+    background:var(--card-border);
+    color:var(--text);
+  }
+  .load-card .load-actions .edit-btn:hover{
+    background:var(--blue);
+    color:#fff;
+  }
+  .load-card .load-actions .complete-btn{
+    background:rgba(46,204,113,0.12);
+    color:var(--green);
+  }
+  .load-card .load-actions .complete-btn:hover{
+    background:var(--green);
+    color:#fff;
+  }
+
+  .loads-pagination{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:12px;
+    padding:12px 0;
+  }
+  .loads-pagination button{
+    padding:6px 16px;
+    border:1px solid var(--card-border);
+    border-radius:8px;
+    background:var(--card);
+    color:var(--text);
+    cursor:pointer;
+    transition:all 0.2s;
+    font-size:0.85rem;
+  }
+  .loads-pagination button:hover:not(:disabled){
+    background:var(--teal);
+    border-color:var(--teal);
+  }
+  .loads-pagination button:disabled{
+    opacity:0.3;
+    cursor:not-allowed;
+  }
+  .loads-pagination .page-info{
+    font-size:0.85rem;
+    color:var(--muted);
+  }
+  .loads-pagination .page-info .current{
+    color:var(--text);
+    font-weight:600;
+  }
+
+  .loads-empty{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--muted);
+    font-style:italic;
+  }
+  .loads-empty .icon{
+    font-size:3rem;
+    display:block;
+    margin-bottom:12px;
+  }
+
+  /* ===== QUICK ADD LOAD MODAL ===== */
+  .modal-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,0.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+    padding:20px;
+    backdrop-filter:blur(4px);
+  }
+  .modal-overlay.active{
+    display:flex;
+  }
+  .modal{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:24px;
+    max-width:500px;
+    width:100%;
+    max-height:90vh;
+    overflow-y:auto;
+    animation:modalIn 0.3s ease;
+  }
+  @keyframes modalIn{
+    from{opacity:0;transform:scale(0.95) translateY(20px);}
+    to{opacity:1;transform:scale(1) translateY(0);}
+  }
+  .modal h3{
+    margin:0 0 16px 0;
+    font-size:1.2rem;
+  }
+  .modal .form-group{
+    margin-bottom:14px;
+  }
+  .modal .form-group label{
+    display:block;
+    font-size:0.8rem;
+    font-weight:600;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .modal .form-group input,
+  .modal .form-group select,
+  .modal .form-group textarea{
+    width:100%;
+    padding:8px 12px;
+    border:1px solid var(--card-border);
+    border-radius:8px;
+    background:var(--input-bg);
+    color:var(--text);
+    font-size:0.9rem;
+    transition:border-color 0.2s;
+    font-family:inherit;
+  }
+  .modal .form-group input:focus,
+  .modal .form-group select:focus,
+  .modal .form-group textarea:focus{
+    border-color:var(--teal);
+    outline:none;
+  }
+  .modal .form-group textarea{
+    resize:vertical;
+    min-height:60px;
+  }
+  .modal .form-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:16px;
+  }
+  .modal .form-actions button{
+    padding:8px 20px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:0.9rem;
+    transition:all 0.2s;
+  }
+  .modal .form-actions .btn-cancel{
+    background:var(--card-border);
+    color:var(--text);
+  }
+  .modal .form-actions .btn-cancel:hover{
+    background:var(--muted);
+  }
+  .modal .form-actions .btn-submit{
+    background:var(--teal);
+    color:#fff;
+  }
+  .modal .form-actions .btn-submit:hover{
+    background:#008a7e;
+  }
+
+  /* ===== REST OF EXISTING STYLES ===== */
+  /* ... (keeping all your existing styles here) ... */
+  /* I'll include the full styles in the complete file */
+
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
@@ -332,7 +641,6 @@
     transform:translateY(-4px) scale(1.01);
     box-shadow:var(--shadow);
   }
-  /* Color-coded card borders */
   .card.status-green{border-color:var(--green);}
   .card.status-over{border-color:var(--over);}
   .card.status-amber{border-color:var(--amber);}
@@ -353,21 +661,10 @@
   .card.status-red .status-indicator{background:var(--red);}
   .card.status-off .status-indicator{background:var(--muted);}
 
-  .card h2{
-    margin:0 0 2px 0;
-    font-size:1.2rem;
-    font-weight:700;
-  }
-  .card .role{
-    color:var(--muted);
-    font-size:0.75rem;
-    margin-bottom:8px;
-    font-weight:500;
-  }
+  .card h2{margin:0 0 2px 0;font-size:1.2rem;font-weight:700;}
+  .card .role{color:var(--muted);font-size:0.75rem;margin-bottom:8px;font-weight:500;}
   .card .points-badge{
-    position:absolute;
-    top:10px;
-    right:10px;
+    position:absolute;top:10px;right:10px;
     background:rgba(255,215,0,0.12);
     border:1px solid var(--gold);
     color:var(--gold);
@@ -387,9 +684,7 @@
     background:rgba(137,147,171,0.08);
   }
   .card .forecast-badge{
-    position:absolute;
-    bottom:10px;
-    right:10px;
+    position:absolute;bottom:10px;right:10px;
     background:rgba(52,152,219,0.12);
     border:1px solid var(--blue);
     color:var(--blue);
@@ -413,22 +708,10 @@
     width:100%;
     pointer-events:none;
   }
-  .dial-num .big{
-    font-size:2rem;
-    font-weight:800;
-    line-height:1;
-  }
-  .dial-num .small{
-    font-size:0.75rem;
-    color:var(--muted);
-    margin-top:2px;
-  }
-  .dial-num .projected{
-    font-size:0.6rem;
-    color:var(--muted);
-    margin-top:1px;
-    opacity:0.6;
-  }
+  .dial-num .big{font-size:2rem;font-weight:800;line-height:1;}
+  .dial-num .small{font-size:0.75rem;color:var(--muted);margin-top:2px;}
+  .dial-num .projected{font-size:0.6rem;color:var(--muted);margin-top:1px;opacity:0.6;}
+  
   .badge{
     margin-top:8px;
     padding:4px 14px;
@@ -453,23 +736,10 @@
     font-size:0.8rem;
   }
   .weekly-row div{text-align:center;flex:1;}
-  .weekly-row .label{
-    color:var(--muted);
-    font-size:0.65rem;
-    display:block;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
-  }
-  .weekly-row .val{
-    font-size:1rem;
-    font-weight:700;
-    margin-top:2px;
-  }
-  .weekly-row .val .error-count{
-    color:var(--red);
-  }
+  .weekly-row .label{color:var(--muted);font-size:0.65rem;display:block;text-transform:uppercase;letter-spacing:0.5px;}
+  .weekly-row .val{font-size:1rem;font-weight:700;margin-top:2px;}
+  .weekly-row .val .error-count{color:var(--red);}
 
-  /* ===== MINI TREND ===== */
   .mini-trend{
     width:100%;
     margin-top:10px;
@@ -515,27 +785,10 @@
     border-radius:3px 3px 0 0;
     transition:height 0.4s ease;
   }
-  .mini-trend .bar-fill.faded{
-    opacity:0.25;
-    position:absolute;
-    bottom:0;
-    left:0;
-    border-radius:3px 3px 0 0;
-  }
-  .mini-trend .bar-fill.solid{
-    position:relative;
-    z-index:1;
-  }
-  .mini-trend .bar-col .bar-val{
-    font-size:0.6rem;
-    font-weight:700;
-    margin-top:3px;
-  }
-  .mini-trend .bar-col .bar-label{
-    font-size:0.55rem;
-    color:var(--muted);
-    margin-top:1px;
-  }
+  .mini-trend .bar-fill.faded{opacity:0.25;position:absolute;bottom:0;left:0;border-radius:3px 3px 0 0;}
+  .mini-trend .bar-fill.solid{position:relative;z-index:1;}
+  .mini-trend .bar-col .bar-val{font-size:0.6rem;font-weight:700;margin-top:3px;}
+  .mini-trend .bar-col .bar-label{font-size:0.55rem;color:var(--muted);margin-top:1px;}
   .mini-trend .bar-target-line{
     position:absolute;
     top:0;
@@ -548,7 +801,6 @@
     background:rgba(0,0,0,0.2);
   }
 
-  /* ===== TEAM SUMMARY ===== */
   .team-summary-wrap{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
@@ -569,15 +821,9 @@
     box-shadow:var(--shadow);
     transform:translateY(-2px);
   }
-  .team-dial-card h3{
-    margin:0 0 2px 0;
-    font-size:1.05rem;
-  }
-  .team-dial-card .team-sub{
-    color:var(--muted);
-    font-size:0.7rem;
-    margin-bottom:4px;
-  }
+  .team-dial-card h3{margin:0 0 2px 0;font-size:1.05rem;}
+  .team-dial-card .team-sub{color:var(--muted);font-size:0.7rem;margin-bottom:4px;}
+  
   .leaderboard-card{
     background:var(--card);
     border:1px solid var(--card-border);
@@ -585,15 +831,8 @@
     padding:18px 16px;
     transition:all 0.3s ease;
   }
-  .leaderboard-card:hover{
-    box-shadow:var(--shadow);
-  }
-  .leaderboard-card h3{
-    margin:0 0 12px 0;
-    font-size:0.95rem;
-    color:var(--muted);
-    font-weight:600;
-  }
+  .leaderboard-card:hover{box-shadow:var(--shadow);}
+  .leaderboard-card h3{margin:0 0 12px 0;font-size:0.95rem;color:var(--muted);font-weight:600;}
   .leaderboard{
     display:flex;
     flex-direction:column;
@@ -613,41 +852,15 @@
     background:var(--card-hover);
     transform:translateX(4px);
   }
-  .leaderboard .lb-rank{
-    font-weight:700;
-    color:var(--muted);
-    width:16px;
-    text-align:center;
-    flex-shrink:0;
-    font-size:0.7rem;
-  }
-  .leaderboard .lb-dot{
-    width:10px;
-    height:10px;
-    border-radius:50%;
-    flex-shrink:0;
-  }
-  .leaderboard .lb-name{
-    flex:1;
-    font-weight:600;
-    min-width:60px;
-  }
-  .leaderboard .lb-figures{
-    color:var(--muted);
-    font-size:0.7rem;
-    white-space:nowrap;
-  }
-  .leaderboard .lb-pct{
-    font-weight:700;
-    min-width:44px;
-    text-align:right;
-    font-size:0.8rem;
-  }
+  .leaderboard .lb-rank{font-weight:700;color:var(--muted);width:16px;text-align:center;flex-shrink:0;font-size:0.7rem;}
+  .leaderboard .lb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .leaderboard .lb-name{flex:1;font-weight:600;min-width:60px;}
+  .leaderboard .lb-figures{color:var(--muted);font-size:0.7rem;white-space:nowrap;}
+  .leaderboard .lb-pct{font-weight:700;min-width:44px;text-align:right;font-size:0.8rem;}
   .leaderboard .lb-pct.positive{color:var(--green);}
   .leaderboard .lb-pct.negative{color:var(--red);}
   .leaderboard .lb-pct.neutral{color:var(--muted);}
 
-  /* ===== HOLIDAYS ===== */
   .holiday-page-inner{
     background:var(--card);
     border:1px solid var(--card-border);
@@ -664,11 +877,7 @@
     flex-wrap:wrap;
     gap:8px;
   }
-  .holiday-page-inner .holiday-header h3{
-    margin:0;
-    font-size:1rem;
-    color:var(--text);
-  }
+  .holiday-page-inner .holiday-header h3{margin:0;font-size:1rem;color:var(--text);}
   .holiday-page-inner .holiday-header .month-nav{
     display:flex;
     gap:6px;
@@ -684,9 +893,7 @@
     font-size:0.9rem;
     transition:all 0.2s ease;
   }
-  .holiday-page-inner .holiday-header .month-nav button:hover{
-    background:var(--teal);
-  }
+  .holiday-page-inner .holiday-header .month-nav button:hover{background:var(--teal);}
   .holiday-page-inner .holiday-header .month-nav .month-label{
     font-size:0.95rem;
     font-weight:600;
@@ -726,11 +933,7 @@
     border-color:var(--amber);
     background:rgba(245,166,35,0.06);
   }
-  .holiday-page-inner .holiday-grid .day-cell .day-number{
-    font-weight:600;
-    font-size:0.75rem;
-    margin-bottom:2px;
-  }
+  .holiday-page-inner .holiday-grid .day-cell .day-number{font-weight:600;font-size:0.75rem;margin-bottom:2px;}
   .holiday-page-inner .holiday-grid .day-cell .code-line{
     font-size:0.65rem;
     font-weight:700;
@@ -766,7 +969,6 @@
   .holiday-page-inner .holiday-legend .legend-item .color-dot.AS{background:#f5a623;}
   .holiday-page-inner .holiday-legend .legend-item .color-dot.DF{background:#e74c3c;}
 
-  /* ===== FORECAST ===== */
   .forecast-note{
     color:var(--muted);
     font-size:0.75rem;
@@ -788,13 +990,8 @@
     padding:16px;
     transition:all 0.3s ease;
   }
-  .forecast-week-card:hover{
-    box-shadow:var(--shadow);
-    transform:translateY(-2px);
-  }
-  .forecast-week-card.current-week{
-    border-color:var(--blue);
-  }
+  .forecast-week-card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .forecast-week-card.current-week{border-color:var(--blue);}
   .forecast-week-card.danger-week{
     border-color:var(--red) !important;
     background:rgba(231,76,60,0.06) !important;
@@ -806,27 +1003,11 @@
     align-items:baseline;
     margin-bottom:10px;
   }
-  .forecast-week-card .fw-header .fw-label{
-    font-weight:700;
-    font-size:0.9rem;
-  }
-  .forecast-week-card .fw-header .fw-total{
-    font-size:1.3rem;
-    font-weight:700;
-    color:var(--blue);
-  }
+  .forecast-week-card .fw-header .fw-label{font-weight:700;font-size:0.9rem;}
+  .forecast-week-card .fw-header .fw-total{font-size:1.3rem;font-weight:700;color:var(--blue);}
   .forecast-week-card .fw-header .fw-total.danger{color:var(--red);}
-  .forecast-week-card .fw-header .fw-total .unit{
-    font-size:0.65rem;
-    color:var(--muted);
-    font-weight:400;
-    margin-left:2px;
-  }
-  .forecast-week-card .fw-breakdown{
-    display:flex;
-    flex-wrap:wrap;
-    gap:4px;
-  }
+  .forecast-week-card .fw-header .fw-total .unit{font-size:0.65rem;color:var(--muted);font-weight:400;margin-left:2px;}
+  .forecast-week-card .fw-breakdown{display:flex;flex-wrap:wrap;gap:4px;}
   .forecast-week-card .fw-person-chip{
     display:flex;
     align-items:center;
@@ -836,15 +1017,9 @@
     padding:2px 10px;
     font-size:0.7rem;
   }
-  .forecast-week-card .fw-person-chip .dot{
-    width:7px;height:7px;border-radius:50%;display:inline-block;
-  }
-  .forecast-empty{
-    text-align:center;
-    color:var(--muted);
-    padding:30px 0;
-    font-style:italic;
-  }
+  .forecast-week-card .fw-person-chip .dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .forecast-empty{text-align:center;color:var(--muted);padding:30px 0;font-style:italic;}
+  
   .warning-badge{
     padding:2px 10px;
     border-radius:999px;
@@ -854,6 +1029,7 @@
   .warning-badge.danger{background:rgba(231,76,60,0.15);color:var(--red);}
   .warning-badge.warning{background:rgba(245,166,35,0.15);color:var(--amber);}
   .warning-badge.ok{background:rgba(46,204,113,0.15);color:var(--green);}
+  
   .capacity-bar{
     height:5px;
     border-radius:999px;
@@ -861,14 +1037,11 @@
     margin:6px 0;
     overflow:hidden;
   }
-  .capacity-bar .fill{
-    height:100%;
-    border-radius:999px;
-    transition:width 0.4s ease;
-  }
+  .capacity-bar .fill{height:100%;border-radius:999px;transition:width 0.4s ease;}
   .capacity-bar .fill.danger{background:var(--red);}
   .capacity-bar .fill.warning{background:var(--amber);}
   .capacity-bar .fill.ok{background:var(--green);}
+  
   .capacity-detail{
     display:flex;
     justify-content:space-between;
@@ -891,7 +1064,6 @@
     margin:2px 2px 2px 0;
   }
 
-  /* ===== DETAIL PAGES ===== */
   .detail-stats{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));
@@ -906,21 +1078,9 @@
     text-align:center;
     transition:all 0.3s ease;
   }
-  .detail-stat-card:hover{
-    transform:translateY(-2px);
-    box-shadow:var(--shadow);
-  }
-  .detail-stat-card .label{
-    color:var(--muted);
-    font-size:0.65rem;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
-  }
-  .detail-stat-card .value{
-    font-size:1.5rem;
-    font-weight:700;
-    margin-top:2px;
-  }
+  .detail-stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+  .detail-stat-card .label{color:var(--muted);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;}
+  .detail-stat-card .value{font-size:1.5rem;font-weight:700;margin-top:2px;}
   .detail-stat-card .value.positive{color:var(--positive);}
   .detail-stat-card .value.negative{color:var(--negative);}
   .detail-stat-card .value.neutral{color:var(--muted);}
@@ -934,15 +1094,9 @@
     margin-bottom:14px;
     transition:all 0.3s ease;
   }
-  .detail-section:hover{
-    box-shadow:var(--shadow);
-  }
-  .detail-section h3{
-    margin:0 0 12px 0;
-    font-size:0.95rem;
-    color:var(--muted);
-    font-weight:600;
-  }
+  .detail-section:hover{box-shadow:var(--shadow);}
+  .detail-section h3{margin:0 0 12px 0;font-size:0.95rem;color:var(--muted);font-weight:600;}
+  
   .detail-week-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
@@ -955,15 +1109,8 @@
     border:1px solid var(--card-border);
     transition:all 0.2s ease;
   }
-  .detail-week-card:hover{
-    border-color:var(--teal);
-  }
-  .detail-week-card .week-label{
-    font-weight:600;
-    font-size:0.8rem;
-    margin-bottom:4px;
-    color:var(--text);
-  }
+  .detail-week-card:hover{border-color:var(--teal);}
+  .detail-week-card .week-label{font-weight:600;font-size:0.8rem;margin-bottom:4px;color:var(--text);}
   .detail-week-card .week-row{
     display:flex;
     justify-content:space-between;
@@ -1004,24 +1151,10 @@
     cursor:pointer;
     transition:all 0.2s ease;
   }
-  .detail-day-card:hover{
-    transform:scale(1.04);
-    box-shadow:var(--shadow);
-    border-color:var(--blue);
-  }
-  .detail-day-card .day-date{
-    font-size:0.65rem;
-    color:var(--muted);
-  }
-  .detail-day-card .day-stairs{
-    font-size:1rem;
-    font-weight:700;
-    margin:2px 0;
-  }
-  .detail-day-card .day-target{
-    font-size:0.65rem;
-    color:var(--muted);
-  }
+  .detail-day-card:hover{transform:scale(1.04);box-shadow:var(--shadow);border-color:var(--blue);}
+  .detail-day-card .day-date{font-size:0.65rem;color:var(--muted);}
+  .detail-day-card .day-stairs{font-size:1rem;font-weight:700;margin:2px 0;}
+  .detail-day-card .day-target{font-size:0.65rem;color:var(--muted);}
   .detail-day-card .day-status{
     font-size:0.55rem;
     padding:1px 6px;
@@ -1043,12 +1176,7 @@
     display:inline-block;
     margin-top:1px;
   }
-  .detail-day-card .tap-hint{
-    font-size:0.5rem;
-    color:var(--blue);
-    margin-top:2px;
-    opacity:0.6;
-  }
+  .detail-day-card .tap-hint{font-size:0.5rem;color:var(--blue);margin-top:2px;opacity:0.6;}
 
   .detail-errors{margin-top:4px;}
   .detail-error-item{
@@ -1062,21 +1190,11 @@
     gap:4px;
     transition:all 0.2s ease;
   }
-  .detail-error-item:hover{
-    background:var(--section-bg);
-    padding-left:8px;
-    border-radius:4px;
-  }
+  .detail-error-item:hover{background:var(--section-bg);padding-left:8px;border-radius:4px;}
   .detail-error-item:last-child{border-bottom:none;}
   .detail-error-item .error-left{flex:1;min-width:120px;}
-  .detail-error-item .error-date{
-    color:var(--muted);
-    font-size:0.7rem;
-  }
-  .detail-error-item .error-desc{
-    font-size:0.75rem;
-    margin-top:1px;
-  }
+  .detail-error-item .error-date{color:var(--muted);font-size:0.7rem;}
+  .detail-error-item .error-desc{font-size:0.75rem;margin-top:1px;}
   .detail-error-item .error-points{
     color:var(--red);
     font-weight:700;
@@ -1108,11 +1226,7 @@
     flex-wrap:wrap;
     font-size:0.85rem;
   }
-  .today-off-banner .title{
-    font-weight:700;
-    color:var(--amber);
-    white-space:nowrap;
-  }
+  .today-off-banner .title{font-weight:700;color:var(--amber);white-space:nowrap;}
   .today-off-banner .chip{
     background:rgba(255,255,255,0.04);
     border-radius:999px;
@@ -1122,35 +1236,11 @@
     align-items:center;
     gap:4px;
   }
-  .today-off-banner .chip .dot{
-    width:7px;
-    height:7px;
-    border-radius:50%;
-    display:inline-block;
-    box-shadow:none;
-    animation:none;
-  }
-  .loading{
-    text-align:center;
-    color:var(--muted);
-    padding:40px 0;
-    font-size:1rem;
-  }
-  footer{
-    text-align:center;
-    color:var(--muted);
-    font-size:0.65rem;
-    margin-top:16px;
-    padding-top:12px;
-    border-top:1px solid var(--card-border);
-  }
-  .parts-note{
-    color:var(--muted);
-    font-size:0.7rem;
-    margin:-4px 0 12px 0;
-  }
+  .today-off-banner .chip .dot{width:7px;height:7px;border-radius:50%;display:inline-block;box-shadow:none;animation:none;}
+  .loading{text-align:center;color:var(--muted);padding:40px 0;font-size:1rem;}
+  footer{text-align:center;color:var(--muted);font-size:0.65rem;margin-top:16px;padding-top:12px;border-top:1px solid var(--card-border);}
+  .parts-note{color:var(--muted);font-size:0.7rem;margin:-4px 0 12px 0;}
 
-  /* ===== RESPONSIVE ===== */
   @media (max-width: 600px){
     body{padding:8px;}
     .brand-name{font-size:1.1rem;}
@@ -1158,6 +1248,9 @@
     .header-right .status{font-size:0.65rem;}
     .grid{grid-template-columns:1fr;}
     .tile-grid{grid-template-columns:1fr 1fr;}
+    .loads-grid{grid-template-columns:1fr;}
+    .loads-controls{flex-direction:column;align-items:stretch;}
+    .loads-controls .loads-stats{margin-left:0;text-align:center;}
     .detail-stats{grid-template-columns:repeat(2,1fr);}
     .detail-week-grid{grid-template-columns:1fr;}
     .detail-daily-grid{grid-template-columns:repeat(3,1fr);}
@@ -1167,6 +1260,7 @@
     .holiday-page-inner .holiday-grid .day-cell .day-number{font-size:0.65rem;}
     .dial-wrap{max-width:150px;}
     .dial-num .big{font-size:1.5rem;}
+    .modal{padding:16px;}
   }
   @media (max-width: 400px){
     .tile-grid{grid-template-columns:1fr;}
@@ -1178,7 +1272,6 @@
 <body>
 
 <header>
-  <!-- ===== BRANDING ===== -->
   <div class="brand">
     <svg class="brand-logo" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="100" cy="100" r="98" fill="#00A99D"/>
@@ -1193,13 +1286,11 @@
     </div>
   </div>
   
-  <!-- ===== HEADER RIGHT ===== -->
   <div class="header-right">
     <div class="status">
       <span class="dot"></span>
       <span id="lastUpdated">Loading…</span>
     </div>
-    <!-- Theme Toggle -->
     <div class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">
       <span class="icon sun">☀️</span>
       <span class="icon moon">🌙</span>
@@ -1225,13 +1316,19 @@
       <div class="tile-sub">Daily &amp; weekly stair targets per person</div>
       <div class="tile-badge" id="tileKpiBadge" style="display:none;"></div>
     </div>
+    <div class="nav-tile" id="tileLoads">
+      <div class="tile-icon">📦</div>
+      <div class="tile-label">LOADS</div>
+      <div class="tile-sub">Track all loads with Drive links</div>
+      <div class="tile-badge" id="tileLoadsBadge" style="display:none;"></div>
+    </div>
     <div class="nav-tile" id="tileHolidays">
       <div class="tile-icon">📅</div>
       <div class="tile-label">HOLIDAYS</div>
       <div class="tile-sub">Team holiday &amp; absence calendar</div>
     </div>
     <div class="nav-tile" id="tileForecast">
-      <div class="tile-icon">📦</div>
+      <div class="tile-icon">🔮</div>
       <div class="tile-label">FORECAST</div>
       <div class="tile-sub">Stairs due out, week by week</div>
       <div class="tile-badge" id="tileForecastBadge" style="display:none;"></div>
@@ -1253,6 +1350,86 @@
   <div id="todayOffBanner"></div>
   <div id="teamSummary"></div>
   <div class="grid" id="dialGrid"></div>
+</div>
+
+<!-- ============ LOADS PAGE ============ -->
+<div id="loadsPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromLoads">← Production Office</button>
+    <h2>📦 Loads</h2>
+    <button class="back-btn" id="addLoadBtn" style="background:var(--teal);color:#fff;">+ Add Load</button>
+  </div>
+  
+  <div id="loadsContainer">
+    <div class="loads-controls">
+      <div class="loads-search">
+        <input type="text" id="loadSearch" placeholder="🔍 Search by load number, description, or plot..." />
+      </div>
+      <div class="loads-filters">
+        <select id="personFilter">
+          <option value="all">👤 All People</option>
+        </select>
+        <select id="statusFilter">
+          <option value="all">📊 All Status</option>
+          <option value="in-progress">🔄 In Progress</option>
+          <option value="completed">✅ Completed</option>
+          <option value="delayed">❌ Delayed</option>
+          <option value="pending">⏳ Pending</option>
+        </select>
+      </div>
+      <div class="loads-stats">
+        Showing <span class="highlight" id="loadsShowing">0</span> of <span class="highlight" id="loadsTotal">0</span> loads
+      </div>
+    </div>
+    <div class="loads-grid" id="loadsGrid"></div>
+    <div class="loads-pagination" id="loadsPagination"></div>
+  </div>
+</div>
+
+<!-- ============ ADD LOAD MODAL ============ -->
+<div class="modal-overlay" id="addLoadModal">
+  <div class="modal">
+    <h3>📦 Add New Load</h3>
+    <div class="form-group">
+      <label>Load Number</label>
+      <input type="text" id="newLoadNumber" placeholder="e.g. 1234" />
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <input type="text" id="newLoadDescription" placeholder="Brief description of the load" />
+    </div>
+    <div class="form-group">
+      <label>Person</label>
+      <select id="newLoadPerson">
+        <option value="">Select person...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="newLoadStatus">
+        <option value="pending">⏳ Pending</option>
+        <option value="in-progress">🔄 In Progress</option>
+        <option value="completed">✅ Completed</option>
+        <option value="delayed">❌ Delayed</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Plot</label>
+      <input type="text" id="newLoadPlot" placeholder="e.g. Plot 42" />
+    </div>
+    <div class="form-group">
+      <label>Google Drive Link</label>
+      <input type="url" id="newLoadDriveLink" placeholder="https://drive.google.com/..." />
+    </div>
+    <div class="form-group">
+      <label>Due Date</label>
+      <input type="date" id="newLoadDueDate" />
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" id="cancelLoadBtn">Cancel</button>
+      <button class="btn-submit" id="submitLoadBtn">Add Load</button>
+    </div>
+  </div>
 </div>
 
 <!-- ============ PERSON DETAIL PAGE ============ -->
@@ -1324,7 +1501,7 @@
 <div id="forecastPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromForecast">← Production Office</button>
-    <h2>📦 Forecast &amp; Manpower Check</h2>
+    <h2>🔮 Forecast &amp; Manpower Check</h2>
   </div>
   <div class="forecast-note">Upcoming stairs grouped by delivery week. Capacity for each week is based on who's available the week before (the week the team would actually be building it). 🔴 = shortfall — may need overtime.</div>
   <div class="forecast-week-grid" id="forecastWeeks"></div>
@@ -1409,7 +1586,211 @@ const FORECAST_WEEKS = 8;
 const TREND_WEEKS = 4;
 
 /* =========================================================
-   HELPERS
+   LOADS SYSTEM - Local Storage (for demo data)
+   ========================================================= */
+let allLoads = [];
+
+// Load from localStorage or use default demo data
+function loadLoadsFromStorage() {
+  const stored = localStorage.getItem('staircraft_loads');
+  if (stored) {
+    try {
+      allLoads = JSON.parse(stored);
+      return;
+    } catch(e) {}
+  }
+  // Default demo loads
+  allLoads = [
+    { id: 1, loadNumber: '1001', description: 'Oak staircase - Main house', person: 'SF', personName: 'Simon Faulks', status: 'in-progress', plot: 'Plot 42', driveLink: 'https://drive.google.com/drive/folders/example1', dueDate: '2026-09-15', dateAdded: '2026-09-01' },
+    { id: 2, loadNumber: '1002', description: 'Walnut handrail - West wing', person: 'LA', personName: 'Liam Aiello', status: 'completed', plot: 'Plot 18', driveLink: 'https://drive.google.com/drive/folders/example2', dueDate: '2026-09-10', dateAdded: '2026-08-28' },
+    { id: 3, loadNumber: '1003', description: 'Spiral staircase - Folly', person: 'AS', personName: 'Adam Stanislawski', status: 'delayed', plot: 'Plot 7', driveLink: 'https://drive.google.com/drive/folders/example3', dueDate: '2026-09-05', dateAdded: '2026-08-25' },
+    { id: 4, loadNumber: '1004', description: 'Birch ply risers - Kitchen', person: 'DF', personName: 'Dominika Formanowicz', status: 'pending', plot: 'Plot 23', driveLink: '', dueDate: '2026-09-25', dateAdded: '2026-09-02' },
+    { id: 5, loadNumber: '1005', description: 'Ash treads - Garden room', person: 'SF', personName: 'Simon Faulks', status: 'in-progress', plot: 'Plot 42', driveLink: 'https://drive.google.com/drive/folders/example5', dueDate: '2026-09-20', dateAdded: '2026-09-01' },
+    { id: 6, loadNumber: '1006', description: 'Oak newel posts - Main staircase', person: 'LA', personName: 'Liam Aiello', status: 'completed', plot: 'Plot 18', driveLink: 'https://drive.google.com/drive/folders/example6', dueDate: '2026-09-08', dateAdded: '2026-08-30' },
+    { id: 7, loadNumber: '1007', description: 'Mahogany handrail - Library', person: 'AS', personName: 'Adam Stanislawski', status: 'pending', plot: 'Plot 7', driveLink: '', dueDate: '2026-10-01', dateAdded: '2026-09-03' },
+    { id: 8, loadNumber: '1008', description: 'Steel stringers - Mezzanine', person: 'DF', personName: 'Dominika Formanowicz', status: 'in-progress', plot: 'Plot 23', driveLink: 'https://drive.google.com/drive/folders/example8', dueDate: '2026-09-18', dateAdded: '2026-09-01' },
+  ];
+  saveLoadsToStorage();
+}
+
+function saveLoadsToStorage() {
+  localStorage.setItem('staircraft_loads', JSON.stringify(allLoads));
+}
+
+function getNextLoadId() {
+  const maxId = allLoads.reduce((max, l) => Math.max(max, l.id), 0);
+  return maxId + 1;
+}
+
+function addLoad(loadData) {
+  const newLoad = {
+    id: getNextLoadId(),
+    ...loadData,
+    dateAdded: new Date().toISOString().split('T')[0]
+  };
+  allLoads.push(newLoad);
+  saveLoadsToStorage();
+  renderLoads();
+  updateLoadsBadge();
+  return newLoad;
+}
+
+function updateLoadStatus(loadId, newStatus) {
+  const load = allLoads.find(l => l.id === loadId);
+  if (load) {
+    load.status = newStatus;
+    saveLoadsToStorage();
+    renderLoads();
+    updateLoadsBadge();
+  }
+}
+
+function deleteLoad(loadId) {
+  allLoads = allLoads.filter(l => l.id !== loadId);
+  saveLoadsToStorage();
+  renderLoads();
+  updateLoadsBadge();
+}
+
+/* =========================================================
+   LOADS RENDERER
+   ========================================================= */
+let loadsFiltered = [];
+let loadsPageSize = 12;
+let loadsCurrentPage = 1;
+
+function getStatusLabel(status) {
+  const map = {
+    'in-progress': '🔄 In Progress',
+    'completed': '✅ Completed',
+    'delayed': '❌ Delayed',
+    'pending': '⏳ Pending'
+  };
+  return map[status] || status;
+}
+
+function renderLoads() {
+  const searchTerm = document.getElementById('loadSearch')?.value?.toLowerCase() || '';
+  const personFilter = document.getElementById('personFilter')?.value || 'all';
+  const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+  
+  // Filter
+  loadsFiltered = allLoads.filter(load => {
+    // Search
+    if (searchTerm) {
+      const match = load.loadNumber.toString().includes(searchTerm) ||
+                    load.description.toLowerCase().includes(searchTerm) ||
+                    load.plot.toLowerCase().includes(searchTerm);
+      if (!match) return false;
+    }
+    // Person
+    if (personFilter !== 'all' && load.person !== personFilter) return false;
+    // Status
+    if (statusFilter !== 'all' && load.status !== statusFilter) return false;
+    return true;
+  });
+  
+  // Sort by due date (soonest first)
+  loadsFiltered.sort((a, b) => {
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+  
+  // Update stats
+  document.getElementById('loadsTotal').textContent = loadsFiltered.length;
+  
+  // Paginate
+  const totalPages = Math.ceil(loadsFiltered.length / loadsPageSize);
+  if (loadsCurrentPage > totalPages) loadsCurrentPage = Math.max(1, totalPages);
+  const start = (loadsCurrentPage - 1) * loadsPageSize;
+  const end = Math.min(start + loadsPageSize, loadsFiltered.length);
+  const pageData = loadsFiltered.slice(start, end);
+  
+  document.getElementById('loadsShowing').textContent = pageData.length;
+  
+  // Render grid
+  const grid = document.getElementById('loadsGrid');
+  if (pageData.length === 0) {
+    grid.innerHTML = `
+      <div class="loads-empty" style="grid-column:1/-1;">
+        <span class="icon">📭</span>
+        No loads found. Try adjusting your filters or add a new load.
+      </div>
+    `;
+  } else {
+    grid.innerHTML = pageData.map(load => `
+      <div class="load-card" data-id="${load.id}">
+        <div class="load-header">
+          <span class="load-number">#${load.loadNumber}</span>
+          <span class="load-status status-${load.status}">${getStatusLabel(load.status)}</span>
+        </div>
+        <div class="load-description">${load.description}</div>
+        <div class="load-details">
+          <span><span class="person-dot" style="background:${PEOPLE.find(p => p.initials === load.person)?.color || '#8993ab'};"></span> ${load.personName}</span>
+          <span>📍 ${load.plot}</span>
+          ${load.dueDate ? `<span>📅 Due: ${new Date(load.dueDate).toLocaleDateString('en-GB')}</span>` : ''}
+        </div>
+        <div class="load-actions">
+          ${load.driveLink ? `<a href="${load.driveLink}" target="_blank" class="drive-link">📁 Drive Folder</a>` : ''}
+          <button class="edit-btn" onclick="editLoadStatus(${load.id})">✏️ Status</button>
+          ${load.status !== 'completed' ? `<button class="complete-btn" onclick="markComplete(${load.id})">✅ Complete</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  // Render pagination
+  const pagination = document.getElementById('loadsPagination');
+  if (totalPages > 1) {
+    pagination.innerHTML = `
+      <button ${loadsCurrentPage === 1 ? 'disabled' : ''} onclick="loadsGoToPage(${loadsCurrentPage - 1})">◀ Prev</button>
+      <span class="page-info">Page <span class="current">${loadsCurrentPage}</span> of ${totalPages}</span>
+      <button ${loadsCurrentPage === totalPages ? 'disabled' : ''} onclick="loadsGoToPage(${loadsCurrentPage + 1})">Next ▶</button>
+    `;
+  } else {
+    pagination.innerHTML = '';
+  }
+}
+
+function loadsGoToPage(page) {
+  const totalPages = Math.ceil(loadsFiltered.length / loadsPageSize);
+  if (page < 1 || page > totalPages) return;
+  loadsCurrentPage = page;
+  renderLoads();
+}
+
+function editLoadStatus(loadId) {
+  const load = allLoads.find(l => l.id === loadId);
+  if (!load) return;
+  const newStatus = prompt(`Current status: ${getStatusLabel(load.status)}\nEnter new status (pending, in-progress, completed, delayed):`, load.status);
+  if (newStatus && ['pending', 'in-progress', 'completed', 'delayed'].includes(newStatus)) {
+    updateLoadStatus(loadId, newStatus);
+  } else if (newStatus !== null) {
+    alert('Invalid status. Use: pending, in-progress, completed, delayed');
+  }
+}
+
+function markComplete(loadId) {
+  if (confirm('Mark this load as completed?')) {
+    updateLoadStatus(loadId, 'completed');
+  }
+}
+
+function updateLoadsBadge() {
+  const badge = document.getElementById('tileLoadsBadge');
+  const pending = allLoads.filter(l => l.status === 'pending' || l.status === 'in-progress').length;
+  if (pending > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = `${pending} active`;
+    badge.className = 'tile-badge';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+/* =========================================================
+   HELPER FUNCTIONS (from original code)
    ========================================================= */
 function parseUKDate(str){
   if(!str) return null;
@@ -1732,7 +2113,6 @@ function statusLabelText(status, code){
   return '';
 }
 
-/* ===== PROJECTED DIAL ===== */
 function drawProjectedDial(actual, projected, target, colorClass){
   const size=200, stroke=16, r=(size-stroke)/2, cx=size/2, cy=size/2;
   const circumference = 2*Math.PI*r;
@@ -1793,7 +2173,6 @@ function drawProjectedDial(actual, projected, target, colorClass){
   `;
 }
 
-/* ===== MINI TREND PROJECTED ===== */
 function drawMiniTrendProjected(weeks, person, stairEntries, holidayIndex, today){
   const bars = weeks.map(w => {
     let actual = 0, target = 0;
@@ -1847,7 +2226,6 @@ function drawMiniTrendProjected(weeks, person, stairEntries, holidayIndex, today
   `;
 }
 
-/* ===== RENDER TEAM SUMMARY ===== */
 function renderTeamSummary(leaderboardData){
   const container = document.getElementById('teamSummary');
   if(!container) return;
@@ -1897,7 +2275,6 @@ function renderTeamSummary(leaderboardData){
   `;
 }
 
-/* ===== RENDER HOLIDAY CALENDAR ===== */
 function renderHolidayCalendar(holidayIndex, month, year) {
   const container = document.getElementById('holidayGrid');
   const monthLabel = document.getElementById('monthLabel');
@@ -2259,6 +2636,7 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
   const detailPage = document.getElementById('detailPage');
   document.getElementById('landingPage').classList.remove('active');
   document.getElementById('kpiPage').classList.remove('active');
+  document.getElementById('loadsPage').classList.remove('active');
   document.getElementById('holidaysPage').classList.remove('active');
   document.getElementById('forecastPage').classList.remove('active');
   detailPage.classList.add('active');
@@ -2502,6 +2880,7 @@ function showDayDetailPage(person, date, stairEntries, holidayIndex){
 const VIEW_IDS = {
   landing: 'landingPage',
   kpi: 'kpiPage',
+  loads: 'loadsPage',
   detail: 'detailPage',
   day: 'dayDetailPage',
   holidays: 'holidaysPage',
@@ -2518,6 +2897,11 @@ function setActiveView(view){
 }
 
 document.getElementById('tileKpi').addEventListener('click', ()=> setActiveView('kpi'));
+document.getElementById('tileLoads').addEventListener('click', ()=>{
+  setActiveView('loads');
+  renderLoads();
+  updateLoadsBadge();
+});
 document.getElementById('tileHolidays').addEventListener('click', ()=>{
   setActiveView('holidays');
   if(window._holidayIndex){
@@ -2535,6 +2919,8 @@ document.getElementById('tileErrors').addEventListener('click', ()=>{
   setActiveView('errors');
   if(window._errorEntries) renderErrorTrends(window._errorEntries, window._today);
 });
+
+document.getElementById('backToLandingFromLoads').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromErrors').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromKpi').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromHolidays').addEventListener('click', ()=> setActiveView('landing'));
@@ -2552,6 +2938,84 @@ document.getElementById('nextMonth').addEventListener('click', function(){
   if(window._holidayMonth > 11){ window._holidayMonth = 0; window._holidayYear++; }
   renderHolidayCalendar(window._holidayIndex, window._holidayMonth, window._holidayYear);
 });
+
+/* =========================================================
+   LOADS EVENT LISTENERS
+   ========================================================= */
+// Add Load button
+document.getElementById('addLoadBtn').addEventListener('click', function() {
+  document.getElementById('addLoadModal').classList.add('active');
+  // Populate person dropdown
+  const select = document.getElementById('newLoadPerson');
+  select.innerHTML = '<option value="">Select person...</option>';
+  PEOPLE.forEach(p => {
+    select.innerHTML += `<option value="${p.initials}">${p.name}</option>`;
+  });
+  // Set default due date to 2 weeks from now
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 14);
+  document.getElementById('newLoadDueDate').value = dueDate.toISOString().split('T')[0];
+});
+
+// Cancel button
+document.getElementById('cancelLoadBtn').addEventListener('click', function() {
+  document.getElementById('addLoadModal').classList.remove('active');
+});
+
+// Close modal on overlay click
+document.getElementById('addLoadModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    this.classList.remove('active');
+  }
+});
+
+// Submit new load
+document.getElementById('submitLoadBtn').addEventListener('click', function() {
+  const loadNumber = document.getElementById('newLoadNumber').value.trim();
+  const description = document.getElementById('newLoadDescription').value.trim();
+  const person = document.getElementById('newLoadPerson').value;
+  const status = document.getElementById('newLoadStatus').value;
+  const plot = document.getElementById('newLoadPlot').value.trim() || 'Unassigned';
+  const driveLink = document.getElementById('newLoadDriveLink').value.trim();
+  const dueDate = document.getElementById('newLoadDueDate').value;
+  
+  if (!loadNumber || !description || !person) {
+    alert('Please fill in Load Number, Description, and Person');
+    return;
+  }
+  
+  const personObj = PEOPLE.find(p => p.initials === person);
+  
+  addLoad({
+    loadNumber: loadNumber,
+    description: description,
+    person: person,
+    personName: personObj ? personObj.name : person,
+    status: status,
+    plot: plot,
+    driveLink: driveLink,
+    dueDate: dueDate
+  });
+  
+  // Clear form
+  document.getElementById('newLoadNumber').value = '';
+  document.getElementById('newLoadDescription').value = '';
+  document.getElementById('newLoadPlot').value = '';
+  document.getElementById('newLoadDriveLink').value = '';
+  
+  document.getElementById('addLoadModal').classList.remove('active');
+  
+  // If we're on the loads page, refresh
+  if (window._currentView === 'loads') {
+    renderLoads();
+    updateLoadsBadge();
+  }
+});
+
+// Load search/filter events
+document.getElementById('loadSearch').addEventListener('input', renderLoads);
+document.getElementById('personFilter').addEventListener('change', renderLoads);
+document.getElementById('statusFilter').addEventListener('change', renderLoads);
 
 /* =========================================================
    MAIN LOAD
@@ -2584,6 +3048,10 @@ async function loadAndRender(){
     window._forecastEntries = forecastEntries;
     window._errorEntries = errorEntries;
     window._today = today;
+    
+    // Load loads from storage
+    loadLoadsFromStorage();
+    updateLoadsBadge();
 
     const dialGrid = document.getElementById('dialGrid');
     dialGrid.innerHTML = '';
