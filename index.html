@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,6 +36,44 @@
     margin-bottom:16px;
     flex-wrap:wrap;
     gap:8px;
+  }
+  /* ===== BRANDING ===== */
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-logo{
+    width:40px;
+    height:40px;
+    background:linear-gradient(135deg, #4a90e2, #2ecc71);
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:900;
+    font-size:1.2rem;
+    color:#fff;
+    letter-spacing:-0.5px;
+    flex-shrink:0;
+  }
+  .brand-name{
+    font-size:1.3rem;
+    font-weight:700;
+    letter-spacing:1px;
+    background:linear-gradient(90deg, #4a90e2, #2ecc71);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+  .brand-name .sub{
+    font-size:0.6rem;
+    font-weight:400;
+    color:var(--muted);
+    -webkit-text-fill-color:var(--muted);
+    letter-spacing:0.5px;
+    display:block;
+    margin-top:-2px;
   }
   h1{
     font-size:1.5rem;
@@ -755,7 +792,15 @@
 <body>
 
 <header>
-  <h1>🏢 Production Office</h1>
+  <!-- ===== BRANDING ===== -->
+  <div class="brand">
+    <div class="brand-logo">SC</div>
+    <div class="brand-name">
+      STAIRCRAFT
+      <span class="sub">PRODUCTION OFFICE</span>
+    </div>
+  </div>
+  <!-- ===== END BRANDING ===== -->
   <div class="status">
     <span class="dot"></span><span id="lastUpdated">Loading…</span>
   </div>
@@ -767,7 +812,7 @@
 <!-- ============ LANDING PAGE ============ -->
 <div id="landingPage" class="page-view">
   <div class="landing-title">
-    <h1>PRODUCTION OFFICE</h1>
+    <h1>📊 PRODUCTION OFFICE</h1>
     <p>Choose a section</p>
   </div>
   <div id="lookaheadBanner"></div>
