@@ -211,7 +211,6 @@
     border-radius:50%;
   }
 
-  /* ===== LANDING PAGE ===== */
   .landing-title{
     text-align:center;
     margin-bottom:28px;
@@ -355,6 +354,24 @@
     color:var(--text);
     font-weight:600;
   }
+  .loads-controls .drive-auth-status{
+    font-size:0.7rem;
+    padding:4px 12px;
+    border-radius:999px;
+    background:var(--section-bg);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .loads-controls .drive-auth-status .status-dot{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    display:inline-block;
+  }
+  .loads-controls .drive-auth-status .status-dot.connected{background:var(--green);}
+  .loads-controls .drive-auth-status .status-dot.disconnected{background:var(--red);}
+  .loads-controls .drive-auth-status .status-dot.searching{background:var(--amber);animation:pulse 1s infinite;}
 
   .loads-grid{
     display:grid;
@@ -369,7 +386,6 @@
     padding:14px 16px;
     transition:all 0.25s ease;
     position:relative;
-    cursor:pointer;
   }
   .load-card:hover{
     transform:translateY(-3px);
@@ -380,7 +396,7 @@
     display:flex;
     justify-content:space-between;
     align-items:flex-start;
-    margin-bottom:8px;
+    margin-bottom:6px;
   }
   .load-card .load-number{
     font-weight:700;
@@ -397,7 +413,6 @@
   }
   .load-card .load-status.status-in-progress{background:rgba(52,152,219,0.15);color:var(--blue);}
   .load-card .load-status.status-completed{background:rgba(46,204,113,0.15);color:var(--green);}
-  .load-card .load-status.status-delayed{background:rgba(231,76,60,0.15);color:var(--red);}
   .load-card .load-status.status-pending{background:rgba(245,166,35,0.15);color:var(--amber);}
   
   .load-card .load-details{
@@ -419,11 +434,10 @@
     border-radius:50%;
     display:inline-block;
   }
-  .load-card .load-description{
-    font-size:0.85rem;
-    color:var(--text);
+  .load-card .load-stairs{
+    font-size:0.75rem;
+    color:var(--muted);
     margin-bottom:8px;
-    line-height:1.4;
   }
   .load-card .load-actions{
     display:flex;
@@ -431,11 +445,11 @@
     flex-wrap:wrap;
     padding-top:8px;
     border-top:1px solid var(--card-border);
+    align-items:center;
   }
-  .load-card .load-actions a,
-  .load-card .load-actions button{
-    font-size:0.7rem;
-    padding:4px 12px;
+  .load-card .load-actions .drive-btn{
+    font-size:0.75rem;
+    padding:5px 14px;
     border-radius:6px;
     border:none;
     cursor:pointer;
@@ -443,31 +457,32 @@
     text-decoration:none;
     display:inline-flex;
     align-items:center;
-    gap:4px;
-  }
-  .load-card .load-actions .drive-link{
+    gap:5px;
     background:rgba(0,169,157,0.12);
     color:var(--teal);
   }
-  .load-card .load-actions .drive-link:hover{
+  .load-card .load-actions .drive-btn:hover{
     background:var(--teal);
     color:#fff;
   }
-  .load-card .load-actions .edit-btn{
-    background:var(--card-border);
-    color:var(--text);
+  .load-card .load-actions .drive-btn.searching{
+    opacity:0.6;
+    cursor:wait;
   }
-  .load-card .load-actions .edit-btn:hover{
-    background:var(--blue);
-    color:#fff;
+  .load-card .load-actions .drive-btn .spinner{
+    display:inline-block;
+    animation:spin 1s linear infinite;
   }
-  .load-card .load-actions .complete-btn{
-    background:rgba(46,204,113,0.12);
+  @keyframes spin{
+    0%{transform:rotate(0deg);}
+    100%{transform:rotate(360deg);}
+  }
+  .load-card .load-actions .drive-link-found{
+    font-size:0.65rem;
     color:var(--green);
-  }
-  .load-card .load-actions .complete-btn:hover{
-    background:var(--green);
-    color:#fff;
+    display:flex;
+    align-items:center;
+    gap:4px;
   }
 
   .loads-pagination{
@@ -516,7 +531,7 @@
     margin-bottom:12px;
   }
 
-  /* ===== QUICK ADD LOAD MODAL ===== */
+  /* ===== MODAL ===== */
   .modal-overlay{
     position:fixed;
     top:0;
@@ -616,9 +631,6 @@
   }
 
   /* ===== REST OF EXISTING STYLES ===== */
-  /* ... (keeping all your existing styles here) ... */
-  /* I'll include the full styles in the complete file */
-
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
@@ -1319,7 +1331,7 @@
     <div class="nav-tile" id="tileLoads">
       <div class="tile-icon">📦</div>
       <div class="tile-label">LOADS</div>
-      <div class="tile-sub">Track all loads with Drive links</div>
+      <div class="tile-sub">Track all loads with auto Drive search</div>
       <div class="tile-badge" id="tileLoadsBadge" style="display:none;"></div>
     </div>
     <div class="nav-tile" id="tileHolidays">
@@ -1357,13 +1369,13 @@
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromLoads">← Production Office</button>
     <h2>📦 Loads</h2>
-    <button class="back-btn" id="addLoadBtn" style="background:var(--teal);color:#fff;">+ Add Load</button>
+    <button class="back-btn" id="refreshLoadsBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
   </div>
   
   <div id="loadsContainer">
     <div class="loads-controls">
       <div class="loads-search">
-        <input type="text" id="loadSearch" placeholder="🔍 Search by load number, description, or plot..." />
+        <input type="text" id="loadSearch" placeholder="🔍 Search by load number..." />
       </div>
       <div class="loads-filters">
         <select id="personFilter">
@@ -1373,62 +1385,19 @@
           <option value="all">📊 All Status</option>
           <option value="in-progress">🔄 In Progress</option>
           <option value="completed">✅ Completed</option>
-          <option value="delayed">❌ Delayed</option>
           <option value="pending">⏳ Pending</option>
         </select>
       </div>
       <div class="loads-stats">
         Showing <span class="highlight" id="loadsShowing">0</span> of <span class="highlight" id="loadsTotal">0</span> loads
       </div>
+      <div class="drive-auth-status" id="driveAuthStatus">
+        <span class="status-dot disconnected" id="driveStatusDot"></span>
+        <span id="driveStatusText">Drive: Disconnected</span>
+      </div>
     </div>
     <div class="loads-grid" id="loadsGrid"></div>
     <div class="loads-pagination" id="loadsPagination"></div>
-  </div>
-</div>
-
-<!-- ============ ADD LOAD MODAL ============ -->
-<div class="modal-overlay" id="addLoadModal">
-  <div class="modal">
-    <h3>📦 Add New Load</h3>
-    <div class="form-group">
-      <label>Load Number</label>
-      <input type="text" id="newLoadNumber" placeholder="e.g. 1234" />
-    </div>
-    <div class="form-group">
-      <label>Description</label>
-      <input type="text" id="newLoadDescription" placeholder="Brief description of the load" />
-    </div>
-    <div class="form-group">
-      <label>Person</label>
-      <select id="newLoadPerson">
-        <option value="">Select person...</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Status</label>
-      <select id="newLoadStatus">
-        <option value="pending">⏳ Pending</option>
-        <option value="in-progress">🔄 In Progress</option>
-        <option value="completed">✅ Completed</option>
-        <option value="delayed">❌ Delayed</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Plot</label>
-      <input type="text" id="newLoadPlot" placeholder="e.g. Plot 42" />
-    </div>
-    <div class="form-group">
-      <label>Google Drive Link</label>
-      <input type="url" id="newLoadDriveLink" placeholder="https://drive.google.com/..." />
-    </div>
-    <div class="form-group">
-      <label>Due Date</label>
-      <input type="date" id="newLoadDueDate" />
-    </div>
-    <div class="form-actions">
-      <button class="btn-cancel" id="cancelLoadBtn">Cancel</button>
-      <button class="btn-submit" id="submitLoadBtn">Add Load</button>
-    </div>
   </div>
 </div>
 
@@ -1540,7 +1509,7 @@
   </div>
 </div>
 
-<footer>Live from Google Sheets · refreshes automatically</footer>
+<footer>Live from Google Sheets · Drive auto-search enabled</footer>
 
 <script>
 /* =========================================================
@@ -1586,106 +1555,275 @@ const FORECAST_WEEKS = 8;
 const TREND_WEEKS = 4;
 
 /* =========================================================
-   LOADS SYSTEM - Local Storage (for demo data)
+   GOOGLE DRIVE API - AUTO SEARCH
    ========================================================= */
-let allLoads = [];
+// ===== IMPORTANT: REPLACE WITH YOUR CLIENT ID =====
+const CLIENT_ID = '821115912364-ufeqbg5crh9g9m92e9tsstndkqqiri0e.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyB881el5XgUpTbl2fXDaia7qg2a6L64qCA';
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 
-// Load from localStorage or use default demo data
-function loadLoadsFromStorage() {
-  const stored = localStorage.getItem('staircraft_loads');
-  if (stored) {
-    try {
-      allLoads = JSON.parse(stored);
+let gapiInitialized = false;
+let gapiSignedIn = false;
+let driveSearchCache = {}; // Cache found links
+
+// Status indicators
+const driveStatusDot = document.getElementById('driveStatusDot');
+const driveStatusText = document.getElementById('driveStatusText');
+
+function updateDriveStatus(status, text) {
+  driveStatusDot.className = 'status-dot ' + status;
+  driveStatusText.textContent = 'Drive: ' + text;
+}
+
+// Load Google API client
+function loadGoogleAPI() {
+  return new Promise((resolve, reject) => {
+    if (typeof gapi !== 'undefined' && gapi.client) {
+      resolve();
       return;
-    } catch(e) {}
+    }
+    const script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.onload = () => {
+      resolve();
+    };
+    script.onerror = () => {
+      reject(new Error('Failed to load Google API'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+// Initialize GAPI client
+async function initGapiClient() {
+  try {
+    await loadGoogleAPI();
+    await new Promise((resolve, reject) => {
+      gapi.load('client:auth2', {
+        callback: resolve,
+        onerror: reject
+      });
+    });
+    
+    await gapi.client.init({
+      apiKey: API_KEY,
+      clientId: CLIENT_ID,
+      discoveryDocs: [DISCOVERY_DOC],
+      scope: SCOPES
+    });
+    
+    gapiInitialized = true;
+    
+    // Check sign-in status
+    const auth = gapi.auth2.getAuthInstance();
+    gapiSignedIn = auth.isSignedIn.get();
+    
+    if (gapiSignedIn) {
+      updateDriveStatus('connected', 'Connected');
+    } else {
+      updateDriveStatus('disconnected', 'Not signed in');
+      // Try to sign in silently
+      try {
+        await auth.signIn({ prompt: 'none' });
+        gapiSignedIn = true;
+        updateDriveStatus('connected', 'Connected');
+      } catch (e) {
+        // User needs to sign in manually
+        updateDriveStatus('disconnected', 'Sign in required');
+      }
+    }
+    
+    // Listen for sign-in changes
+    auth.isSignedIn.listen((isSignedIn) => {
+      gapiSignedIn = isSignedIn;
+      if (isSignedIn) {
+        updateDriveStatus('connected', 'Connected');
+      } else {
+        updateDriveStatus('disconnected', 'Signed out');
+      }
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to init GAPI:', error);
+    updateDriveStatus('disconnected', 'Error: ' + error.message);
+    return false;
   }
-  // Default demo loads
-  allLoads = [
-    { id: 1, loadNumber: '1001', description: 'Oak staircase - Main house', person: 'SF', personName: 'Simon Faulks', status: 'in-progress', plot: 'Plot 42', driveLink: 'https://drive.google.com/drive/folders/example1', dueDate: '2026-09-15', dateAdded: '2026-09-01' },
-    { id: 2, loadNumber: '1002', description: 'Walnut handrail - West wing', person: 'LA', personName: 'Liam Aiello', status: 'completed', plot: 'Plot 18', driveLink: 'https://drive.google.com/drive/folders/example2', dueDate: '2026-09-10', dateAdded: '2026-08-28' },
-    { id: 3, loadNumber: '1003', description: 'Spiral staircase - Folly', person: 'AS', personName: 'Adam Stanislawski', status: 'delayed', plot: 'Plot 7', driveLink: 'https://drive.google.com/drive/folders/example3', dueDate: '2026-09-05', dateAdded: '2026-08-25' },
-    { id: 4, loadNumber: '1004', description: 'Birch ply risers - Kitchen', person: 'DF', personName: 'Dominika Formanowicz', status: 'pending', plot: 'Plot 23', driveLink: '', dueDate: '2026-09-25', dateAdded: '2026-09-02' },
-    { id: 5, loadNumber: '1005', description: 'Ash treads - Garden room', person: 'SF', personName: 'Simon Faulks', status: 'in-progress', plot: 'Plot 42', driveLink: 'https://drive.google.com/drive/folders/example5', dueDate: '2026-09-20', dateAdded: '2026-09-01' },
-    { id: 6, loadNumber: '1006', description: 'Oak newel posts - Main staircase', person: 'LA', personName: 'Liam Aiello', status: 'completed', plot: 'Plot 18', driveLink: 'https://drive.google.com/drive/folders/example6', dueDate: '2026-09-08', dateAdded: '2026-08-30' },
-    { id: 7, loadNumber: '1007', description: 'Mahogany handrail - Library', person: 'AS', personName: 'Adam Stanislawski', status: 'pending', plot: 'Plot 7', driveLink: '', dueDate: '2026-10-01', dateAdded: '2026-09-03' },
-    { id: 8, loadNumber: '1008', description: 'Steel stringers - Mezzanine', person: 'DF', personName: 'Dominika Formanowicz', status: 'in-progress', plot: 'Plot 23', driveLink: 'https://drive.google.com/drive/folders/example8', dueDate: '2026-09-18', dateAdded: '2026-09-01' },
-  ];
-  saveLoadsToStorage();
 }
 
-function saveLoadsToStorage() {
-  localStorage.setItem('staircraft_loads', JSON.stringify(allLoads));
-}
-
-function getNextLoadId() {
-  const maxId = allLoads.reduce((max, l) => Math.max(max, l.id), 0);
-  return maxId + 1;
-}
-
-function addLoad(loadData) {
-  const newLoad = {
-    id: getNextLoadId(),
-    ...loadData,
-    dateAdded: new Date().toISOString().split('T')[0]
-  };
-  allLoads.push(newLoad);
-  saveLoadsToStorage();
-  renderLoads();
-  updateLoadsBadge();
-  return newLoad;
-}
-
-function updateLoadStatus(loadId, newStatus) {
-  const load = allLoads.find(l => l.id === loadId);
-  if (load) {
-    load.status = newStatus;
-    saveLoadsToStorage();
-    renderLoads();
-    updateLoadsBadge();
+// Search Drive for a folder matching the load number
+async function searchDriveForLoad(loadNumber) {
+  if (!gapiInitialized || !gapiSignedIn) {
+    // Try to sign in
+    try {
+      const auth = gapi.auth2.getAuthInstance();
+      await auth.signIn();
+      gapiSignedIn = true;
+      updateDriveStatus('connected', 'Connected');
+    } catch (e) {
+      updateDriveStatus('disconnected', 'Sign in needed');
+      return null;
+    }
+  }
+  
+  try {
+    updateDriveStatus('searching', 'Searching...');
+    
+    const response = await gapi.client.drive.files.list({
+      q: `name contains '${loadNumber}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name, webViewLink)',
+      pageSize: 10
+    });
+    
+    const folders = response.result.files || [];
+    
+    if (folders.length > 0) {
+      // Return the first matching folder
+      const folder = folders[0];
+      driveSearchCache[loadNumber] = folder.webViewLink;
+      updateDriveStatus('connected', 'Connected');
+      return folder.webViewLink;
+    } else {
+      updateDriveStatus('connected', 'Connected');
+      return null;
+    }
+  } catch (error) {
+    console.error('Drive search error:', error);
+    updateDriveStatus('connected', 'Connected');
+    return null;
   }
 }
 
-function deleteLoad(loadId) {
-  allLoads = allLoads.filter(l => l.id !== loadId);
-  saveLoadsToStorage();
-  renderLoads();
-  updateLoadsBadge();
+// Sign in button (shown when not signed in)
+function showDriveSignIn() {
+  if (gapiInitialized) {
+    const auth = gapi.auth2.getAuthInstance();
+    auth.signIn().then(() => {
+      gapiSignedIn = true;
+      updateDriveStatus('connected', 'Connected');
+      renderLoads(); // Refresh to show Drive buttons
+    }).catch(() => {
+      updateDriveStatus('disconnected', 'Sign in cancelled');
+    });
+  }
 }
+
+// Click on Drive status to sign in
+document.getElementById('driveAuthStatus').addEventListener('click', function() {
+  if (!gapiSignedIn) {
+    showDriveSignIn();
+  }
+});
 
 /* =========================================================
-   LOADS RENDERER
+   LOADS SYSTEM - From Google Sheets
    ========================================================= */
+let loadItems = [];
 let loadsFiltered = [];
 let loadsPageSize = 12;
 let loadsCurrentPage = 1;
 
-function getStatusLabel(status) {
-  const map = {
-    'in-progress': '🔄 In Progress',
-    'completed': '✅ Completed',
-    'delayed': '❌ Delayed',
-    'pending': '⏳ Pending'
-  };
-  return map[status] || status;
+// Parse loads from the tracking sheet rows
+function parseLoadsFromSheet(stairEntries, forecastEntries) {
+  // Combine completed and forecast entries
+  const allEntries = [...stairEntries, ...forecastEntries];
+  const loadMap = {};
+  
+  allEntries.forEach(entry => {
+    // Use the delivery date (Column E) as the due date
+    const dueDate = entry.deliveryDate ? entry.deliveryDate.toISOString().split('T')[0] : null;
+    
+    // Generate a load number from the stairs count or use a unique identifier
+    // Since we don't have a specific load number column, we'll use the stairs count + date
+    const loadNumber = entry.stairs || 'N/A';
+    const key = loadNumber + '_' + (dueDate || '');
+    
+    // Determine status
+    let status = 'pending';
+    if (entry.initials) {
+      // Check if it's in the completed array (has a completed tick)
+      const isCompleted = stairEntries.some(s => 
+        s.initials === entry.initials && 
+        s.date === entry.date && 
+        s.stairs === entry.stairs &&
+        s.deliveryDate === entry.deliveryDate
+      );
+      status = isCompleted ? 'completed' : 'in-progress';
+    }
+    
+    if (!loadMap[key]) {
+      loadMap[key] = {
+        loadNumber: loadNumber,
+        stairs: entry.stairs,
+        person: entry.initials || '',
+        personName: entry.initials ? PEOPLE.find(p => p.initials === entry.initials)?.name || entry.initials : 'Unassigned',
+        status: status,
+        dueDate: dueDate,
+        date: entry.date ? entry.date.toISOString().split('T')[0] : null
+      };
+    }
+  });
+  
+  return Object.values(loadMap);
 }
 
+// Get saved Drive links from localStorage
+function getSavedDriveLinks() {
+  try {
+    return JSON.parse(localStorage.getItem('driveLinks') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+// Save Drive link to localStorage
+function saveDriveLink(loadNumber, link) {
+  const links = getSavedDriveLinks();
+  links[loadNumber] = link;
+  localStorage.setItem('driveLinks', JSON.stringify(links));
+}
+
+// Get Drive link for a load (cached or search)
+async function getDriveLink(loadNumber) {
+  // Check cache first
+  if (driveSearchCache[loadNumber]) {
+    return driveSearchCache[loadNumber];
+  }
+  
+  // Check saved links
+  const savedLinks = getSavedDriveLinks();
+  if (savedLinks[loadNumber]) {
+    driveSearchCache[loadNumber] = savedLinks[loadNumber];
+    return savedLinks[loadNumber];
+  }
+  
+  // Search Drive
+  const link = await searchDriveForLoad(loadNumber);
+  if (link) {
+    saveDriveLink(loadNumber, link);
+  }
+  return link;
+}
+
+/* =========================================================
+   RENDER LOADS
+   ========================================================= */
 function renderLoads() {
   const searchTerm = document.getElementById('loadSearch')?.value?.toLowerCase() || '';
   const personFilter = document.getElementById('personFilter')?.value || 'all';
   const statusFilter = document.getElementById('statusFilter')?.value || 'all';
   
   // Filter
-  loadsFiltered = allLoads.filter(load => {
-    // Search
+  loadsFiltered = loadItems.filter(load => {
+    // Search by load number
     if (searchTerm) {
-      const match = load.loadNumber.toString().includes(searchTerm) ||
-                    load.description.toLowerCase().includes(searchTerm) ||
-                    load.plot.toLowerCase().includes(searchTerm);
-      if (!match) return false;
+      const loadNumStr = load.loadNumber.toString();
+      if (!loadNumStr.includes(searchTerm)) return false;
     }
-    // Person
+    // Person filter
     if (personFilter !== 'all' && load.person !== personFilter) return false;
-    // Status
+    // Status filter
     if (statusFilter !== 'all' && load.status !== statusFilter) return false;
     return true;
   });
@@ -1715,29 +1853,54 @@ function renderLoads() {
     grid.innerHTML = `
       <div class="loads-empty" style="grid-column:1/-1;">
         <span class="icon">📭</span>
-        No loads found. Try adjusting your filters or add a new load.
+        No loads found. Try adjusting your filters or add loads to the Google Sheet.
       </div>
     `;
   } else {
-    grid.innerHTML = pageData.map(load => `
-      <div class="load-card" data-id="${load.id}">
-        <div class="load-header">
-          <span class="load-number">#${load.loadNumber}</span>
-          <span class="load-status status-${load.status}">${getStatusLabel(load.status)}</span>
+    grid.innerHTML = pageData.map((load, index) => {
+      const statusLabels = {
+        'in-progress': '🔄 In Progress',
+        'completed': '✅ Completed',
+        'pending': '⏳ Pending'
+      };
+      const statusClass = load.status || 'pending';
+      const personColor = PEOPLE.find(p => p.initials === load.person)?.color || '#8993ab';
+      const loadNum = load.loadNumber;
+      
+      // Check if we have a Drive link
+      const hasLink = driveSearchCache[loadNum] || getSavedDriveLinks()[loadNum];
+      
+      return `
+        <div class="load-card" data-load="${loadNum}" data-index="${index}">
+          <div class="load-header">
+            <span class="load-number">#${loadNum}</span>
+            <span class="load-status status-${statusClass}">${statusLabels[statusClass] || statusClass}</span>
+          </div>
+          <div class="load-details">
+            <span><span class="person-dot" style="background:${personColor};"></span> ${load.personName || 'Unassigned'}</span>
+            ${load.dueDate ? `<span>📅 Due: ${new Date(load.dueDate).toLocaleDateString('en-GB')}</span>` : ''}
+          </div>
+          <div class="load-stairs">
+            ${load.stairs ? `📊 ${load.stairs} stairs` : ''}
+          </div>
+          <div class="load-actions">
+            <button class="drive-btn" data-load="${loadNum}" id="driveBtn_${loadNum}">
+              ${hasLink ? '📁 Open Drive Folder' : '🔍 Find in Drive'}
+            </button>
+            ${hasLink ? `<span class="drive-link-found">✅ Link saved</span>` : ''}
+          </div>
         </div>
-        <div class="load-description">${load.description}</div>
-        <div class="load-details">
-          <span><span class="person-dot" style="background:${PEOPLE.find(p => p.initials === load.person)?.color || '#8993ab'};"></span> ${load.personName}</span>
-          <span>📍 ${load.plot}</span>
-          ${load.dueDate ? `<span>📅 Due: ${new Date(load.dueDate).toLocaleDateString('en-GB')}</span>` : ''}
-        </div>
-        <div class="load-actions">
-          ${load.driveLink ? `<a href="${load.driveLink}" target="_blank" class="drive-link">📁 Drive Folder</a>` : ''}
-          <button class="edit-btn" onclick="editLoadStatus(${load.id})">✏️ Status</button>
-          ${load.status !== 'completed' ? `<button class="complete-btn" onclick="markComplete(${load.id})">✅ Complete</button>` : ''}
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
+    
+    // Attach Drive button events
+    document.querySelectorAll('.drive-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const loadNum = this.dataset.load;
+        handleDriveClick(loadNum, this);
+      });
+    });
   }
   
   // Render pagination
@@ -1760,26 +1923,73 @@ function loadsGoToPage(page) {
   renderLoads();
 }
 
-function editLoadStatus(loadId) {
-  const load = allLoads.find(l => l.id === loadId);
-  if (!load) return;
-  const newStatus = prompt(`Current status: ${getStatusLabel(load.status)}\nEnter new status (pending, in-progress, completed, delayed):`, load.status);
-  if (newStatus && ['pending', 'in-progress', 'completed', 'delayed'].includes(newStatus)) {
-    updateLoadStatus(loadId, newStatus);
-  } else if (newStatus !== null) {
-    alert('Invalid status. Use: pending, in-progress, completed, delayed');
+async function handleDriveClick(loadNum, button) {
+  // Check if we already have a link
+  const savedLinks = getSavedDriveLinks();
+  if (savedLinks[loadNum]) {
+    window.open(savedLinks[loadNum], '_blank');
+    return;
   }
-}
-
-function markComplete(loadId) {
-  if (confirm('Mark this load as completed?')) {
-    updateLoadStatus(loadId, 'completed');
+  
+  if (driveSearchCache[loadNum]) {
+    window.open(driveSearchCache[loadNum], '_blank');
+    return;
+  }
+  
+  // Not signed in?
+  if (!gapiSignedIn) {
+    showDriveSignIn();
+    // Wait a moment then retry
+    setTimeout(() => {
+      if (gapiSignedIn) {
+        handleDriveClick(loadNum, button);
+      }
+    }, 2000);
+    return;
+  }
+  
+  // Search for it
+  button.textContent = '🔍 Searching...';
+  button.classList.add('searching');
+  button.disabled = true;
+  
+  try {
+    const link = await searchDriveForLoad(loadNum);
+    if (link) {
+      saveDriveLink(loadNum, link);
+      button.textContent = '📁 Open Drive Folder';
+      button.classList.remove('searching');
+      button.disabled = false;
+      window.open(link, '_blank');
+      renderLoads(); // Refresh to show the saved link indicator
+    } else {
+      button.textContent = '❌ Not found';
+      button.classList.remove('searching');
+      button.disabled = false;
+      // Offer to open Drive search
+      const openSearch = confirm(`No folder found for load #${loadNum}.\n\nWould you like to open Google Drive and search for it manually?`);
+      if (openSearch) {
+        window.open(`https://drive.google.com/drive/search?q=${loadNum}`, '_blank');
+      }
+      // Reset button after 3 seconds
+      setTimeout(() => {
+        button.textContent = '🔍 Find in Drive';
+      }, 3000);
+    }
+  } catch (error) {
+    console.error('Drive search error:', error);
+    button.textContent = '❌ Error';
+    button.classList.remove('searching');
+    button.disabled = false;
+    setTimeout(() => {
+      button.textContent = '🔍 Find in Drive';
+    }, 3000);
   }
 }
 
 function updateLoadsBadge() {
   const badge = document.getElementById('tileLoadsBadge');
-  const pending = allLoads.filter(l => l.status === 'pending' || l.status === 'in-progress').length;
+  const pending = loadItems.filter(l => l.status === 'pending' || l.status === 'in-progress').length;
   if (pending > 0) {
     badge.style.display = 'inline-block';
     badge.textContent = `${pending} active`;
@@ -1996,7 +2206,6 @@ function parseStairRows(rows){
     
     if(deliveryDate && !isNaN(stairs) && stairs > 0) {
       const initials = (r[initialsCol]||'').trim().toUpperCase();
-      const personInitials = initials || 'UNASSIGNED';
       
       const completedVal = (r[completedCol] || '').toString().trim().toUpperCase();
       const isCompleted = completedVal === 'TRUE' || completedVal === 'YES' || completedVal === '1' || completedVal === '✓';
@@ -2012,16 +2221,29 @@ function parseStairRows(rows){
       
       const date = parseUKDate(r[dateCol]);
       
-      if(isCompleted && date && initials && PEOPLE.some(p => p.initials === initials)) {
-        completed.push({date, initials, stairs, parts, deliveryDate});
-      } else {
-        forecast.push({
+      // Store ALL entries for loads, not just completed ones
+      if(deliveryDate && !isNaN(stairs) && stairs > 0) {
+        const entry = {
           date: date || null,
           initials: initials || null,
           stairs: stairs,
           parts: parts,
-          deliveryDate: deliveryDate
-        });
+          deliveryDate: deliveryDate,
+          isCompleted: isCompleted
+        };
+        
+        if(isCompleted && date && initials && PEOPLE.some(p => p.initials === initials)) {
+          completed.push({date, initials, stairs, parts, deliveryDate});
+        } else {
+          forecast.push({
+            date: date || null,
+            initials: initials || null,
+            stairs: stairs,
+            parts: parts,
+            deliveryDate: deliveryDate,
+            isCompleted: isCompleted
+          });
+        }
       }
     }
   }
@@ -2942,80 +3164,15 @@ document.getElementById('nextMonth').addEventListener('click', function(){
 /* =========================================================
    LOADS EVENT LISTENERS
    ========================================================= */
-// Add Load button
-document.getElementById('addLoadBtn').addEventListener('click', function() {
-  document.getElementById('addLoadModal').classList.add('active');
-  // Populate person dropdown
-  const select = document.getElementById('newLoadPerson');
-  select.innerHTML = '<option value="">Select person...</option>';
-  PEOPLE.forEach(p => {
-    select.innerHTML += `<option value="${p.initials}">${p.name}</option>`;
-  });
-  // Set default due date to 2 weeks from now
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 14);
-  document.getElementById('newLoadDueDate').value = dueDate.toISOString().split('T')[0];
-});
-
-// Cancel button
-document.getElementById('cancelLoadBtn').addEventListener('click', function() {
-  document.getElementById('addLoadModal').classList.remove('active');
-});
-
-// Close modal on overlay click
-document.getElementById('addLoadModal').addEventListener('click', function(e) {
-  if (e.target === this) {
-    this.classList.remove('active');
-  }
-});
-
-// Submit new load
-document.getElementById('submitLoadBtn').addEventListener('click', function() {
-  const loadNumber = document.getElementById('newLoadNumber').value.trim();
-  const description = document.getElementById('newLoadDescription').value.trim();
-  const person = document.getElementById('newLoadPerson').value;
-  const status = document.getElementById('newLoadStatus').value;
-  const plot = document.getElementById('newLoadPlot').value.trim() || 'Unassigned';
-  const driveLink = document.getElementById('newLoadDriveLink').value.trim();
-  const dueDate = document.getElementById('newLoadDueDate').value;
-  
-  if (!loadNumber || !description || !person) {
-    alert('Please fill in Load Number, Description, and Person');
-    return;
-  }
-  
-  const personObj = PEOPLE.find(p => p.initials === person);
-  
-  addLoad({
-    loadNumber: loadNumber,
-    description: description,
-    person: person,
-    personName: personObj ? personObj.name : person,
-    status: status,
-    plot: plot,
-    driveLink: driveLink,
-    dueDate: dueDate
-  });
-  
-  // Clear form
-  document.getElementById('newLoadNumber').value = '';
-  document.getElementById('newLoadDescription').value = '';
-  document.getElementById('newLoadPlot').value = '';
-  document.getElementById('newLoadDriveLink').value = '';
-  
-  document.getElementById('addLoadModal').classList.remove('active');
-  
-  // If we're on the loads page, refresh
-  if (window._currentView === 'loads') {
-    renderLoads();
-    updateLoadsBadge();
-  }
-});
-
-// Load search/filter events
 document.getElementById('loadSearch').addEventListener('input', renderLoads);
 document.getElementById('personFilter').addEventListener('change', renderLoads);
 document.getElementById('statusFilter').addEventListener('change', renderLoads);
+
+document.getElementById('refreshLoadsBtn').addEventListener('click', function() {
+  renderLoads();
+  this.textContent = '✅ Refreshed!';
+  setTimeout(() => { this.textContent = '🔄 Refresh'; }, 2000);
+});
 
 /* =========================================================
    MAIN LOAD
@@ -3049,9 +3206,31 @@ async function loadAndRender(){
     window._errorEntries = errorEntries;
     window._today = today;
     
-    // Load loads from storage
-    loadLoadsFromStorage();
+    // Generate load items from sheet data
+    loadItems = parseLoadsFromSheet(stairEntries, forecastEntries);
     updateLoadsBadge();
+
+    // Populate person filter dropdown
+    const personFilter = document.getElementById('personFilter');
+    personFilter.innerHTML = '<option value="all">👤 All People</option>';
+    const uniquePersons = [...new Set(loadItems.map(l => l.person).filter(p => p))];
+    uniquePersons.forEach(p => {
+      const person = PEOPLE.find(pp => pp.initials === p);
+      personFilter.innerHTML += `<option value="${p}">${person ? person.name : p}</option>`;
+    });
+
+    // Initialize Drive API
+    if (!gapiInitialized) {
+      try {
+        await initGapiClient();
+      } catch (e) {
+        console.warn('Drive API not initialized:', e);
+        updateDriveStatus('disconnected', 'API not available');
+      }
+    }
+
+    // Render loads
+    renderLoads();
 
     const dialGrid = document.getElementById('dialGrid');
     dialGrid.innerHTML = '';
@@ -3179,7 +3358,19 @@ async function loadAndRender(){
   }
 }
 
-loadAndRender();
+// Initialize Drive API and then load everything
+async function initAndLoad() {
+  // Try to init Drive API first (but don't block if it fails)
+  try {
+    await initGapiClient();
+  } catch (e) {
+    console.warn('Drive API init failed, continuing without Drive:', e);
+  }
+  // Now load the main app
+  await loadAndRender();
+}
+
+initAndLoad();
 setInterval(loadAndRender, REFRESH_MS);
 </script>
 </body>
