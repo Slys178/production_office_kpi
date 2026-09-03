@@ -1666,7 +1666,7 @@ async function searchDriveForLoad(loadNumber) {
     updateDriveStatus('searching', 'Searching...');
 
     const query = `name contains '${loadNumber}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, webViewLink)')}&pageSize=10&key=${API_KEY}`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, webViewLink)')}&pageSize=10&key=${API_KEY}&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`;
 
     const resp = await fetch(url, {
       headers: { Authorization: 'Bearer ' + driveAccessToken }
