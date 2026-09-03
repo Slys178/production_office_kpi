@@ -295,6 +295,7 @@
     100%{opacity:1;}
   }
 
+  /* ===== LOADS SYSTEM STYLES ===== */
   .loads-controls{
     background:var(--card);
     border:1px solid var(--card-border);
@@ -530,6 +531,7 @@
     margin-bottom:12px;
   }
 
+  /* ===== MODAL ===== */
   .modal-overlay{
     position:fixed;
     top:0;
@@ -628,6 +630,7 @@
     background:#008a7e;
   }
 
+  /* ===== REST OF EXISTING STYLES ===== */
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
@@ -1540,12 +1543,11 @@ const PEOPLE = [
   { initials:"DF", name:"Dominika Formanowicz",  holidayName:"Dominika Formanowicz", color:"#e74c3c" }
 ];
 
-// Updated hours with exact start and end times
 const HOURS = {
-  SF: { MonThu: 9,   Fri: 6.5, start: 6.5, end: 16 },
-  LA: { MonThu: 9,   Fri: 6.5, start: 6.5, end: 16 },
-  AS: { MonThu: 9,   Fri: 6.5, start: 6.5, end: 16 },
-  DF: { MonThu: 6,   Fri: 3.5, start: 9.5, end: 16 }
+  SF: { MonThu: 9,   Fri: 6.5 },
+  LA: { MonThu: 9,   Fri: 6.5 },
+  AS: { MonThu: 9,   Fri: 6.5 },
+  DF: { MonThu: 6,   Fri: 3.5 }
 };
 const BASE_RATE = 54 / 9;
 const REFRESH_MS = 3 * 60 * 1000;
@@ -1555,16 +1557,18 @@ const TREND_WEEKS = 4;
 /* =========================================================
    GOOGLE DRIVE API - AUTO SEARCH
    ========================================================= */
+// ===== IMPORTANT: REPLACE WITH YOUR CLIENT ID =====
 const CLIENT_ID = '965947227076-hrls555o1pv7coftc80qng6chgtf0sh7.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDxn2lFqZ0MeJR5ZkZrqpEnauq0j_EYlOI';
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
-let gapiInitialized = false;
-let gapiSignedIn = false;
+let gapiInitialized = false; // "GIS is loaded and ready to request a token", kept for compatibility with existing call sites
+let gapiSignedIn = false;    // "we currently hold a usable access token"
 let driveAccessToken = null;
 let tokenClient = null;
-let driveSearchCache = {};
+let driveSearchCache = {}; // Cache found links
 
+// Status indicators
 const driveStatusDot = document.getElementById('driveStatusDot');
 const driveStatusText = document.getElementById('driveStatusText');
 
@@ -1573,6 +1577,9 @@ function updateDriveStatus(status, text) {
   driveStatusText.textContent = 'Drive: ' + text;
 }
 
+// Load Google Identity Services' script (replaces the old, now-unreliable
+// gapi.auth2 / Google Sign-In library, which depends on a third-party-cookie
+// iframe that modern browsers block by default).
 function loadGoogleIdentityServices() {
   return new Promise((resolve, reject) => {
     if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
@@ -1587,6 +1594,10 @@ function loadGoogleIdentityServices() {
   });
 }
 
+// Initialize the token client. This does NOT sign anyone in yet — it just
+// gets everything ready so a later button click (a real user gesture) can
+// request an access token via a normal OAuth popup, which works reliably
+// regardless of third-party cookie settings.
 async function initGapiClient() {
   try {
     await loadGoogleIdentityServices();
@@ -1618,6 +1629,8 @@ async function initGapiClient() {
   }
 }
 
+// Request an access token via a real popup — must be called from a user
+// gesture (a click), which this always is in this app.
 function requestDriveToken(interactive){
   return new Promise((resolve) => {
     if(!tokenClient){ resolve(false); return; }
@@ -1635,6 +1648,7 @@ function requestDriveToken(interactive){
   });
 }
 
+// Search Drive for a folder matching the load number
 async function searchDriveForLoad(loadNumber) {
   if (!gapiInitialized) {
     updateDriveStatus('disconnected', 'Not ready yet');
@@ -1659,6 +1673,7 @@ async function searchDriveForLoad(loadNumber) {
     });
 
     if (resp.status === 401) {
+      // Token expired — get a fresh one and retry once
       driveAccessToken = null;
       gapiSignedIn = false;
       const gotToken = await requestDriveToken(false);
@@ -1689,11 +1704,12 @@ async function searchDriveForLoad(loadNumber) {
   }
 }
 
+// Sign in button (shown when not signed in)
 function showDriveSignIn() {
   if (gapiInitialized) {
     requestDriveToken(true).then((ok) => {
       if (ok) {
-        renderLoads();
+        renderLoads(); // Refresh to show Drive buttons
       } else {
         updateDriveStatus('disconnected', 'Sign in cancelled');
       }
@@ -1701,6 +1717,7 @@ function showDriveSignIn() {
   }
 }
 
+// Click on Drive status to sign in
 document.getElementById('driveAuthStatus').addEventListener('click', function() {
   if (!gapiSignedIn) {
     showDriveSignIn();
@@ -1708,24 +1725,32 @@ document.getElementById('driveAuthStatus').addEventListener('click', function() 
 });
 
 /* =========================================================
-   LOADS SYSTEM
+   LOADS SYSTEM - From Google Sheets
    ========================================================= */
 let loadItems = [];
 let loadsFiltered = [];
 let loadsPageSize = 12;
 let loadsCurrentPage = 1;
 
+// Parse loads from the tracking sheet rows
 function parseLoadsFromSheet(stairEntries, forecastEntries) {
+  // Combine completed and forecast entries
   const allEntries = [...stairEntries, ...forecastEntries];
   const loadMap = {};
   
   allEntries.forEach(entry => {
+    // Use the delivery date (Column E) as the due date
     const dueDate = entry.deliveryDate ? entry.deliveryDate.toISOString().split('T')[0] : null;
+    
+    // Use the real LOAD No from Column F — fall back to a stairs+date key only
+    // for the rare row where that column is genuinely blank.
     const loadNumber = entry.loadNo && entry.loadNo.trim() ? entry.loadNo.trim() : ('#' + entry.stairs + '_' + (dueDate || ''));
     const key = loadNumber + '_' + (dueDate || '');
     
+    // Determine status
     let status = 'pending';
     if (entry.initials) {
+      // Check if it's in the completed array (has a completed tick)
       const isCompleted = stairEntries.some(s => 
         s.initials === entry.initials && 
         s.date === entry.date && 
@@ -1751,6 +1776,7 @@ function parseLoadsFromSheet(stairEntries, forecastEntries) {
   return Object.values(loadMap);
 }
 
+// Get saved Drive links from localStorage
 function getSavedDriveLinks() {
   try {
     return JSON.parse(localStorage.getItem('driveLinks') || '{}');
@@ -1759,21 +1785,28 @@ function getSavedDriveLinks() {
   }
 }
 
+// Save Drive link to localStorage
 function saveDriveLink(loadNumber, link) {
   const links = getSavedDriveLinks();
   links[loadNumber] = link;
   localStorage.setItem('driveLinks', JSON.stringify(links));
 }
 
+// Get Drive link for a load (cached or search)
 async function getDriveLink(loadNumber) {
+  // Check cache first
   if (driveSearchCache[loadNumber]) {
     return driveSearchCache[loadNumber];
   }
+  
+  // Check saved links
   const savedLinks = getSavedDriveLinks();
   if (savedLinks[loadNumber]) {
     driveSearchCache[loadNumber] = savedLinks[loadNumber];
     return savedLinks[loadNumber];
   }
+  
+  // Search Drive
   const link = await searchDriveForLoad(loadNumber);
   if (link) {
     saveDriveLink(loadNumber, link);
@@ -1781,29 +1814,39 @@ async function getDriveLink(loadNumber) {
   return link;
 }
 
+/* =========================================================
+   RENDER LOADS
+   ========================================================= */
 function renderLoads() {
   const searchTerm = document.getElementById('loadSearch')?.value?.toLowerCase() || '';
   const personFilter = document.getElementById('personFilter')?.value || 'all';
   const statusFilter = document.getElementById('statusFilter')?.value || 'all';
   
+  // Filter
   loadsFiltered = loadItems.filter(load => {
+    // Search by load number
     if (searchTerm) {
       const loadNumStr = load.loadNumber.toString();
       if (!loadNumStr.includes(searchTerm)) return false;
     }
+    // Person filter
     if (personFilter !== 'all' && load.person !== personFilter) return false;
+    // Status filter
     if (statusFilter !== 'all' && load.status !== statusFilter) return false;
     return true;
   });
   
+  // Sort by due date (soonest first)
   loadsFiltered.sort((a, b) => {
     if (!a.dueDate) return 1;
     if (!b.dueDate) return -1;
     return new Date(a.dueDate) - new Date(b.dueDate);
   });
   
+  // Update stats
   document.getElementById('loadsTotal').textContent = loadsFiltered.length;
   
+  // Paginate
   const totalPages = Math.ceil(loadsFiltered.length / loadsPageSize);
   if (loadsCurrentPage > totalPages) loadsCurrentPage = Math.max(1, totalPages);
   const start = (loadsCurrentPage - 1) * loadsPageSize;
@@ -1812,6 +1855,7 @@ function renderLoads() {
   
   document.getElementById('loadsShowing').textContent = pageData.length;
   
+  // Render grid
   const grid = document.getElementById('loadsGrid');
   if (pageData.length === 0) {
     grid.innerHTML = `
@@ -1830,6 +1874,8 @@ function renderLoads() {
       const statusClass = load.status || 'pending';
       const personColor = PEOPLE.find(p => p.initials === load.person)?.color || '#8993ab';
       const loadNum = load.loadNumber;
+      
+      // Check if we have a Drive link
       const hasLink = driveSearchCache[loadNum] || getSavedDriveLinks()[loadNum];
       
       return `
@@ -1855,6 +1901,7 @@ function renderLoads() {
       `;
     }).join('');
     
+    // Attach Drive button events
     document.querySelectorAll('.drive-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -1864,6 +1911,7 @@ function renderLoads() {
     });
   }
   
+  // Render pagination
   const pagination = document.getElementById('loadsPagination');
   if (totalPages > 1) {
     pagination.innerHTML = `
@@ -1884,17 +1932,22 @@ function loadsGoToPage(page) {
 }
 
 async function handleDriveClick(loadNum, button) {
+  // Check if we already have a link
   const savedLinks = getSavedDriveLinks();
   if (savedLinks[loadNum]) {
     window.open(savedLinks[loadNum], '_blank');
     return;
   }
+  
   if (driveSearchCache[loadNum]) {
     window.open(driveSearchCache[loadNum], '_blank');
     return;
   }
+  
+  // Not signed in?
   if (!gapiSignedIn) {
     showDriveSignIn();
+    // Wait a moment then retry
     setTimeout(() => {
       if (gapiSignedIn) {
         handleDriveClick(loadNum, button);
@@ -1902,9 +1955,12 @@ async function handleDriveClick(loadNum, button) {
     }, 2000);
     return;
   }
+  
+  // Search for it
   button.textContent = '🔍 Searching...';
   button.classList.add('searching');
   button.disabled = true;
+  
   try {
     const link = await searchDriveForLoad(loadNum);
     if (link) {
@@ -1913,15 +1969,17 @@ async function handleDriveClick(loadNum, button) {
       button.classList.remove('searching');
       button.disabled = false;
       window.open(link, '_blank');
-      renderLoads();
+      renderLoads(); // Refresh to show the saved link indicator
     } else {
       button.textContent = '❌ Not found';
       button.classList.remove('searching');
       button.disabled = false;
+      // Offer to open Drive search
       const openSearch = confirm(`No folder found for load #${loadNum}.\n\nWould you like to open Google Drive and search for it manually?`);
       if (openSearch) {
         window.open(`https://drive.google.com/drive/search?q=${loadNum}`, '_blank');
       }
+      // Reset button after 3 seconds
       setTimeout(() => {
         button.textContent = '🔍 Find in Drive';
       }, 3000);
@@ -1950,7 +2008,7 @@ function updateLoadsBadge() {
 }
 
 /* =========================================================
-   HELPER FUNCTIONS
+   HELPER FUNCTIONS (from original code)
    ========================================================= */
 function parseUKDate(str){
   if(!str) return null;
@@ -2173,6 +2231,7 @@ function parseStairRows(rows){
       const date = parseUKDate(r[dateCol]);
       const loadNo = loadNoCol > -1 ? (r[loadNoCol]||'').toString().trim().replace(/^#+/, '') : '';
       
+      // Store ALL entries for loads, not just completed ones
       if(deliveryDate && !isNaN(stairs) && stairs > 0) {
         const entry = {
           date: date || null,
@@ -2261,7 +2320,7 @@ function parseErrorRows(rows){
 }
 
 /* =========================================================
-   RENDER FUNCTIONS - UPDATED WITH REAL-TIME PACE
+   RENDER FUNCTIONS
    ========================================================= */
 function fmtDate(d){
   return d.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
@@ -2270,46 +2329,9 @@ function fmtDateShort(d){
   return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 }
 
-// NEW: Calculate what % of the day has passed for a person
-function getDayProgress(initials, date) {
-  const now = new Date();
-  // If the date is not today, return 1 (100%) - we're looking at a past or future day
-  if (!sameDay(now, date)) {
-    return 1;
-  }
-  
-  const day = now.getDay();
-  const isFriday = day === 5;
-  const hour = now.getHours();
-  const minute = now.getMinutes();
-  const currentTime = hour + minute / 60;
-  
-  // Get start and end times for this person
-  const hours = HOURS[initials];
-  if (!hours) return 1;
-  
-  const startHour = hours.start;
-  const endHour = hours.end;
-  
-  // If outside working hours
-  if (currentTime <= startHour) return 0;
-  if (currentTime >= endHour) return 1;
-  
-  const totalHours = endHour - startHour;
-  const hoursWorked = currentTime - startHour;
-  
-  return Math.min(1, Math.max(0, hoursWorked / totalHours));
-}
-
-// NEW: Calculate expected stairs at this point in the day
-function getExpectedStairsNow(person, date, dailyTarget) {
-  const progress = getDayProgress(person.initials, date);
-  return Math.round(dailyTarget * progress);
-}
-
-function statusForProgress(actual, expected) {
-  if(expected === 0) return 'off';
-  const ratio = actual / expected;
+function statusForProgress(actual, projected){
+  if(projected === 0) return 'off';
+  const ratio = actual / projected;
   if(ratio >= 1) return 'over';
   if(ratio >= 0.85) return 'green';
   if(ratio >= 0.6) return 'amber';
@@ -2325,94 +2347,62 @@ function statusLabelText(status, code){
   return '';
 }
 
-// NEW: Dial showing actual vs expected at this exact time
-function drawPaceDial(actual, expected, target, colorClass, initials, date) {
+function drawProjectedDial(actual, projected, target, colorClass){
   const size=200, stroke=16, r=(size-stroke)/2, cx=size/2, cy=size/2;
   const circumference = 2*Math.PI*r;
   
-  // Use the target as the max value for the dial
-  const displayMax = Math.max(target, actual, expected);
-  const maxVal = Math.max(displayMax, target * 1.1);
+  const maxVal = Math.max(target, projected, actual);
+  const displayMax = Math.max(maxVal, target * 1.2);
   
-  const pctActual = Math.min(1, actual / maxVal);
-  const pctExpected = Math.min(1, expected / maxVal);
-  const pctTarget = Math.min(1, target / maxVal);
+  const pctActual = Math.min(1, actual / displayMax);
+  const pctProjected = Math.min(1, projected / displayMax);
+  const pctTarget = Math.min(1, target / displayMax);
   
   const dashActual = circumference * pctActual;
-  const dashExpected = circumference * pctExpected;
+  const dashProjected = circumference * pctProjected;
   
   const colorMap = {green:'#2ecc71', over:'#3498db', amber:'#f5a623', red:'#e74c3c', off:'#8993ab'};
   const color = colorMap[colorClass] || '#4a90e2';
   
-  // Determine status text
   let statusText = '';
   let statusColor = color;
-  const progress = getDayProgress(initials, date);
-  
-  if (progress === 0) {
-    statusText = '⏰ Not started';
+  if(target > 0 && projected >= target) {
+    statusText = '🎯 On track';
+    statusColor = '#2ecc71';
+  } else if(target > 0 && projected < target && projected > 0) {
+    const pctOfTarget = Math.round((projected / target) * 100);
+    if(pctOfTarget >= 85) { statusText = `⚠️ ${pctOfTarget}%`; statusColor = '#f5a623'; }
+    else if(pctOfTarget >= 60) { statusText = `⚠️ ${pctOfTarget}%`; statusColor = '#f5a623'; }
+    else { statusText = `❌ ${pctOfTarget}%`; statusColor = '#e74c3c'; }
+  } else if(target > 0 && projected === 0) {
+    statusText = '📌 No projection';
     statusColor = '#8993ab';
-  } else if (progress >= 1) {
-    // End of day - check if they hit target
-    if (actual >= target) {
-      statusText = '🎯 Target met!';
-      statusColor = '#2ecc71';
-    } else {
-      statusText = `❌ ${Math.round((actual/target)*100)}% of target`;
-      statusColor = '#e74c3c';
-    }
-  } else if (expected === 0) {
-    statusText = '📌 No target';
-    statusColor = '#8993ab';
-  } else {
-    const pctOfExpected = Math.round((actual / expected) * 100);
-    if (pctOfExpected >= 100) {
-      statusText = `🌟 ${pctOfExpected}% ahead!`;
-      statusColor = '#3498db';
-    } else if (pctOfExpected >= 85) {
-      statusText = `✅ ${pctOfExpected}% of pace`;
-      statusColor = '#2ecc71';
-    } else if (pctOfExpected >= 60) {
-      statusText = `⚠️ ${pctOfExpected}% of pace`;
-      statusColor = '#f5a623';
-    } else {
-      statusText = `❌ ${pctOfExpected}% of pace`;
-      statusColor = '#e74c3c';
-    }
   }
-  
-  // Show current time as a percentage on the dial
-  const timeProgress = getDayProgress(initials, date);
   
   return `
     <svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:200px;">
-      <!-- Background ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--card-border)" stroke-width="${stroke}"/>
-      <!-- Expected (faded) ring - where they should be now -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
-        stroke-dasharray="${dashExpected} ${circumference}" stroke-linecap="round"
+        stroke-dasharray="${dashProjected} ${circumference}" stroke-linecap="round"
         opacity="0.25"
         transform="rotate(-90 ${cx} ${cy})"/>
-      <!-- Actual (solid) ring - where they actually are -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
         stroke-dasharray="${dashActual} ${circumference}" stroke-linecap="round"
         transform="rotate(-90 ${cx} ${cy})"/>
-      <!-- Target marker (end of day target) -->
       <line x1="${cx + (r-4) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y1="${cy - (r-4) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
             x2="${cx + (r+6) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y2="${cy - (r+6) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-            stroke="var(--text)" stroke-width="2" stroke-linecap="round"/>
-      <!-- Time marker (where we are in the day - small dot on the dial) -->
-      <circle cx="${cx + r * Math.sin(-Math.PI/2 + 2*Math.PI*timeProgress)}" 
-              cy="${cy - r * Math.cos(-Math.PI/2 + 2*Math.PI*timeProgress)}"
-              r="3" fill="var(--text)" opacity="0.3"/>
+            stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="${cx + r * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
+              cy="${cy - r * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
+              r="3.5" fill="var(--text)" opacity="0.4"/>
     </svg>
     <div class="dial-num">
       <div class="big" style="color:${statusColor};">${actual}</div>
-      <div class="small">done · today's target ${target}</div>
-      <div class="projected">📈 should be ${expected} now</div>
-      <div class="small" style="font-weight:600;color:${statusColor};font-size:0.7rem;">${statusText}</div>
+      <div class="small">done · target ${target}</div>
+      <div class="projected">📈 projected ${projected}</div>
+      <div class="small" style="font-weight:600;color:${statusColor};">${statusText}</div>
     </div>
   `;
 }
@@ -2474,23 +2464,20 @@ function renderTeamSummary(leaderboardData){
   const container = document.getElementById('teamSummary');
   if(!container) return;
 
-  // Calculate combined team stats
-  const teamActual = leaderboardData.reduce((s,d) => s + d.dayActual, 0);
-  const teamExpected = leaderboardData.reduce((s,d) => s + d.dayExpected, 0);
-  const teamTarget = leaderboardData.reduce((s,d) => s + d.dayTarget, 0);
-  
-  // For team status, use the average of all members' progress
-  const teamStatus = statusForProgress(teamActual, teamExpected);
+  const teamActual = leaderboardData.reduce((s,d) => s + d.weekActual, 0);
+  const teamProjected = leaderboardData.reduce((s,d) => s + d.weekProjected, 0);
+  const teamTarget = leaderboardData.reduce((s,d) => s + d.weekTarget, 0);
+  const teamStatus = statusForProgress(teamActual, teamProjected);
 
   const ranked = [...leaderboardData].sort((a,b) => {
-    const pctA = a.dayExpected > 0 ? a.dayActual / a.dayExpected : (a.dayActual > 0 ? 2 : -1);
-    const pctB = b.dayExpected > 0 ? b.dayActual / b.dayExpected : (b.dayActual > 0 ? 2 : -1);
+    const pctA = a.weekTarget > 0 ? a.weekProjected / a.weekTarget : (a.weekProjected > 0 ? 2 : -1);
+    const pctB = b.weekTarget > 0 ? b.weekProjected / b.weekTarget : (b.weekProjected > 0 ? 2 : -1);
     return pctB - pctA;
   });
 
   const lbRows = ranked.map((d, idx) => {
-    const pct = d.dayExpected > 0 ? Math.round((d.dayActual / d.dayExpected) * 100) : (d.dayActual > 0 ? 100 : null);
-    const diff = d.dayActual - d.dayExpected;
+    const pct = d.weekTarget > 0 ? Math.round((d.weekProjected / d.weekTarget) * 100) : (d.weekProjected > 0 ? 100 : null);
+    const diff = d.weekProjected - d.weekTarget;
     const pctClass = diff > 0 ? 'positive' : (diff < 0 ? 'negative' : 'neutral');
     const pctLabel = pct === null ? '—' : pct + '%';
     return `
@@ -2498,7 +2485,7 @@ function renderTeamSummary(leaderboardData){
         <span class="lb-rank">${idx+1}</span>
         <span class="lb-dot" style="background:${d.person.color};"></span>
         <span class="lb-name">${d.person.name}</span>
-        <span class="lb-figures">${d.dayActual} done · expected ${d.dayExpected}</span>
+        <span class="lb-figures">${d.weekActual} done · proj ${d.weekProjected}</span>
         <span class="lb-pct ${pctClass}">${pctLabel}</span>
       </div>
     `;
@@ -2508,14 +2495,14 @@ function renderTeamSummary(leaderboardData){
     <div class="team-summary-wrap">
       <div class="team-dial-card">
         <h3>🏢 Whole Office</h3>
-        <div class="team-sub">Team pace right now</div>
+        <div class="team-sub">Actual vs projected finish</div>
         <div class="dial-wrap">
-          ${drawPaceDial(teamActual, teamExpected, teamTarget, teamStatus, 'SF', new Date())}
+          ${drawProjectedDial(teamActual, teamProjected, teamTarget, teamStatus)}
         </div>
         <span class="badge ${teamStatus}">${statusLabelText(teamStatus, null)}</span>
       </div>
       <div class="leaderboard-card">
-        <h3>🏆 Current Pace Leaderboard</h3>
+        <h3>🏆 Projected vs Target</h3>
         <div class="leaderboard">${lbRows}</div>
       </div>
     </div>
@@ -3231,9 +3218,11 @@ async function loadAndRender(){
     window._errorEntries = errorEntries;
     window._today = today;
     
+    // Generate load items from sheet data
     loadItems = parseLoadsFromSheet(stairEntries, forecastEntries);
     updateLoadsBadge();
 
+    // Populate person filter dropdown
     const personFilter = document.getElementById('personFilter');
     personFilter.innerHTML = '<option value="all">👤 All People</option>';
     const uniquePersons = [...new Set(loadItems.map(l => l.person).filter(p => p))];
@@ -3242,6 +3231,7 @@ async function loadAndRender(){
       personFilter.innerHTML += `<option value="${p}">${person ? person.name : p}</option>`;
     });
 
+    // Initialize Drive API
     if (!gapiInitialized) {
       try {
         await initGapiClient();
@@ -3251,6 +3241,7 @@ async function loadAndRender(){
       }
     }
 
+    // Render loads
     renderLoads();
 
     const dialGrid = document.getElementById('dialGrid');
@@ -3263,27 +3254,30 @@ async function loadAndRender(){
       const todayCode = getCodeForPerson(holidayIndex, person.holidayName, today);
       if(todayCode && isAbsenceCode(todayCode)) offToday.push({ person, code: todayCode });
       
-      // Get today's target
       const todayTarget = targetFor(initials, today, todayCode);
-      // Get today's actual
       const todayActual = stairEntries.filter(e=>e.initials===initials && sameDay(e.date, today))
                                        .reduce((s,e)=>s+e.stairs,0);
+      let weekActual = 0, weekTarget = 0;
+      for(let d=new Date(monday); d<=friday; d.setDate(d.getDate()+1)){
+        const stats = computeDayStats(person, new Date(d), stairEntries, holidayIndex);
+        weekActual += stats.actual;
+        weekTarget += stats.target;
+      }
       
-      // Calculate where they should be NOW based on time of day
-      const todayExpected = getExpectedStairsNow(person, today, todayTarget);
+      let weekProjected = weekActual;
+      const todayCopy = new Date(today);
+      for(let d = new Date(todayCopy); d <= friday; d.setDate(d.getDate()+1)){
+        const dCopy = new Date(d);
+        if(!dayBucket(dCopy)) continue;
+        if(dCopy > todayCopy) {
+          const code = getCodeForPerson(holidayIndex, person.holidayName, dCopy);
+          weekProjected += targetFor(person.initials, dCopy, code);
+        }
+      }
       
-      // Get weekly totals for the mini trend
+      const status = statusForProgress(weekActual, weekProjected);
       const trendWeeks = getWeeklyTotals(person, stairEntries, holidayIndex, today, TREND_WEEKS);
-      
-      // Store for leaderboard
-      leaderboardData.push({ 
-        person, 
-        dayActual: todayActual, 
-        dayExpected: todayExpected, 
-        dayTarget: todayTarget 
-      });
-
-      const status = statusForProgress(todayActual, todayExpected);
+      leaderboardData.push({ person, weekActual, weekProjected, weekTarget });
 
       const card = document.createElement('div');
       card.className = `card status-${status}`;
@@ -3312,11 +3306,11 @@ async function loadAndRender(){
         <h2>${person.name}</h2>
         <div class="role">${initials}${todayCode ? ' · '+ (statusLabel(todayCode)||todayCode) : ''}</div>
         <div class="dial-wrap">
-          ${drawPaceDial(todayActual, todayExpected, todayTarget, status, initials, today)}
+          ${drawProjectedDial(weekActual, weekProjected, weekTarget, status)}
         </div>
-        <span class="badge ${status}">${statusLabelText(status, todayTarget===0 ? todayCode : null)}</span>
+        <span class="badge ${status}">${statusLabelText(status, weekTarget===0 ? todayCode : null)}</span>
         <div class="weekly-row">
-          <div><span class="label">Target</span><span class="val">${todayTarget}</span></div>
+          <div><span class="label">Today</span><span class="val">${todayActual}/${todayTarget}</span></div>
           <div><span class="label">Errors</span><span class="val"><span class="error-count">${personErrors.length}</span></span></div>
         </div>
         ${drawMiniTrendProjected(trendWeeks, person, stairEntries, holidayIndex, today)}
@@ -3376,12 +3370,15 @@ async function loadAndRender(){
   }
 }
 
+// Initialize Drive API and then load everything
 async function initAndLoad() {
+  // Try to init Drive API first (but don't block if it fails)
   try {
     await initGapiClient();
   } catch (e) {
     console.warn('Drive API init failed, continuing without Drive:', e);
   }
+  // Now load the main app
   await loadAndRender();
 }
 
