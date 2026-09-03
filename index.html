@@ -1561,10 +1561,11 @@ const TREND_WEEKS = 4;
 const CLIENT_ID = '821115912364-ufeqbg5crh9g9m92e9tsstndkqqiri0e.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyB881el5XgUpTbl2fXDaia7qg2a6L64qCA';
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
-const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 
-let gapiInitialized = false;
-let gapiSignedIn = false;
+let gapiInitialized = false; // "GIS is loaded and ready to request a token", kept for compatibility with existing call sites
+let gapiSignedIn = false;    // "we currently hold a usable access token"
+let driveAccessToken = null;
+let tokenClient = null;
 let driveSearchCache = {}; // Cache found links
 
 // Status indicators
@@ -1576,110 +1577,118 @@ function updateDriveStatus(status, text) {
   driveStatusText.textContent = 'Drive: ' + text;
 }
 
-// Load Google API client
-function loadGoogleAPI() {
+// Load Google Identity Services' script (replaces the old, now-unreliable
+// gapi.auth2 / Google Sign-In library, which depends on a third-party-cookie
+// iframe that modern browsers block by default).
+function loadGoogleIdentityServices() {
   return new Promise((resolve, reject) => {
-    if (typeof gapi !== 'undefined' && gapi.client) {
+    if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
       resolve();
       return;
     }
     const script = document.createElement('script');
-    script.src = 'https://apis.google.com/js/api.js';
-    script.onload = () => {
-      resolve();
-    };
-    script.onerror = () => {
-      reject(new Error('Failed to load Google API'));
-    };
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Google Identity Services'));
     document.head.appendChild(script);
   });
 }
 
-// Initialize GAPI client
+// Initialize the token client. This does NOT sign anyone in yet — it just
+// gets everything ready so a later button click (a real user gesture) can
+// request an access token via a normal OAuth popup, which works reliably
+// regardless of third-party cookie settings.
 async function initGapiClient() {
   try {
-    await loadGoogleAPI();
-    await new Promise((resolve, reject) => {
-      gapi.load('client:auth2', {
-        callback: resolve,
-        onerror: reject
-      });
+    await loadGoogleIdentityServices();
+
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (tokenResponse) => {
+        if (tokenResponse && tokenResponse.access_token) {
+          driveAccessToken = tokenResponse.access_token;
+          gapiSignedIn = true;
+          updateDriveStatus('connected', 'Connected');
+        }
+      },
+      error_callback: (err) => {
+        console.error('Drive sign-in error:', err);
+        gapiSignedIn = false;
+        updateDriveStatus('disconnected', (err && err.type) ? err.type : 'Sign in failed');
+      }
     });
-    
-    await gapi.client.init({
-      apiKey: API_KEY,
-      clientId: CLIENT_ID,
-      discoveryDocs: [DISCOVERY_DOC],
-      scope: SCOPES
-    });
-    
+
     gapiInitialized = true;
-    
-    // Check sign-in status
-    const auth = gapi.auth2.getAuthInstance();
-    gapiSignedIn = auth.isSignedIn.get();
-    
-    if (gapiSignedIn) {
-      updateDriveStatus('connected', 'Connected');
-    } else {
-      updateDriveStatus('disconnected', 'Not signed in');
-      // Try to sign in silently
-      try {
-        await auth.signIn({ prompt: 'none' });
-        gapiSignedIn = true;
-        updateDriveStatus('connected', 'Connected');
-      } catch (e) {
-        // User needs to sign in manually
-        updateDriveStatus('disconnected', 'Sign in required');
-      }
-    }
-    
-    // Listen for sign-in changes
-    auth.isSignedIn.listen((isSignedIn) => {
-      gapiSignedIn = isSignedIn;
-      if (isSignedIn) {
-        updateDriveStatus('connected', 'Connected');
-      } else {
-        updateDriveStatus('disconnected', 'Signed out');
-      }
-    });
-    
+    updateDriveStatus('disconnected', 'Not signed in');
     return true;
   } catch (error) {
-    console.error('Failed to init GAPI:', error);
-    updateDriveStatus('disconnected', 'Error: ' + error.message);
+    console.error('Failed to init Google Identity Services:', error);
+    updateDriveStatus('disconnected', 'Error: ' + (error && error.message ? error.message : 'unknown'));
     return false;
   }
 }
 
+// Request an access token via a real popup — must be called from a user
+// gesture (a click), which this always is in this app.
+function requestDriveToken(interactive){
+  return new Promise((resolve) => {
+    if(!tokenClient){ resolve(false); return; }
+    tokenClient.callback = (tokenResponse) => {
+      if (tokenResponse && tokenResponse.access_token) {
+        driveAccessToken = tokenResponse.access_token;
+        gapiSignedIn = true;
+        updateDriveStatus('connected', 'Connected');
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    };
+    tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+  });
+}
+
 // Search Drive for a folder matching the load number
 async function searchDriveForLoad(loadNumber) {
-  if (!gapiInitialized || !gapiSignedIn) {
-    // Try to sign in
-    try {
-      const auth = gapi.auth2.getAuthInstance();
-      await auth.signIn();
-      gapiSignedIn = true;
-      updateDriveStatus('connected', 'Connected');
-    } catch (e) {
+  if (!gapiInitialized) {
+    updateDriveStatus('disconnected', 'Not ready yet');
+    return null;
+  }
+  if (!gapiSignedIn || !driveAccessToken) {
+    const gotToken = await requestDriveToken(true);
+    if (!gotToken) {
       updateDriveStatus('disconnected', 'Sign in needed');
       return null;
     }
   }
-  
+
   try {
     updateDriveStatus('searching', 'Searching...');
-    
-    const response = await gapi.client.drive.files.list({
-      q: `name contains '${loadNumber}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-      fields: 'files(id, name, webViewLink)',
-      pageSize: 10
+
+    const query = `name contains '${loadNumber}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, webViewLink)')}&pageSize=10&key=${API_KEY}`;
+
+    const resp = await fetch(url, {
+      headers: { Authorization: 'Bearer ' + driveAccessToken }
     });
-    
-    const folders = response.result.files || [];
-    
+
+    if (resp.status === 401) {
+      // Token expired — get a fresh one and retry once
+      driveAccessToken = null;
+      gapiSignedIn = false;
+      const gotToken = await requestDriveToken(false);
+      if (!gotToken) { updateDriveStatus('disconnected', 'Sign in needed'); return null; }
+      return searchDriveForLoad(loadNumber);
+    }
+
+    if (!resp.ok) {
+      throw new Error('Drive API returned ' + resp.status);
+    }
+
+    const data = await resp.json();
+    const folders = data.files || [];
+
     if (folders.length > 0) {
-      // Return the first matching folder
       const folder = folders[0];
       driveSearchCache[loadNumber] = folder.webViewLink;
       updateDriveStatus('connected', 'Connected');
@@ -1698,13 +1707,12 @@ async function searchDriveForLoad(loadNumber) {
 // Sign in button (shown when not signed in)
 function showDriveSignIn() {
   if (gapiInitialized) {
-    const auth = gapi.auth2.getAuthInstance();
-    auth.signIn().then(() => {
-      gapiSignedIn = true;
-      updateDriveStatus('connected', 'Connected');
-      renderLoads(); // Refresh to show Drive buttons
-    }).catch(() => {
-      updateDriveStatus('disconnected', 'Sign in cancelled');
+    requestDriveToken(true).then((ok) => {
+      if (ok) {
+        renderLoads(); // Refresh to show Drive buttons
+      } else {
+        updateDriveStatus('disconnected', 'Sign in cancelled');
+      }
     });
   }
 }
