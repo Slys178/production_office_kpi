@@ -1558,8 +1558,8 @@ const TREND_WEEKS = 4;
    GOOGLE DRIVE API - AUTO SEARCH
    ========================================================= */
 // ===== IMPORTANT: REPLACE WITH YOUR CLIENT ID =====
-const CLIENT_ID = '821115912364-ufeqbg5crh9g9m92e9tsstndkqqiri0e.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyB881el5XgUpTbl2fXDaia7qg2a6L64qCA';
+const CLIENT_ID = '965947227076-hrls555o1pv7coftc80qng6chgtf0sh7.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyDxn2lFqZ0MeJR5ZkZrqpEnauq0j_EYlOI';
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
 let gapiInitialized = false; // "GIS is loaded and ready to request a token", kept for compatibility with existing call sites
@@ -1742,9 +1742,9 @@ function parseLoadsFromSheet(stairEntries, forecastEntries) {
     // Use the delivery date (Column E) as the due date
     const dueDate = entry.deliveryDate ? entry.deliveryDate.toISOString().split('T')[0] : null;
     
-    // Generate a load number from the stairs count or use a unique identifier
-    // Since we don't have a specific load number column, we'll use the stairs count + date
-    const loadNumber = entry.stairs || 'N/A';
+    // Use the real LOAD No from Column F — fall back to a stairs+date key only
+    // for the rare row where that column is genuinely blank.
+    const loadNumber = entry.loadNo && entry.loadNo.trim() ? entry.loadNo.trim() : ('#' + entry.stairs + '_' + (dueDate || ''));
     const key = loadNumber + '_' + (dueDate || '');
     
     // Determine status
@@ -2193,6 +2193,7 @@ function parseStairRows(rows){
   const initialsCol = header.findIndex(c=>c==='INITIALS');
   const stairsCol = header.findIndex(c=>c.includes('NUMBER OF STAIRS'));
   const deliveryDateCol = header.findIndex(c=>c.includes('DELIVERY') && c.includes('DATE'));
+  const loadNoCol = header.findIndex(c=>c.includes('LOAD') && c.includes('NO'));
 
   const winderStringPlatesCol = header.findIndex(c=>c.includes('WINDER') && c.includes('STRING') && c.includes('PLATES'));
   const smallStringPlatesCol  = header.findIndex(c=>c.includes('SMALL') && c.includes('STRING') && c.includes('PLATES'));
@@ -2228,6 +2229,7 @@ function parseStairRows(rows){
       };
       
       const date = parseUKDate(r[dateCol]);
+      const loadNo = loadNoCol > -1 ? (r[loadNoCol]||'').toString().trim() : '';
       
       // Store ALL entries for loads, not just completed ones
       if(deliveryDate && !isNaN(stairs) && stairs > 0) {
@@ -2237,11 +2239,12 @@ function parseStairRows(rows){
           stairs: stairs,
           parts: parts,
           deliveryDate: deliveryDate,
-          isCompleted: isCompleted
+          isCompleted: isCompleted,
+          loadNo: loadNo
         };
         
         if(isCompleted && date && initials && PEOPLE.some(p => p.initials === initials)) {
-          completed.push({date, initials, stairs, parts, deliveryDate});
+          completed.push({date, initials, stairs, parts, deliveryDate, loadNo});
         } else {
           forecast.push({
             date: date || null,
@@ -2249,7 +2252,8 @@ function parseStairRows(rows){
             stairs: stairs,
             parts: parts,
             deliveryDate: deliveryDate,
-            isCompleted: isCompleted
+            isCompleted: isCompleted,
+            loadNo: loadNo
           });
         }
       }
