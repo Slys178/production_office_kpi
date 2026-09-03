@@ -295,7 +295,6 @@
     100%{opacity:1;}
   }
 
-  /* ===== LOADS SYSTEM STYLES ===== */
   .loads-controls{
     background:var(--card);
     border:1px solid var(--card-border);
@@ -531,7 +530,6 @@
     margin-bottom:12px;
   }
 
-  /* ===== MODAL ===== */
   .modal-overlay{
     position:fixed;
     top:0;
@@ -630,7 +628,6 @@
     background:#008a7e;
   }
 
-  /* ===== REST OF EXISTING STYLES ===== */
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
@@ -1557,18 +1554,16 @@ const TREND_WEEKS = 4;
 /* =========================================================
    GOOGLE DRIVE API - AUTO SEARCH
    ========================================================= */
-// ===== IMPORTANT: REPLACE WITH YOUR CLIENT ID =====
 const CLIENT_ID = '965947227076-hrls555o1pv7coftc80qng6chgtf0sh7.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDxn2lFqZ0MeJR5ZkZrqpEnauq0j_EYlOI';
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
-let gapiInitialized = false; // "GIS is loaded and ready to request a token", kept for compatibility with existing call sites
-let gapiSignedIn = false;    // "we currently hold a usable access token"
+let gapiInitialized = false;
+let gapiSignedIn = false;
 let driveAccessToken = null;
 let tokenClient = null;
-let driveSearchCache = {}; // Cache found links
+let driveSearchCache = {};
 
-// Status indicators
 const driveStatusDot = document.getElementById('driveStatusDot');
 const driveStatusText = document.getElementById('driveStatusText');
 
@@ -1577,9 +1572,6 @@ function updateDriveStatus(status, text) {
   driveStatusText.textContent = 'Drive: ' + text;
 }
 
-// Load Google Identity Services' script (replaces the old, now-unreliable
-// gapi.auth2 / Google Sign-In library, which depends on a third-party-cookie
-// iframe that modern browsers block by default).
 function loadGoogleIdentityServices() {
   return new Promise((resolve, reject) => {
     if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
@@ -1594,10 +1586,6 @@ function loadGoogleIdentityServices() {
   });
 }
 
-// Initialize the token client. This does NOT sign anyone in yet — it just
-// gets everything ready so a later button click (a real user gesture) can
-// request an access token via a normal OAuth popup, which works reliably
-// regardless of third-party cookie settings.
 async function initGapiClient() {
   try {
     await loadGoogleIdentityServices();
@@ -1629,8 +1617,6 @@ async function initGapiClient() {
   }
 }
 
-// Request an access token via a real popup — must be called from a user
-// gesture (a click), which this always is in this app.
 function requestDriveToken(interactive){
   return new Promise((resolve) => {
     if(!tokenClient){ resolve(false); return; }
@@ -1648,7 +1634,6 @@ function requestDriveToken(interactive){
   });
 }
 
-// Search Drive for a folder matching the load number
 async function searchDriveForLoad(loadNumber) {
   if (!gapiInitialized) {
     updateDriveStatus('disconnected', 'Not ready yet');
@@ -1673,7 +1658,6 @@ async function searchDriveForLoad(loadNumber) {
     });
 
     if (resp.status === 401) {
-      // Token expired — get a fresh one and retry once
       driveAccessToken = null;
       gapiSignedIn = false;
       const gotToken = await requestDriveToken(false);
@@ -1704,12 +1688,11 @@ async function searchDriveForLoad(loadNumber) {
   }
 }
 
-// Sign in button (shown when not signed in)
 function showDriveSignIn() {
   if (gapiInitialized) {
     requestDriveToken(true).then((ok) => {
       if (ok) {
-        renderLoads(); // Refresh to show Drive buttons
+        renderLoads();
       } else {
         updateDriveStatus('disconnected', 'Sign in cancelled');
       }
@@ -1717,7 +1700,6 @@ function showDriveSignIn() {
   }
 }
 
-// Click on Drive status to sign in
 document.getElementById('driveAuthStatus').addEventListener('click', function() {
   if (!gapiSignedIn) {
     showDriveSignIn();
@@ -1725,32 +1707,24 @@ document.getElementById('driveAuthStatus').addEventListener('click', function() 
 });
 
 /* =========================================================
-   LOADS SYSTEM - From Google Sheets
+   LOADS SYSTEM
    ========================================================= */
 let loadItems = [];
 let loadsFiltered = [];
 let loadsPageSize = 12;
 let loadsCurrentPage = 1;
 
-// Parse loads from the tracking sheet rows
 function parseLoadsFromSheet(stairEntries, forecastEntries) {
-  // Combine completed and forecast entries
   const allEntries = [...stairEntries, ...forecastEntries];
   const loadMap = {};
   
   allEntries.forEach(entry => {
-    // Use the delivery date (Column E) as the due date
     const dueDate = entry.deliveryDate ? entry.deliveryDate.toISOString().split('T')[0] : null;
-    
-    // Use the real LOAD No from Column F — fall back to a stairs+date key only
-    // for the rare row where that column is genuinely blank.
     const loadNumber = entry.loadNo && entry.loadNo.trim() ? entry.loadNo.trim() : ('#' + entry.stairs + '_' + (dueDate || ''));
     const key = loadNumber + '_' + (dueDate || '');
     
-    // Determine status
     let status = 'pending';
     if (entry.initials) {
-      // Check if it's in the completed array (has a completed tick)
       const isCompleted = stairEntries.some(s => 
         s.initials === entry.initials && 
         s.date === entry.date && 
@@ -1776,7 +1750,6 @@ function parseLoadsFromSheet(stairEntries, forecastEntries) {
   return Object.values(loadMap);
 }
 
-// Get saved Drive links from localStorage
 function getSavedDriveLinks() {
   try {
     return JSON.parse(localStorage.getItem('driveLinks') || '{}');
@@ -1785,28 +1758,21 @@ function getSavedDriveLinks() {
   }
 }
 
-// Save Drive link to localStorage
 function saveDriveLink(loadNumber, link) {
   const links = getSavedDriveLinks();
   links[loadNumber] = link;
   localStorage.setItem('driveLinks', JSON.stringify(links));
 }
 
-// Get Drive link for a load (cached or search)
 async function getDriveLink(loadNumber) {
-  // Check cache first
   if (driveSearchCache[loadNumber]) {
     return driveSearchCache[loadNumber];
   }
-  
-  // Check saved links
   const savedLinks = getSavedDriveLinks();
   if (savedLinks[loadNumber]) {
     driveSearchCache[loadNumber] = savedLinks[loadNumber];
     return savedLinks[loadNumber];
   }
-  
-  // Search Drive
   const link = await searchDriveForLoad(loadNumber);
   if (link) {
     saveDriveLink(loadNumber, link);
@@ -1814,39 +1780,29 @@ async function getDriveLink(loadNumber) {
   return link;
 }
 
-/* =========================================================
-   RENDER LOADS
-   ========================================================= */
 function renderLoads() {
   const searchTerm = document.getElementById('loadSearch')?.value?.toLowerCase() || '';
   const personFilter = document.getElementById('personFilter')?.value || 'all';
   const statusFilter = document.getElementById('statusFilter')?.value || 'all';
   
-  // Filter
   loadsFiltered = loadItems.filter(load => {
-    // Search by load number
     if (searchTerm) {
       const loadNumStr = load.loadNumber.toString();
       if (!loadNumStr.includes(searchTerm)) return false;
     }
-    // Person filter
     if (personFilter !== 'all' && load.person !== personFilter) return false;
-    // Status filter
     if (statusFilter !== 'all' && load.status !== statusFilter) return false;
     return true;
   });
   
-  // Sort by due date (soonest first)
   loadsFiltered.sort((a, b) => {
     if (!a.dueDate) return 1;
     if (!b.dueDate) return -1;
     return new Date(a.dueDate) - new Date(b.dueDate);
   });
   
-  // Update stats
   document.getElementById('loadsTotal').textContent = loadsFiltered.length;
   
-  // Paginate
   const totalPages = Math.ceil(loadsFiltered.length / loadsPageSize);
   if (loadsCurrentPage > totalPages) loadsCurrentPage = Math.max(1, totalPages);
   const start = (loadsCurrentPage - 1) * loadsPageSize;
@@ -1855,7 +1811,6 @@ function renderLoads() {
   
   document.getElementById('loadsShowing').textContent = pageData.length;
   
-  // Render grid
   const grid = document.getElementById('loadsGrid');
   if (pageData.length === 0) {
     grid.innerHTML = `
@@ -1874,8 +1829,6 @@ function renderLoads() {
       const statusClass = load.status || 'pending';
       const personColor = PEOPLE.find(p => p.initials === load.person)?.color || '#8993ab';
       const loadNum = load.loadNumber;
-      
-      // Check if we have a Drive link
       const hasLink = driveSearchCache[loadNum] || getSavedDriveLinks()[loadNum];
       
       return `
@@ -1901,7 +1854,6 @@ function renderLoads() {
       `;
     }).join('');
     
-    // Attach Drive button events
     document.querySelectorAll('.drive-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -1911,7 +1863,6 @@ function renderLoads() {
     });
   }
   
-  // Render pagination
   const pagination = document.getElementById('loadsPagination');
   if (totalPages > 1) {
     pagination.innerHTML = `
@@ -1932,22 +1883,17 @@ function loadsGoToPage(page) {
 }
 
 async function handleDriveClick(loadNum, button) {
-  // Check if we already have a link
   const savedLinks = getSavedDriveLinks();
   if (savedLinks[loadNum]) {
     window.open(savedLinks[loadNum], '_blank');
     return;
   }
-  
   if (driveSearchCache[loadNum]) {
     window.open(driveSearchCache[loadNum], '_blank');
     return;
   }
-  
-  // Not signed in?
   if (!gapiSignedIn) {
     showDriveSignIn();
-    // Wait a moment then retry
     setTimeout(() => {
       if (gapiSignedIn) {
         handleDriveClick(loadNum, button);
@@ -1955,12 +1901,9 @@ async function handleDriveClick(loadNum, button) {
     }, 2000);
     return;
   }
-  
-  // Search for it
   button.textContent = '🔍 Searching...';
   button.classList.add('searching');
   button.disabled = true;
-  
   try {
     const link = await searchDriveForLoad(loadNum);
     if (link) {
@@ -1969,17 +1912,15 @@ async function handleDriveClick(loadNum, button) {
       button.classList.remove('searching');
       button.disabled = false;
       window.open(link, '_blank');
-      renderLoads(); // Refresh to show the saved link indicator
+      renderLoads();
     } else {
       button.textContent = '❌ Not found';
       button.classList.remove('searching');
       button.disabled = false;
-      // Offer to open Drive search
       const openSearch = confirm(`No folder found for load #${loadNum}.\n\nWould you like to open Google Drive and search for it manually?`);
       if (openSearch) {
         window.open(`https://drive.google.com/drive/search?q=${loadNum}`, '_blank');
       }
-      // Reset button after 3 seconds
       setTimeout(() => {
         button.textContent = '🔍 Find in Drive';
       }, 3000);
@@ -2008,7 +1949,7 @@ function updateLoadsBadge() {
 }
 
 /* =========================================================
-   HELPER FUNCTIONS (from original code)
+   HELPER FUNCTIONS
    ========================================================= */
 function parseUKDate(str){
   if(!str) return null;
@@ -2231,7 +2172,6 @@ function parseStairRows(rows){
       const date = parseUKDate(r[dateCol]);
       const loadNo = loadNoCol > -1 ? (r[loadNoCol]||'').toString().trim().replace(/^#+/, '') : '';
       
-      // Store ALL entries for loads, not just completed ones
       if(deliveryDate && !isNaN(stairs) && stairs > 0) {
         const entry = {
           date: date || null,
@@ -2320,13 +2260,48 @@ function parseErrorRows(rows){
 }
 
 /* =========================================================
-   RENDER FUNCTIONS
+   RENDER FUNCTIONS - UPDATED WITH "COMPLETED DAYS ONLY" LOGIC
    ========================================================= */
 function fmtDate(d){
   return d.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
 }
 function fmtDateShort(d){
   return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+}
+
+// NEW: Calculate the cumulative target for COMPLETED days only
+function getCompletedDaysTarget(person, today, stairEntries, holidayIndex) {
+  const monday = mondayOf(today);
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+  
+  let completedTarget = 0;
+  let completedActual = 0;
+  
+  // Loop through each day of the week (Mon-Fri)
+  for (let d = new Date(monday); d <= friday; d.setDate(d.getDate() + 1)) {
+    const dCopy = new Date(d);
+    if (!dayBucket(dCopy)) continue;
+    
+    // Check if this day is COMPLETED (yesterday or earlier)
+    // A day is "completed" if it's strictly before today
+    const isCompletedDay = dCopy < new Date(today.setHours(0,0,0,0));
+    
+    if (isCompletedDay) {
+      // Add this day's target to the completed target
+      const code = getCodeForPerson(holidayIndex, person.holidayName, dCopy);
+      const dayTarget = targetFor(person.initials, dCopy, code);
+      completedTarget += dayTarget;
+      
+      // Also track actual for this day (for reference)
+      const dayActual = stairEntries
+        .filter(e => e.initials === person.initials && sameDay(e.date, dCopy))
+        .reduce((s, e) => s + e.stairs, 0);
+      completedActual += dayActual;
+    }
+  }
+  
+  return { completedTarget, completedActual };
 }
 
 function statusForProgress(actual, projected){
@@ -2347,62 +2322,88 @@ function statusLabelText(status, code){
   return '';
 }
 
-function drawProjectedDial(actual, projected, target, colorClass){
+// UPDATED: Dial showing actual vs completed-days target
+function drawProjectedDial(actual, completedTarget, weekTarget, colorClass, person, today) {
   const size=200, stroke=16, r=(size-stroke)/2, cx=size/2, cy=size/2;
   const circumference = 2*Math.PI*r;
   
-  const maxVal = Math.max(target, projected, actual);
-  const displayMax = Math.max(maxVal, target * 1.2);
+  // Use the week target as the max value for the dial
+  const maxVal = Math.max(weekTarget, actual, completedTarget);
+  const displayMax = Math.max(maxVal, weekTarget * 1.1);
   
   const pctActual = Math.min(1, actual / displayMax);
-  const pctProjected = Math.min(1, projected / displayMax);
-  const pctTarget = Math.min(1, target / displayMax);
+  const pctCompleted = Math.min(1, completedTarget / displayMax);
+  const pctTarget = Math.min(1, weekTarget / displayMax);
   
   const dashActual = circumference * pctActual;
-  const dashProjected = circumference * pctProjected;
+  const dashCompleted = circumference * pctCompleted;
   
+  // Determine color based on status
+  const status = statusForProgress(actual, completedTarget);
   const colorMap = {green:'#2ecc71', over:'#3498db', amber:'#f5a623', red:'#e74c3c', off:'#8993ab'};
-  const color = colorMap[colorClass] || '#4a90e2';
+  const color = colorMap[status] || '#4a90e2';
   
+  // Determine status text
   let statusText = '';
   let statusColor = color;
-  if(target > 0 && projected >= target) {
-    statusText = '🎯 On track';
-    statusColor = '#2ecc71';
-  } else if(target > 0 && projected < target && projected > 0) {
-    const pctOfTarget = Math.round((projected / target) * 100);
-    if(pctOfTarget >= 85) { statusText = `⚠️ ${pctOfTarget}%`; statusColor = '#f5a623'; }
-    else if(pctOfTarget >= 60) { statusText = `⚠️ ${pctOfTarget}%`; statusColor = '#f5a623'; }
-    else { statusText = `❌ ${pctOfTarget}%`; statusColor = '#e74c3c'; }
-  } else if(target > 0 && projected === 0) {
-    statusText = '📌 No projection';
+  
+  const todayDate = new Date(today);
+  todayDate.setHours(0,0,0,0);
+  const dayOfWeek = todayDate.getDay(); // 1=Mon, 5=Fri, 0=Sun, 6=Sat
+  
+  // If it's Monday or before, no completed days yet
+  if (dayOfWeek === 1 || dayOfWeek === 0 || dayOfWeek === 6) {
+    statusText = '📅 Week just started';
     statusColor = '#8993ab';
+  } else if (completedTarget === 0 && actual === 0) {
+    statusText = '📌 No target yet';
+    statusColor = '#8993ab';
+  } else if (actual >= completedTarget && actual >= weekTarget) {
+    statusText = '🎯 Target met!';
+    statusColor = '#2ecc71';
+  } else if (actual >= completedTarget) {
+    statusText = '✅ On pace!';
+    statusColor = '#2ecc71';
+  } else {
+    const pctOfPace = Math.round((actual / completedTarget) * 100);
+    if (pctOfPace >= 85) {
+      statusText = `⚠️ ${pctOfPace}% of pace`;
+      statusColor = '#f5a623';
+    } else {
+      statusText = `❌ ${pctOfPace}% of pace`;
+      statusColor = '#e74c3c';
+    }
   }
   
   return `
     <svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:200px;">
+      <!-- Background ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--card-border)" stroke-width="${stroke}"/>
+      <!-- Completed days target (faded) ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
-        stroke-dasharray="${dashProjected} ${circumference}" stroke-linecap="round"
+        stroke-dasharray="${dashCompleted} ${circumference}" stroke-linecap="round"
         opacity="0.25"
         transform="rotate(-90 ${cx} ${cy})"/>
+      <!-- Actual (solid) ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
         stroke-dasharray="${dashActual} ${circumference}" stroke-linecap="round"
         transform="rotate(-90 ${cx} ${cy})"/>
+      <!-- Weekly target marker -->
       <line x1="${cx + (r-4) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y1="${cy - (r-4) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
             x2="${cx + (r+6) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y2="${cy - (r+6) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-            stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"/>
+            stroke="var(--text)" stroke-width="2" stroke-linecap="round"/>
+      <!-- Small dot on target marker -->
       <circle cx="${cx + r * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
               cy="${cy - r * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-              r="3.5" fill="var(--text)" opacity="0.4"/>
+              r="3" fill="var(--text)" opacity="0.3"/>
     </svg>
     <div class="dial-num">
       <div class="big" style="color:${statusColor};">${actual}</div>
-      <div class="small">done · target ${target}</div>
-      <div class="projected">📈 projected ${projected}</div>
-      <div class="small" style="font-weight:600;color:${statusColor};">${statusText}</div>
+      <div class="small">done · weekly target ${weekTarget}</div>
+      <div class="projected">📈 expected from completed days: ${completedTarget}</div>
+      <div class="small" style="font-weight:600;color:${statusColor};font-size:0.65rem;">${statusText}</div>
     </div>
   `;
 }
@@ -2465,19 +2466,19 @@ function renderTeamSummary(leaderboardData){
   if(!container) return;
 
   const teamActual = leaderboardData.reduce((s,d) => s + d.weekActual, 0);
-  const teamProjected = leaderboardData.reduce((s,d) => s + d.weekProjected, 0);
+  const teamCompletedTarget = leaderboardData.reduce((s,d) => s + d.completedTarget, 0);
   const teamTarget = leaderboardData.reduce((s,d) => s + d.weekTarget, 0);
-  const teamStatus = statusForProgress(teamActual, teamProjected);
+  const teamStatus = statusForProgress(teamActual, teamCompletedTarget);
 
   const ranked = [...leaderboardData].sort((a,b) => {
-    const pctA = a.weekTarget > 0 ? a.weekProjected / a.weekTarget : (a.weekProjected > 0 ? 2 : -1);
-    const pctB = b.weekTarget > 0 ? b.weekProjected / b.weekTarget : (b.weekProjected > 0 ? 2 : -1);
+    const pctA = a.completedTarget > 0 ? a.weekActual / a.completedTarget : (a.weekActual > 0 ? 2 : -1);
+    const pctB = b.completedTarget > 0 ? b.weekActual / b.completedTarget : (b.weekActual > 0 ? 2 : -1);
     return pctB - pctA;
   });
 
   const lbRows = ranked.map((d, idx) => {
-    const pct = d.weekTarget > 0 ? Math.round((d.weekProjected / d.weekTarget) * 100) : (d.weekProjected > 0 ? 100 : null);
-    const diff = d.weekProjected - d.weekTarget;
+    const pct = d.completedTarget > 0 ? Math.round((d.weekActual / d.completedTarget) * 100) : (d.weekActual > 0 ? 100 : null);
+    const diff = d.weekActual - d.completedTarget;
     const pctClass = diff > 0 ? 'positive' : (diff < 0 ? 'negative' : 'neutral');
     const pctLabel = pct === null ? '—' : pct + '%';
     return `
@@ -2485,7 +2486,7 @@ function renderTeamSummary(leaderboardData){
         <span class="lb-rank">${idx+1}</span>
         <span class="lb-dot" style="background:${d.person.color};"></span>
         <span class="lb-name">${d.person.name}</span>
-        <span class="lb-figures">${d.weekActual} done · proj ${d.weekProjected}</span>
+        <span class="lb-figures">${d.weekActual} done · expected ${d.completedTarget}</span>
         <span class="lb-pct ${pctClass}">${pctLabel}</span>
       </div>
     `;
@@ -2495,14 +2496,14 @@ function renderTeamSummary(leaderboardData){
     <div class="team-summary-wrap">
       <div class="team-dial-card">
         <h3>🏢 Whole Office</h3>
-        <div class="team-sub">Actual vs projected finish</div>
+        <div class="team-sub">Actual vs completed days target</div>
         <div class="dial-wrap">
-          ${drawProjectedDial(teamActual, teamProjected, teamTarget, teamStatus)}
+          ${drawProjectedDial(teamActual, teamCompletedTarget, teamTarget, teamStatus, null, new Date())}
         </div>
         <span class="badge ${teamStatus}">${statusLabelText(teamStatus, null)}</span>
       </div>
       <div class="leaderboard-card">
-        <h3>🏆 Projected vs Target</h3>
+        <h3>🏆 Pace Leaderboard</h3>
         <div class="leaderboard">${lbRows}</div>
       </div>
     </div>
@@ -3218,11 +3219,9 @@ async function loadAndRender(){
     window._errorEntries = errorEntries;
     window._today = today;
     
-    // Generate load items from sheet data
     loadItems = parseLoadsFromSheet(stairEntries, forecastEntries);
     updateLoadsBadge();
 
-    // Populate person filter dropdown
     const personFilter = document.getElementById('personFilter');
     personFilter.innerHTML = '<option value="all">👤 All People</option>';
     const uniquePersons = [...new Set(loadItems.map(l => l.person).filter(p => p))];
@@ -3231,7 +3230,6 @@ async function loadAndRender(){
       personFilter.innerHTML += `<option value="${p}">${person ? person.name : p}</option>`;
     });
 
-    // Initialize Drive API
     if (!gapiInitialized) {
       try {
         await initGapiClient();
@@ -3241,7 +3239,6 @@ async function loadAndRender(){
       }
     }
 
-    // Render loads
     renderLoads();
 
     const dialGrid = document.getElementById('dialGrid');
@@ -3254,30 +3251,30 @@ async function loadAndRender(){
       const todayCode = getCodeForPerson(holidayIndex, person.holidayName, today);
       if(todayCode && isAbsenceCode(todayCode)) offToday.push({ person, code: todayCode });
       
+      // Get today's target
       const todayTarget = targetFor(initials, today, todayCode);
-      const todayActual = stairEntries.filter(e=>e.initials===initials && sameDay(e.date, today))
-                                       .reduce((s,e)=>s+e.stairs,0);
+      
+      // Get weekly totals
       let weekActual = 0, weekTarget = 0;
-      for(let d=new Date(monday); d<=friday; d.setDate(d.getDate()+1)){
+      for(let d = new Date(monday); d <= friday; d.setDate(d.getDate() + 1)){
         const stats = computeDayStats(person, new Date(d), stairEntries, holidayIndex);
         weekActual += stats.actual;
         weekTarget += stats.target;
       }
       
-      let weekProjected = weekActual;
-      const todayCopy = new Date(today);
-      for(let d = new Date(todayCopy); d <= friday; d.setDate(d.getDate()+1)){
-        const dCopy = new Date(d);
-        if(!dayBucket(dCopy)) continue;
-        if(dCopy > todayCopy) {
-          const code = getCodeForPerson(holidayIndex, person.holidayName, dCopy);
-          weekProjected += targetFor(person.initials, dCopy, code);
-        }
-      }
+      // NEW: Calculate completed days target (days that are fully finished)
+      const { completedTarget, completedActual } = getCompletedDaysTarget(person, today, stairEntries, holidayIndex);
       
-      const status = statusForProgress(weekActual, weekProjected);
+      const status = statusForProgress(weekActual, completedTarget);
       const trendWeeks = getWeeklyTotals(person, stairEntries, holidayIndex, today, TREND_WEEKS);
-      leaderboardData.push({ person, weekActual, weekProjected, weekTarget });
+      
+      leaderboardData.push({ 
+        person, 
+        weekActual, 
+        completedTarget, 
+        weekTarget,
+        weekProjected: completedTarget // for backward compatibility
+      });
 
       const card = document.createElement('div');
       card.className = `card status-${status}`;
@@ -3306,11 +3303,11 @@ async function loadAndRender(){
         <h2>${person.name}</h2>
         <div class="role">${initials}${todayCode ? ' · '+ (statusLabel(todayCode)||todayCode) : ''}</div>
         <div class="dial-wrap">
-          ${drawProjectedDial(weekActual, weekProjected, weekTarget, status)}
+          ${drawProjectedDial(weekActual, completedTarget, weekTarget, status, person, today)}
         </div>
         <span class="badge ${status}">${statusLabelText(status, weekTarget===0 ? todayCode : null)}</span>
         <div class="weekly-row">
-          <div><span class="label">Today</span><span class="val">${todayActual}/${todayTarget}</span></div>
+          <div><span class="label">Today</span><span class="val">${todayTarget}</span></div>
           <div><span class="label">Errors</span><span class="val"><span class="error-count">${personErrors.length}</span></span></div>
         </div>
         ${drawMiniTrendProjected(trendWeeks, person, stairEntries, holidayIndex, today)}
@@ -3370,15 +3367,12 @@ async function loadAndRender(){
   }
 }
 
-// Initialize Drive API and then load everything
 async function initAndLoad() {
-  // Try to init Drive API first (but don't block if it fails)
   try {
     await initGapiClient();
   } catch (e) {
     console.warn('Drive API init failed, continuing without Drive:', e);
   }
-  // Now load the main app
   await loadAndRender();
 }
 
