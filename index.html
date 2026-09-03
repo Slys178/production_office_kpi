@@ -2229,7 +2229,7 @@ function parseStairRows(rows){
       };
       
       const date = parseUKDate(r[dateCol]);
-      const loadNo = loadNoCol > -1 ? (r[loadNoCol]||'').toString().trim() : '';
+      const loadNo = loadNoCol > -1 ? (r[loadNoCol]||'').toString().trim().replace(/^#+/, '') : '';
       
       // Store ALL entries for loads, not just completed ones
       if(deliveryDate && !isNaN(stairs) && stairs > 0) {
