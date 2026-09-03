@@ -1493,16 +1493,22 @@
     <div id="errorCountTrend"></div>
   </div>
   <div class="detail-section">
-    <h3>📍 Top Sections</h3>
-    <div class="leaderboard" id="topSections"></div>
+    <h3>⚠️ Repeated Errors & Patterns</h3>
+    <div class="parts-note">Errors that occur 3+ times, or people with 3+ errors. Flagged for attention.</div>
+    <div id="repeatedErrors"></div>
   </div>
   <div class="detail-section">
-    <h3>📍 Top Plots</h3>
-    <div class="leaderboard" id="topPlots"></div>
+    <h3>📍 Top Sections</h3>
+    <div id="topSections"></div>
+  </div>
+  <div class="detail-section">
+    <h3>🔥 Top Errors</h3>
+    <div class="parts-note">Most common error types.</div>
+    <div id="topErrors"></div>
   </div>
   <div class="detail-section">
     <h3>👤 By Person</h3>
-    <div class="leaderboard" id="errorsByPerson"></div>
+    <div id="errorsByPerson"></div>
   </div>
 </div>
 
@@ -1546,6 +1552,7 @@ const HOURS = {
   AS: { MonThu: 9,   Fri: 6.5 },
   DF: { MonThu: 6,   Fri: 3.5 }
 };
+// UPDATED: Target increased from 54 to 56
 const BASE_RATE = 56 / 9;
 const REFRESH_MS = 3 * 60 * 1000;
 const FORECAST_WEEKS = 8;
@@ -2765,9 +2772,10 @@ function renderForecastAccuracy(stairEntries, forecastEntries, today){
 }
 
 /* =========================================================
-   ERROR LOG TRENDS
+   ERROR LOG TRENDS - UPDATED WITH REPEATED ERROR FLAGGING
    ========================================================= */
 function renderErrorTrends(errorEntries, today){
+  // ----- last 6 months, points & count -----
   const months = [];
   for(let i=5; i>=0; i--){
     const d = new Date(today.getFullYear(), today.getMonth()-i, 1);
@@ -2805,6 +2813,7 @@ function renderErrorTrends(errorEntries, today){
   }).join('');
   document.getElementById('errorCountTrend').innerHTML = `<div class="mini-trend" style="border-top:none;padding-top:0;margin-top:0;"><div class="bars">${countBars}</div></div>`;
 
+  // ----- TOP SECTIONS -----
   function topBreakdown(field, limit){
     const map = {};
     errorEntries.forEach(e => {
@@ -2815,7 +2824,8 @@ function renderErrorTrends(errorEntries, today){
     });
     return Object.entries(map).sort((a,b) => b[1].count - a[1].count).slice(0, limit);
   }
-  function renderBreakdownList(containerId, breakdown){
+  
+  function renderBreakdownList(containerId, breakdown, title){
     const container = document.getElementById(containerId);
     if(breakdown.length === 0){ container.innerHTML = '<div class="forecast-empty">No data yet.</div>'; return; }
     container.innerHTML = breakdown.map(([name, stats], idx) => `
@@ -2827,9 +2837,23 @@ function renderErrorTrends(errorEntries, today){
       </div>
     `).join('');
   }
+  
   renderBreakdownList('topSections', topBreakdown('section', 5));
-  renderBreakdownList('topPlots', topBreakdown('plot', 5));
+  
+  // ----- RENAMED: Top Errors (was Top Plots) - now shows error types -----
+  function topErrorTypes(limit){
+    const map = {};
+    errorEntries.forEach(e => {
+      const key = (e.issue||'').trim() || 'Unspecified Error';
+      if(!map[key]) map[key] = { count:0, points:0 };
+      map[key].count++;
+      map[key].points += e.points;
+    });
+    return Object.entries(map).sort((a,b) => b[1].count - a[1].count).slice(0, limit);
+  }
+  renderBreakdownList('topErrors', topErrorTypes(5));
 
+  // ----- BY PERSON -----
   const byPerson = PEOPLE.map(p => {
     const entries = errorEntries.filter(e => e.initials === p.initials);
     const points = entries.reduce((s,e) => s + e.points, 0);
@@ -2844,6 +2868,121 @@ function renderErrorTrends(errorEntries, today){
       <span class="lb-pct ${d.points<0?'negative':(d.points>0?'positive':'neutral')}">${d.points} pts</span>
     </div>
   `).join('');
+
+  // ----- NEW: Repeated Errors Detection (3+ times) -----
+  function getRepeatedErrors() {
+    const errorMap = {};
+    const personErrorMap = {};
+    
+    errorEntries.forEach(e => {
+      // Count by error type
+      const key = (e.issue||'').trim() || 'Unspecified Error';
+      if(!errorMap[key]) errorMap[key] = { count:0, points:0, examples: [] };
+      errorMap[key].count++;
+      errorMap[key].points += e.points;
+      if(errorMap[key].examples.length < 3) {
+        errorMap[key].examples.push({
+          date: e.date,
+          person: e.initials,
+          section: e.section,
+          plot: e.plot
+        });
+      }
+      
+      // Count by person
+      if(e.initials) {
+        if(!personErrorMap[e.initials]) personErrorMap[e.initials] = { count:0, points:0, errors: [] };
+        personErrorMap[e.initials].count++;
+        personErrorMap[e.initials].points += e.points;
+        if(personErrorMap[e.initials].errors.length < 5) {
+          personErrorMap[e.initials].errors.push({
+            issue: e.issue,
+            date: e.date,
+            section: e.section
+          });
+        }
+      }
+    });
+    
+    // Find repeated errors (3+ times)
+    const repeatedErrors = Object.entries(errorMap)
+      .filter(([_, data]) => data.count >= 3)
+      .sort((a, b) => b[1].count - a[1].count);
+    
+    // Find people with 3+ errors
+    const repeatedPeople = Object.entries(personErrorMap)
+      .filter(([_, data]) => data.count >= 3)
+      .sort((a, b) => b[1].count - a[1].count);
+    
+    return { repeatedErrors, repeatedPeople };
+  }
+
+  const { repeatedErrors, repeatedPeople } = getRepeatedErrors();
+  
+  // Render Repeated Errors section
+  const repeatedContainer = document.getElementById('repeatedErrors');
+  if (repeatedContainer) {
+    if (repeatedErrors.length === 0 && repeatedPeople.length === 0) {
+      repeatedContainer.innerHTML = `
+        <div class="forecast-empty" style="padding:15px 0;">
+          ✅ No repeated errors or patterns detected. All errors appear to be isolated.
+        </div>
+      `;
+    } else {
+      let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">';
+      
+      // Repeated errors
+      if (repeatedErrors.length > 0) {
+        html += `
+          <div style="background:var(--section-bg);border-radius:8px;padding:12px;border:1px solid var(--card-border);">
+            <div style="font-weight:700;color:var(--red);margin-bottom:8px;">🔴 Repeated Errors (3+ times)</div>
+        `;
+        repeatedErrors.forEach(([error, data]) => {
+          const examples = data.examples.map(ex => 
+            `${fmtDateShort(ex.date)} - ${ex.person}${ex.section ? ' ('+ex.section+')' : ''}`
+          ).join('; ');
+          html += `
+            <div style="font-size:0.8rem;padding:4px 0;border-bottom:1px solid var(--card-border);">
+              <div style="font-weight:600;">${error}</div>
+              <div style="color:var(--muted);font-size:0.7rem;">${data.count} times · ${data.points} pts</div>
+              <div style="color:var(--muted);font-size:0.65rem;margin-top:2px;">📌 ${examples}</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+      
+      // People with repeated errors
+      if (repeatedPeople.length > 0) {
+        html += `
+          <div style="background:var(--section-bg);border-radius:8px;padding:12px;border:1px solid var(--card-border);">
+            <div style="font-weight:700;color:var(--amber);margin-bottom:8px;">⚠️ People with 3+ Errors</div>
+        `;
+        repeatedPeople.forEach(([initials, data]) => {
+          const person = PEOPLE.find(p => p.initials === initials);
+          const color = person ? person.color : '#8993ab';
+          const name = person ? person.name : initials;
+          const errorSummary = data.errors.map(e => 
+            `${e.issue}${e.section ? ' ('+e.section+')' : ''}`
+          ).slice(0, 3).join('; ');
+          html += `
+            <div style="font-size:0.8rem;padding:4px 0;border-bottom:1px solid var(--card-border);">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="lb-dot" style="background:${color};width:8px;height:8px;border-radius:50%;display:inline-block;"></span>
+                <span style="font-weight:600;">${name}</span>
+                <span style="color:var(--muted);font-size:0.7rem;">${data.count} errors · ${data.points} pts</span>
+              </div>
+              <div style="color:var(--muted);font-size:0.65rem;margin-top:2px;">📌 ${errorSummary}${data.errors.length > 3 ? '...' : ''}</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+      
+      html += '</div>';
+      repeatedContainer.innerHTML = html;
+    }
+  }
 }
 
 /* =========================================================
