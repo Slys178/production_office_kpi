@@ -2772,7 +2772,7 @@ function renderForecastAccuracy(stairEntries, forecastEntries, today){
 }
 
 /* =========================================================
-   ERROR LOG TRENDS - UPDATED WITH REPEATED ERROR FLAGGING
+   ERROR LOG TRENDS - UPDATED WITH CORRECT LAYOUT
    ========================================================= */
 function renderErrorTrends(errorEntries, today){
   // ----- last 6 months, points & count -----
@@ -2825,12 +2825,13 @@ function renderErrorTrends(errorEntries, today){
     return Object.entries(map).sort((a,b) => b[1].count - a[1].count).slice(0, limit);
   }
   
-  function renderBreakdownList(containerId, breakdown, title){
+  function renderBreakdownList(containerId, breakdown){
     const container = document.getElementById(containerId);
     if(breakdown.length === 0){ container.innerHTML = '<div class="forecast-empty">No data yet.</div>'; return; }
     container.innerHTML = breakdown.map(([name, stats], idx) => `
       <div class="lb-row">
         <span class="lb-rank">${idx+1}</span>
+        <span class="lb-dot" style="background:var(--muted);width:0;height:0;"></span>
         <span class="lb-name">${name}</span>
         <span class="lb-figures">${stats.count} error${stats.count===1?'':'s'}</span>
         <span class="lb-pct ${stats.points<0?'negative':(stats.points>0?'positive':'neutral')}">${stats.points} pts</span>
@@ -2840,7 +2841,7 @@ function renderErrorTrends(errorEntries, today){
   
   renderBreakdownList('topSections', topBreakdown('section', 5));
   
-  // ----- RENAMED: Top Errors (was Top Plots) - now shows error types -----
+  // ----- Top Errors (was Top Plots) - now shows error types -----
   function topErrorTypes(limit){
     const map = {};
     errorEntries.forEach(e => {
