@@ -1732,12 +1732,10 @@ function parseLoadsFromSheet(stairEntries, forecastEntries) {
     
     let status = 'pending';
     if (entry.initials) {
-      const isCompleted = stairEntries.some(s => 
-        s.initials === entry.initials && 
-        s.date === entry.date && 
-        s.stairs === entry.stairs &&
-        s.deliveryDate === entry.deliveryDate
-      );
+      // Every entry already carries its own isCompleted flag from the sheet's
+      // tick-box column (set when it was first parsed) — "completed" array
+      // entries just don't repeat the field since it's always true for them.
+      const isCompleted = entry.isCompleted !== undefined ? entry.isCompleted : true;
       status = isCompleted ? 'completed' : 'in-progress';
     }
     
