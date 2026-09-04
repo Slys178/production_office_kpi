@@ -1484,6 +1484,11 @@
     <h2>⚠️ Error Log — Trends</h2>
   </div>
   <div class="detail-section">
+    <h3>🎯 Quality vs Speed</h3>
+    <div class="parts-note">Each dot is one person over the last 4 weeks. Further right = more stairs completed. Higher up = fewer/lighter errors. Bottom-right is the "fast but sloppy" corner worth a closer look.</div>
+    <div id="qualitySpeedChart"></div>
+  </div>
+  <div class="detail-section">
     <h3>📈 Error Points — Last 6 Months</h3>
     <div class="parts-note">Monthly total of error points logged. More negative = worse month.</div>
     <div id="errorPointsTrend"></div>
@@ -2383,32 +2388,42 @@ function drawProjectedDial(actual, completedTarget, weekTarget, colorClass, pers
   return `
     <svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:200px;">
       <!-- Background ring -->
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--card-border)" stroke-width="${stroke}"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--card-border)" stroke-width="${stroke}">
+        <title>The full ring is the gauge's scale — a bit past the weekly target, leaving room to show over-performance. The white marker below shows exactly where the target sits on it.</title>
+      </circle>
       <!-- Completed days target (faded) ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
         stroke-dasharray="${dashCompleted} ${circumference}" stroke-linecap="round"
         opacity="0.25"
-        transform="rotate(-90 ${cx} ${cy})"/>
+        transform="rotate(-90 ${cx} ${cy})">
+        <title>Expected progress by today, based on the days worked so far this week</title>
+      </circle>
       <!-- Actual (solid) ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
         stroke-dasharray="${dashActual} ${circumference}" stroke-linecap="round"
-        transform="rotate(-90 ${cx} ${cy})"/>
+        transform="rotate(-90 ${cx} ${cy})">
+        <title>Actual stairs completed so far this week</title>
+      </circle>
       <!-- Weekly target marker -->
       <line x1="${cx + (r-4) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y1="${cy - (r-4) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
             x2="${cx + (r+6) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y2="${cy - (r+6) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-            stroke="var(--text)" stroke-width="2" stroke-linecap="round"/>
+            stroke="var(--text)" stroke-width="2" stroke-linecap="round">
+        <title>Marks where the full week's target (${weekTarget}) sits on the ring — the finish line</title>
+      </line>
       <!-- Small dot on target marker -->
       <circle cx="${cx + r * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
               cy="${cy - r * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-              r="3" fill="var(--text)" opacity="0.3"/>
+              r="3" fill="var(--text)" opacity="0.3">
+        <title>Marks where the full week's target (${weekTarget}) sits on the ring — the finish line</title>
+      </circle>
     </svg>
     <div class="dial-num">
-      <div class="big" style="color:${statusColor};">${actual}</div>
-      <div class="small">done · weekly target ${weekTarget}</div>
-      <div class="projected">📈 expected from completed days: ${completedTarget}</div>
-      <div class="small" style="font-weight:600;color:${statusColor};font-size:0.65rem;">${statusText}</div>
+      <div class="big" style="color:${statusColor};" title="Stairs completed so far this week">${actual}</div>
+      <div class="small" title="The full week's target">done · weekly target ${weekTarget}</div>
+      <div class="projected" title="What you'd expect to have done by today if working exactly on pace">📈 expected from completed days: ${completedTarget}</div>
+      <div class="small" style="font-weight:600;color:${statusColor};font-size:0.65rem;" title="How today's actual compares to the pace-adjusted expectation above">${statusText}</div>
     </div>
   `;
 }
@@ -2492,7 +2507,7 @@ function renderTeamSummary(leaderboardData){
         <span class="lb-dot" style="background:${d.person.color};"></span>
         <span class="lb-name">${d.person.name}</span>
         <span class="lb-figures">${d.weekActual} done · expected ${d.completedTarget}</span>
-        <span class="lb-pct ${pctClass}">${pctLabel}</span>
+        <span class="lb-pct ${pctClass}" title="Actual so far vs what's expected by today's pace — over 100% means ahead of pace">${pctLabel}</span>
       </div>
     `;
   }).join('');
@@ -2767,6 +2782,66 @@ function renderForecastAccuracy(stairEntries, forecastEntries, today){
     `;
   }
   container.innerHTML = html || '<div class="forecast-empty">No past weeks with delivery dates yet.</div>';
+}
+
+/* =========================================================
+   QUALITY VS SPEED CHART
+   ========================================================= */
+function renderQualitySpeedChart(stairEntries, holidayIndex, errorEntries, today){
+  const container = document.getElementById('qualitySpeedChart');
+  if(!container) return;
+
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - (TREND_WEEKS * 7));
+
+  const points = PEOPLE.map(person => {
+    const weeks = getWeeklyTotals(person, stairEntries, holidayIndex, today, TREND_WEEKS);
+    const totalStairs = weeks.reduce((s,w) => s + w.actual, 0);
+    const totalErrorPoints = errorEntries
+      .filter(e => e.initials === person.initials && e.date >= cutoff && e.date <= today)
+      .reduce((s,e) => s + e.points, 0);
+    const errorCount = errorEntries.filter(e => e.initials === person.initials && e.date >= cutoff && e.date <= today).length;
+    return { person, totalStairs, totalErrorPoints, errorCount };
+  });
+
+  const maxStairs = Math.max(...points.map(p => p.totalStairs), 1);
+  const minPoints = Math.min(...points.map(p => p.totalErrorPoints), 0);
+
+  const size = 400, pad = 40;
+  const plotW = size - pad*2, plotH = size - pad*2;
+
+  const xFor = (stairs) => pad + (stairs / maxStairs) * plotW;
+  const yFor = (pts) => {
+    // 0 (no errors) sits near the top; most negative sits at the bottom
+    if(minPoints === 0) return pad;
+    return pad + ((0 - pts) / (0 - minPoints)) * plotH;
+  };
+
+  const dots = points.map(p => {
+    const x = xFor(p.totalStairs);
+    const y = yFor(p.totalErrorPoints);
+    return `
+      <circle cx="${x}" cy="${y}" r="9" fill="${p.person.color}" stroke="var(--card)" stroke-width="2">
+        <title>${p.person.name}: ${p.totalStairs} stairs, ${p.totalErrorPoints} error points (${p.errorCount} error${p.errorCount===1?'':'s'}) over the last ${TREND_WEEKS} weeks</title>
+      </circle>
+      <text x="${x}" y="${y - 14}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text)">${p.person.initials}</text>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:420px;display:block;margin:0 auto;">
+      <!-- Axes -->
+      <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${size-pad}" stroke="var(--card-border)" stroke-width="1.5"/>
+      <line x1="${pad}" y1="${size-pad}" x2="${size-pad}" y2="${size-pad}" stroke="var(--card-border)" stroke-width="1.5"/>
+      <!-- Axis labels -->
+      <text x="${size/2}" y="${size-8}" text-anchor="middle" font-size="11" fill="var(--muted)">Stairs completed (last ${TREND_WEEKS} weeks) →</text>
+      <text x="12" y="${size/2}" text-anchor="middle" font-size="11" fill="var(--muted)" transform="rotate(-90 12 ${size/2})">← More error points</text>
+      <!-- Corner hint -->
+      <text x="${size-pad-4}" y="${size-pad-8}" text-anchor="end" font-size="9" fill="var(--red)" opacity="0.6">fast but sloppy</text>
+      <text x="${size-pad-4}" y="${pad+12}" text-anchor="end" font-size="9" fill="var(--green)" opacity="0.6">fast &amp; clean</text>
+      ${dots}
+    </svg>
+  `;
 }
 
 /* =========================================================
@@ -3291,6 +3366,7 @@ document.getElementById('tileForecast').addEventListener('click', ()=>{
 document.getElementById('tileErrors').addEventListener('click', ()=>{
   setActiveView('errors');
   if(window._errorEntries) renderErrorTrends(window._errorEntries, window._today);
+  if(window._stairEntries && window._holidayIndex && window._errorEntries) renderQualitySpeedChart(window._stairEntries, window._holidayIndex, window._errorEntries, window._today);
 });
 
 document.getElementById('backToLandingFromLoads').addEventListener('click', ()=> setActiveView('landing'));
@@ -3432,18 +3508,18 @@ async function loadAndRender(){
       const personForecast = forecastEntries
         .filter(e => e.initials === initials && e.deliveryDate && e.deliveryDate >= nextMonday && e.deliveryDate <= nextFriday)
         .reduce((s,e) => s + e.stairs, 0);
-      const forecastBadge = personForecast > 0 ? `<div class="forecast-badge">🔮 ${personForecast} next wk</div>` : '';
+      const forecastBadge = personForecast > 0 ? `<div class="forecast-badge" title="Stairs already logged against this person for next week's deliveries">🔮 ${personForecast} next wk</div>` : '';
 
       card.innerHTML = `
         <div class="status-indicator"></div>
-        <div class="points-badge ${pointsBadgeClass}">${pointsLabel}</div>
+        <div class="points-badge ${pointsBadgeClass}" title="Running total: bonus for stairs over target, minus points for logged errors — click through for the full breakdown">${pointsLabel}</div>
         ${forecastBadge}
         <h2>${person.name}</h2>
         <div class="role">${initials}${todayCode ? ' · '+ (statusLabel(todayCode)||todayCode) : ''}</div>
         <div class="dial-wrap">
           ${drawProjectedDial(weekActual, completedTarget, weekTarget, status, person, today)}
         </div>
-        <span class="badge ${status}">${statusLabelText(status, weekTarget===0 ? todayCode : null)}</span>
+        <span class="badge ${status}" title="How this week's pace compares to a straight-line pace toward the weekly target">${statusLabelText(status, weekTarget===0 ? todayCode : null)}</span>
         <div class="weekly-row">
           <div><span class="label">Today</span><span class="val">${todayTarget}</span></div>
           <div><span class="label">Errors</span><span class="val"><span class="error-count">${personErrors.length}</span></span></div>
@@ -3485,6 +3561,7 @@ async function loadAndRender(){
     }
     if(window._currentView === 'errors'){
       renderErrorTrends(errorEntries, today);
+      renderQualitySpeedChart(stairEntries, holidayIndex, errorEntries, today);
     }
 
     document.getElementById('errorBanner').innerHTML = '';
