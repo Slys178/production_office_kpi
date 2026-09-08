@@ -1422,6 +1422,11 @@
     <h3>⚠️ Error Log</h3>
     <div class="detail-errors" id="detailErrors"></div>
   </div>
+  <div class="detail-section">
+    <h3>🔧 Replacement Parts — Office-Caused (this year)</h3>
+    <div class="detail-stats" id="detailRpStats"></div>
+    <div class="detail-errors" id="detailRp"></div>
+  </div>
 </div>
 
 <!-- ============ DAY DETAIL PAGE ============ -->
@@ -2348,6 +2353,14 @@ function parseReplacementPartsRows(rows){
     const costStr = (r[costCol]||'').replace(/[£,\s]/g, '');
     const cost = parseFloat(costStr) || 0;
 
+    // Operator names are stored like "SIMON FAULKS (OFFICE)" — strip the
+    // suffix and match against our tracked PEOPLE by full name so this cost
+    // can be tied to that person's own page. Names that don't match anyone
+    // we track (blank, other staff, inconsistent entries) are left unmatched
+    // and simply won't appear on any person's page.
+    const cleanOperator = (r[operatorCol]||'').replace(/\(office\)/i, '').trim().toUpperCase();
+    const matchedPerson = PEOPLE.find(p => p.name.toUpperCase() === cleanOperator);
+
     out.push({
       date: date,
       part: (r[partCol]||'').trim() || 'Unspecified',
@@ -2356,6 +2369,7 @@ function parseReplacementPartsRows(rows){
       material: (r[materialCol]||'').trim(),
       reason: (r[reasonCol]||'').trim() || 'Unspecified',
       operator: (r[operatorCol]||'').trim(),
+      initials: matchedPerson ? matchedPerson.initials : null,
       loadNo: (r[loadCol]||'').trim(),
       plot: (r[plotCol]||'').trim()
     });
@@ -3284,7 +3298,7 @@ function getWeeklyTotals(person, stairEntries, holidayIndex, today, numWeeks){
   return weeks;
 }
 
-function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, today, errorEntries) {
+function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, today, errorEntries, rpEntries) {
   const detailPage = document.getElementById('detailPage');
   document.getElementById('landingPage').classList.remove('active');
   document.getElementById('kpiPage').classList.remove('active');
@@ -3459,6 +3473,30 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
           <div class="error-desc">${e.issue}${e.quantity > 1 ? ' (x'+e.quantity+')' : ''} ${e.impact ? '— ' + e.impact : ''}</div>
         </div>
         <div class="error-points">${e.points}</div>
+      </div>
+    `).join('');
+
+  const personRp = (rpEntries||[]).filter(e => e.initials === person.initials).sort((a,b) => b.date - a.date);
+  const personRpCost = personRp.reduce((s,e) => s + e.cost, 0);
+  document.getElementById('detailRpStats').innerHTML = `
+    <div class="detail-stat-card">
+      <div class="label">Incidents (this year)</div>
+      <div class="value">${personRp.length}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Total Cost</div>
+      <div class="value negative">£${personRpCost.toFixed(2)}</div>
+    </div>
+  `;
+  document.getElementById('detailRp').innerHTML = personRp.length === 0 ?
+    '<div style="color:var(--muted);font-style:italic;padding:8px 0;">No office-caused replacement parts logged for this year</div>' :
+    personRp.map(e => `
+      <div class="detail-error-item">
+        <div class="error-left">
+          <div class="error-date">${fmtDate(e.date)}${e.plot ? ' · Plot ' + e.plot : ''}${e.loadNo ? ' · Load ' + e.loadNo : ''}</div>
+          <div class="error-desc">${e.part}${e.quantity>1 ? ' (x'+e.quantity+')' : ''} — ${e.reason}${e.material ? ' · '+e.material : ''}</div>
+        </div>
+        <div class="error-points">£${e.cost.toFixed(2)}</div>
       </div>
     `).join('');
 }
@@ -3743,7 +3781,7 @@ async function loadAndRender(){
       `;
       card.addEventListener('click', function(){
         const p = PEOPLE.find(p => p.initials === this.dataset.person);
-        if(p) showDetailPage(p, window._stairEntries, window._forecastEntries, window._holidayIndex, window._today, window._errorEntries);
+        if(p) showDetailPage(p, window._stairEntries, window._forecastEntries, window._holidayIndex, window._today, window._errorEntries, window._rpEntries);
       });
       dialGrid.appendChild(card);
     });
