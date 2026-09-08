@@ -1,3 +1,16 @@
+/* =========================================================
+   AUTH - Check Permissions (ADD THIS SECTION)
+   ========================================================= */
+
+// ===== ADD THIS LINE =====
+const USER_LIST_SHEET_ID = 'https://docs.google.com/spreadsheets/d/1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw/edit?usp=sharing'; // <-- REPLACE THIS!
+const USER_LIST_GID = '0';
+
+// Check if user is logged in
+function checkLoginStatus() {
+    // ... rest of code
+}
+
 /**
  * Application entry point
  * - Theme toggle
