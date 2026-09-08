@@ -28,7 +28,7 @@
     --toggle-bg:#2a2a3a;
     --toggle-dot:#eef2fb;
   }
-
+  
   [data-theme="light"] {
     --bg:#f0f2f5;
     --card:#ffffff;
@@ -52,7 +52,7 @@
     padding:12px;
     transition:background 0.3s ease, color 0.3s ease;
   }
-
+  
   ::-webkit-scrollbar{width:6px;}
   ::-webkit-scrollbar-track{background:var(--card);}
   ::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:3px;}
@@ -66,7 +66,7 @@
     flex-wrap:wrap;
     gap:8px;
   }
-
+  
   .brand{
     display:flex;
     align-items:center;
@@ -102,7 +102,7 @@
     letter-spacing:0.08em;
     text-transform:uppercase;
   }
-
+  
   .header-right{
     display:flex;
     align-items:center;
@@ -174,7 +174,7 @@
     from{opacity:0;transform:translateY(12px);}
     to{opacity:1;transform:translateY(0);}
   }
-
+  
   .page-header{
     display:flex;
     justify-content:space-between;
@@ -232,7 +232,7 @@
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
     gap:16px;
-    max-width:1100px;
+    max-width:900px;
     margin:0 auto;
   }
   .nav-tile{
@@ -413,7 +413,7 @@
   .load-card .load-status.status-in-progress{background:rgba(52,152,219,0.15);color:var(--blue);}
   .load-card .load-status.status-completed{background:rgba(46,204,113,0.15);color:var(--green);}
   .load-card .load-status.status-pending{background:rgba(245,166,35,0.15);color:var(--amber);}
-
+  
   .load-card .load-details{
     display:flex;
     flex-wrap:wrap;
@@ -655,7 +655,7 @@
   .card.status-amber{border-color:var(--amber);}
   .card.status-red{border-color:var(--red);}
   .card.status-off{border-color:var(--muted);opacity:0.6;}
-
+  
   .card .status-indicator{
     position:absolute;
     top:0;
@@ -702,7 +702,7 @@
     font-size:0.65rem;
     font-weight:600;
   }
-
+  
   .dial-wrap{
     position:relative;
     width:100%;
@@ -720,7 +720,7 @@
   .dial-num .big{font-size:2rem;font-weight:800;line-height:1;}
   .dial-num .small{font-size:0.75rem;color:var(--muted);margin-top:2px;}
   .dial-num .projected{font-size:0.6rem;color:var(--muted);margin-top:1px;opacity:0.6;}
-
+  
   .badge{
     margin-top:8px;
     padding:4px 14px;
@@ -734,7 +734,7 @@
   .badge.amber{background:rgba(245,166,35,0.15);color:var(--amber);}
   .badge.red{background:rgba(231,76,60,0.15);color:var(--red);}
   .badge.off{background:rgba(137,147,171,0.12);color:var(--muted);}
-
+  
   .weekly-row{
     display:flex;
     justify-content:space-between;
@@ -832,7 +832,7 @@
   }
   .team-dial-card h3{margin:0 0 2px 0;font-size:1.05rem;}
   .team-dial-card .team-sub{color:var(--muted);font-size:0.7rem;margin-bottom:4px;}
-
+  
   .leaderboard-card{
     background:var(--card);
     border:1px solid var(--card-border);
@@ -1028,7 +1028,7 @@
   }
   .forecast-week-card .fw-person-chip .dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
   .forecast-empty{text-align:center;color:var(--muted);padding:30px 0;font-style:italic;}
-
+  
   .warning-badge{
     padding:2px 10px;
     border-radius:999px;
@@ -1038,7 +1038,7 @@
   .warning-badge.danger{background:rgba(231,76,60,0.15);color:var(--red);}
   .warning-badge.warning{background:rgba(245,166,35,0.15);color:var(--amber);}
   .warning-badge.ok{background:rgba(46,204,113,0.15);color:var(--green);}
-
+  
   .capacity-bar{
     height:5px;
     border-radius:999px;
@@ -1050,7 +1050,7 @@
   .capacity-bar .fill.danger{background:var(--red);}
   .capacity-bar .fill.warning{background:var(--amber);}
   .capacity-bar .fill.ok{background:var(--green);}
-
+  
   .capacity-detail{
     display:flex;
     justify-content:space-between;
@@ -1105,7 +1105,7 @@
   }
   .detail-section:hover{box-shadow:var(--shadow);}
   .detail-section h3{margin:0 0 12px 0;font-size:0.95rem;color:var(--muted);font-weight:600;}
-
+  
   .detail-week-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
@@ -1276,29 +1276,6 @@
     .detail-stats{grid-template-columns:1fr;}
     .detail-daily-grid{grid-template-columns:repeat(2,1fr);}
   }
-  /* Review page specific */
-  .review-log-item{
-    display:flex;
-    justify-content:space-between;
-    padding:6px 0;
-    border-bottom:1px solid var(--card-border);
-    font-size:0.8rem;
-  }
-  .review-log-item .log-type{
-    font-weight:600;
-    min-width:60px;
-  }
-  .review-log-item .log-desc{
-    flex:1;
-    margin:0 12px;
-  }
-  .review-log-item .log-value{
-    font-weight:600;
-    white-space:nowrap;
-  }
-  .review-log-item .log-value.positive{color:var(--green);}
-  .review-log-item .log-value.negative{color:var(--red);}
-  .review-log-item .log-value.neutral{color:var(--muted);}
 </style>
 </head>
 <body>
@@ -1317,7 +1294,7 @@
       <span class="brand-sub">Production Office</span>
     </div>
   </div>
-
+  
   <div class="header-right">
     <div class="status">
       <span class="dot"></span>
@@ -1345,7 +1322,7 @@
     <div class="nav-tile" id="tileKpi">
       <div class="tile-icon">📈</div>
       <div class="tile-label">OFFICE KPI</div>
-      <div class="tile-sub">Daily & weekly stair targets per person</div>
+      <div class="tile-sub">Daily &amp; weekly stair targets per person</div>
       <div class="tile-badge" id="tileKpiBadge" style="display:none;"></div>
     </div>
     <div class="nav-tile" id="tileLoads">
@@ -1357,7 +1334,7 @@
     <div class="nav-tile" id="tileHolidays">
       <div class="tile-icon">📅</div>
       <div class="tile-label">HOLIDAYS</div>
-      <div class="tile-sub">Team holiday & absence calendar</div>
+      <div class="tile-sub">Team holiday &amp; absence calendar</div>
     </div>
     <div class="nav-tile" id="tileForecast">
       <div class="tile-icon">🔮</div>
@@ -1368,17 +1345,12 @@
     <div class="nav-tile" id="tileErrors">
       <div class="tile-icon">⚠️</div>
       <div class="tile-label">ERROR LOG</div>
-      <div class="tile-sub">Trends, patterns & points over time</div>
+      <div class="tile-sub">Trends, patterns &amp; points over time</div>
     </div>
     <div class="nav-tile" id="tileReplacementParts">
       <div class="tile-icon">🔧</div>
       <div class="tile-label">REPLACEMENT PARTS</div>
-      <div class="tile-sub">Office-caused parts, cost & trends</div>
-    </div>
-    <div class="nav-tile" id="tileReview">
-      <div class="tile-icon">📆</div>
-      <div class="tile-label">MONTH/QUARTER REVIEW</div>
-      <div class="tile-sub">Rolled-up snapshot — output, points, errors, cost</div>
+      <div class="tile-sub">Office-caused parts, cost &amp; trends</div>
     </div>
   </div>
 </div>
@@ -1401,7 +1373,7 @@
     <h2>📦 Loads</h2>
     <button class="back-btn" id="refreshLoadsBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
   </div>
-
+  
   <div id="loadsContainer">
     <div class="loads-controls">
       <div class="loads-search">
@@ -1505,7 +1477,7 @@
 <div id="forecastPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromForecast">← Production Office</button>
-    <h2>🔮 Forecast & Manpower Check</h2>
+    <h2>🔮 Forecast &amp; Manpower Check</h2>
   </div>
   <div class="forecast-note">Upcoming stairs grouped by delivery week. Capacity for each week is based on who's available the week before (the week the team would actually be building it). 🔴 = shortfall — may need overtime.</div>
   <div class="forecast-week-grid" id="forecastWeeks"></div>
@@ -1576,59 +1548,12 @@
     <div class="leaderboard" id="rpTopReasons"></div>
   </div>
   <div class="detail-section">
-    <h3> Top Parts Affected</h3>
+    <h3>🪵 Top Parts Affected</h3>
     <div class="leaderboard" id="rpTopParts"></div>
   </div>
   <div class="detail-section">
     <h3>🕒 Recent Incidents</h3>
     <div id="rpRecentList"></div>
-  </div>
-</div>
-
-<!-- ============ MONTH/QUARTER REVIEW PAGE ============ -->
-<div id="reviewPage" class="page-view">
-  <div class="page-header">
-    <button class="back-btn" id="backToLandingFromReview">← Production Office</button>
-    <h2>📆 Month/Quarter Review</h2>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <select id="reviewPeriod" style="padding:6px 12px;border-radius:6px;background:var(--card-border);color:var(--text);border:none;font-size:0.85rem;">
-        <option value="month">This Month</option>
-        <option value="quarter">This Quarter</option>
-        <option value="year">This Year</option>
-      </select>
-      <button class="back-btn" id="refreshReviewBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
-    </div>
-  </div>
-
-  <!-- Summary Cards -->
-  <div class="detail-stats" id="reviewSummary"></div>
-
-  <!-- Charts / Breakdowns -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px;">
-    <div class="detail-section">
-      <h3>📊 Output vs Target</h3>
-      <div id="reviewOutputChart"></div>
-    </div>
-    <div class="detail-section">
-      <h3>⚠️ Error Summary</h3>
-      <div id="reviewErrorSummary"></div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px;">
-    <div class="detail-section">
-      <h3>🔧 Replacement Parts Cost</h3>
-      <div id="reviewRpSummary"></div>
-    </div>
-    <div class="detail-section">
-      <h3>👤 Person Breakdown</h3>
-      <div id="reviewPersonBreakdown"></div>
-    </div>
-  </div>
-
-  <div class="detail-section">
-    <h3>📋 Detailed Log</h3>
-    <div id="reviewDetailLog"></div>
   </div>
 </div>
 
@@ -1674,6 +1599,7 @@ const HOURS = {
   AS: { MonThu: 9,   Fri: 6.5 },
   DF: { MonThu: 6,   Fri: 3.5 }
 };
+// UPDATED: Target increased from 54 to 56
 const BASE_RATE = 56 / 9;
 const REFRESH_MS = 3 * 60 * 1000;
 const FORECAST_WEEKS = 8;
@@ -1845,18 +1771,21 @@ let loadsCurrentPage = 1;
 function parseLoadsFromSheet(stairEntries, forecastEntries) {
   const allEntries = [...stairEntries, ...forecastEntries];
   const loadMap = {};
-
+  
   allEntries.forEach(entry => {
     const dueDate = entry.deliveryDate ? entry.deliveryDate.toISOString().split('T')[0] : null;
     const loadNumber = entry.loadNo && entry.loadNo.trim() ? entry.loadNo.trim() : ('#' + entry.stairs + '_' + (dueDate || ''));
     const key = loadNumber + '_' + (dueDate || '');
-
+    
     let status = 'pending';
     if (entry.initials) {
+      // Every entry already carries its own isCompleted flag from the sheet's
+      // tick-box column (set when it was first parsed) — "completed" array
+      // entries just don't repeat the field since it's always true for them.
       const isCompleted = entry.isCompleted !== undefined ? entry.isCompleted : true;
       status = isCompleted ? 'completed' : 'in-progress';
     }
-
+    
     if (!loadMap[key]) {
       loadMap[key] = {
         loadNumber: loadNumber,
@@ -1869,7 +1798,7 @@ function parseLoadsFromSheet(stairEntries, forecastEntries) {
       };
     }
   });
-
+  
   return Object.values(loadMap);
 }
 
@@ -1907,7 +1836,7 @@ function renderLoads() {
   const searchTerm = document.getElementById('loadSearch')?.value?.toLowerCase() || '';
   const personFilter = document.getElementById('personFilter')?.value || 'all';
   const statusFilter = document.getElementById('statusFilter')?.value || 'all';
-
+  
   loadsFiltered = loadItems.filter(load => {
     if (searchTerm) {
       const loadNumStr = load.loadNumber.toString();
@@ -1917,23 +1846,23 @@ function renderLoads() {
     if (statusFilter !== 'all' && load.status !== statusFilter) return false;
     return true;
   });
-
+  
   loadsFiltered.sort((a, b) => {
     if (!a.dueDate) return 1;
     if (!b.dueDate) return -1;
     return new Date(a.dueDate) - new Date(b.dueDate);
   });
-
+  
   document.getElementById('loadsTotal').textContent = loadsFiltered.length;
-
+  
   const totalPages = Math.ceil(loadsFiltered.length / loadsPageSize);
   if (loadsCurrentPage > totalPages) loadsCurrentPage = Math.max(1, totalPages);
   const start = (loadsCurrentPage - 1) * loadsPageSize;
   const end = Math.min(start + loadsPageSize, loadsFiltered.length);
   const pageData = loadsFiltered.slice(start, end);
-
+  
   document.getElementById('loadsShowing').textContent = pageData.length;
-
+  
   const grid = document.getElementById('loadsGrid');
   if (pageData.length === 0) {
     grid.innerHTML = `
@@ -1953,7 +1882,7 @@ function renderLoads() {
       const personColor = PEOPLE.find(p => p.initials === load.person)?.color || '#8993ab';
       const loadNum = load.loadNumber;
       const hasLink = driveSearchCache[loadNum] || getSavedDriveLinks()[loadNum];
-
+      
       return `
         <div class="load-card" data-load="${loadNum}" data-index="${index}">
           <div class="load-header">
@@ -1976,7 +1905,7 @@ function renderLoads() {
         </div>
       `;
     }).join('');
-
+    
     document.querySelectorAll('.drive-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -1985,7 +1914,7 @@ function renderLoads() {
       });
     });
   }
-
+  
   const pagination = document.getElementById('loadsPagination');
   if (totalPages > 1) {
     pagination.innerHTML = `
@@ -2276,13 +2205,13 @@ function parseStairRows(rows){
     const r = rows[i];
     const deliveryDate = deliveryDateCol > -1 ? parseUKDate(r[deliveryDateCol]) : null;
     const stairs = parseInt(r[stairsCol],10);
-
+    
     if(deliveryDate && !isNaN(stairs) && stairs > 0) {
       const initials = (r[initialsCol]||'').trim().toUpperCase();
-
+      
       const completedVal = (r[completedCol] || '').toString().trim().toUpperCase();
       const isCompleted = completedVal === 'TRUE' || completedVal === 'YES' || completedVal === '1' || completedVal === '✓';
-
+      
       const parts = {
         winderStringPlates: parseInt(r[winderStringPlatesCol],10) || 0,
         smallStringPlates:  parseInt(r[smallStringPlatesCol],10) || 0,
@@ -2291,10 +2220,10 @@ function parseStairRows(rows){
         winders:             parseInt(r[windersCol],10) || 0,
         bullnose:            parseInt(r[bullnoseCol],10) || 0
       };
-
+      
       const date = parseUKDate(r[dateCol]);
       const loadNo = loadNoCol > -1 ? (r[loadNoCol]||'').toString().trim().replace(/^#+/, '') : '';
-
+      
       if(deliveryDate && !isNaN(stairs) && stairs > 0) {
         const entry = {
           date: date || null,
@@ -2305,7 +2234,7 @@ function parseStairRows(rows){
           isCompleted: isCompleted,
           loadNo: loadNo
         };
-
+        
         if(isCompleted && date && initials && PEOPLE.some(p => p.initials === initials)) {
           completed.push({date, initials, stairs, parts, deliveryDate, loadNo});
         } else {
@@ -2382,8 +2311,74 @@ function parseErrorRows(rows){
   return out;
 }
 
+// Parses the "STAIR PARTS" tab of the Replacement Parts sheet, filtered to
+// only rows logged against the OFFICE section (i.e. mistakes caused by the
+// office — wrong program, missing paperwork — not shop-floor/CNC issues).
+function parseReplacementPartsRows(rows){
+  let headerIdx = -1;
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i];
+    if(r && r.length > 5) {
+      const upper = r.map(c => (c||'').trim().toUpperCase());
+      if(upper.some(c => c.includes('WEEK NO')) && upper.some(c => c.includes('SECTION'))) {
+        headerIdx = i;
+        break;
+      }
+    }
+  }
+  if(headerIdx === -1) return [];
+  const header = rows[headerIdx].map(c => (c||'').trim().toUpperCase());
+  const dateCol = header.findIndex(c => c.includes('DATE'));
+  const partCol = header.findIndex(c => c.includes('PART REPLACED'));
+  const costCol = header.findIndex(c => c.includes('COST'));
+  const qtyCol = header.findIndex(c => c.includes('QUANTITY'));
+  const materialCol = header.findIndex(c => c.includes('MATERIAL'));
+  const reasonCol = header.findIndex(c => c.includes('REASON'));
+  const sectionCol = header.findIndex(c => c.includes('SECTION'));
+  const operatorCol = header.findIndex(c => c.includes('OPERATOR'));
+  const loadCol = header.findIndex(c => c.includes('LOAD'));
+  const plotCol = header.findIndex(c => c.includes('PLOT'));
+
+  const out = [];
+  for(let i=headerIdx+1;i<rows.length;i++){
+    const r = rows[i];
+    if(!r || r.length < 3) continue;
+    const dateStr = (r[dateCol]||'').trim();
+    if(!dateStr) continue;
+    const date = parseUKDate(dateStr);
+    if(!date) continue;
+    const section = (r[sectionCol]||'').trim().toUpperCase();
+    if(section !== 'OFFICE') continue; // only office-caused mistakes for this view
+
+    const costStr = (r[costCol]||'').replace(/[£,\s]/g, '');
+    const cost = parseFloat(costStr) || 0;
+
+    // Operator names are stored like "SIMON FAULKS (OFFICE)" — strip the
+    // suffix and match against our tracked PEOPLE by full name so this cost
+    // can be tied to that person's own page. Names that don't match anyone
+    // we track (blank, other staff, inconsistent entries) are left unmatched
+    // and simply won't appear on any person's page.
+    const cleanOperator = (r[operatorCol]||'').replace(/\(office\)/i, '').trim().toUpperCase();
+    const matchedPerson = PEOPLE.find(p => p.name.toUpperCase() === cleanOperator);
+
+    out.push({
+      date: date,
+      part: (r[partCol]||'').trim() || 'Unspecified',
+      cost: cost,
+      quantity: parseInt(r[qtyCol],10) || 1,
+      material: (r[materialCol]||'').trim(),
+      reason: (r[reasonCol]||'').trim() || 'Unspecified',
+      operator: (r[operatorCol]||'').trim(),
+      initials: matchedPerson ? matchedPerson.initials : null,
+      loadNo: (r[loadCol]||'').trim(),
+      plot: (r[plotCol]||'').trim()
+    });
+  }
+  return out;
+}
+
 /* =========================================================
-   RENDER FUNCTIONS
+   RENDER FUNCTIONS - UPDATED WITH "COMPLETED DAYS ONLY" LOGIC
    ========================================================= */
 function fmtDate(d){
   return d.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
@@ -2392,32 +2387,38 @@ function fmtDateShort(d){
   return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 }
 
+// NEW: Calculate the cumulative target for COMPLETED days only
 function getCompletedDaysTarget(person, today, stairEntries, holidayIndex) {
   const monday = mondayOf(today);
   const friday = new Date(monday);
   friday.setDate(monday.getDate() + 4);
-
+  
   let completedTarget = 0;
   let completedActual = 0;
-
+  
+  // Loop through each day of the week (Mon-Fri)
   for (let d = new Date(monday); d <= friday; d.setDate(d.getDate() + 1)) {
     const dCopy = new Date(d);
     if (!dayBucket(dCopy)) continue;
-
+    
+    // Check if this day is COMPLETED (yesterday or earlier)
+    // A day is "completed" if it's strictly before today
     const isCompletedDay = dCopy < new Date(today.setHours(0,0,0,0));
-
+    
     if (isCompletedDay) {
+      // Add this day's target to the completed target
       const code = getCodeForPerson(holidayIndex, person.holidayName, dCopy);
       const dayTarget = targetFor(person.initials, dCopy, code);
       completedTarget += dayTarget;
-
+      
+      // Also track actual for this day (for reference)
       const dayActual = stairEntries
         .filter(e => e.initials === person.initials && sameDay(e.date, dCopy))
         .reduce((s, e) => s + e.stairs, 0);
       completedActual += dayActual;
     }
   }
-
+  
   return { completedTarget, completedActual };
 }
 
@@ -2439,31 +2440,36 @@ function statusLabelText(status, code){
   return '';
 }
 
+// UPDATED: Dial showing actual vs completed-days target
 function drawProjectedDial(actual, completedTarget, weekTarget, colorClass, person, today) {
   const size=200, stroke=16, r=(size-stroke)/2, cx=size/2, cy=size/2;
   const circumference = 2*Math.PI*r;
-
+  
+  // Use the week target as the max value for the dial
   const maxVal = Math.max(weekTarget, actual, completedTarget);
   const displayMax = Math.max(maxVal, weekTarget * 1.1);
-
+  
   const pctActual = Math.min(1, actual / displayMax);
   const pctCompleted = Math.min(1, completedTarget / displayMax);
   const pctTarget = Math.min(1, weekTarget / displayMax);
-
+  
   const dashActual = circumference * pctActual;
   const dashCompleted = circumference * pctCompleted;
-
+  
+  // Determine color based on status
   const status = statusForProgress(actual, completedTarget);
   const colorMap = {green:'#2ecc71', over:'#3498db', amber:'#f5a623', red:'#e74c3c', off:'#8993ab'};
   const color = colorMap[status] || '#4a90e2';
-
+  
+  // Determine status text
   let statusText = '';
   let statusColor = color;
-
+  
   const todayDate = new Date(today);
   todayDate.setHours(0,0,0,0);
-  const dayOfWeek = todayDate.getDay();
-
+  const dayOfWeek = todayDate.getDay(); // 1=Mon, 5=Fri, 0=Sun, 6=Sat
+  
+  // If it's Monday or before, no completed days yet
   if (dayOfWeek === 1 || dayOfWeek === 0 || dayOfWeek === 6) {
     statusText = '📅 Week just started';
     statusColor = '#8993ab';
@@ -2486,31 +2492,46 @@ function drawProjectedDial(actual, completedTarget, weekTarget, colorClass, pers
       statusColor = '#e74c3c';
     }
   }
-
+  
   return `
     <svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:200px;">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--card-border)" stroke-width="${stroke}"/>
+      <!-- Background ring -->
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--card-border)" stroke-width="${stroke}">
+        <title>The full ring is the gauge's scale — a bit past the weekly target, leaving room to show over-performance. The white marker below shows exactly where the target sits on it.</title>
+      </circle>
+      <!-- Completed days target (faded) ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
         stroke-dasharray="${dashCompleted} ${circumference}" stroke-linecap="round"
         opacity="0.25"
-        transform="rotate(-90 ${cx} ${cy})"/>
+        transform="rotate(-90 ${cx} ${cy})">
+        <title>Expected progress by today, based on the days worked so far this week</title>
+      </circle>
+      <!-- Actual (solid) ring -->
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
         stroke-dasharray="${dashActual} ${circumference}" stroke-linecap="round"
-        transform="rotate(-90 ${cx} ${cy})"/>
-      <line x1="${cx + (r-4) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}"
+        transform="rotate(-90 ${cx} ${cy})">
+        <title>Actual stairs completed so far this week</title>
+      </circle>
+      <!-- Weekly target marker -->
+      <line x1="${cx + (r-4) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y1="${cy - (r-4) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-            x2="${cx + (r+6) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}"
+            x2="${cx + (r+6) * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
             y2="${cy - (r+6) * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-            stroke="var(--text)" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="${cx + r * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}"
+            stroke="var(--text)" stroke-width="2" stroke-linecap="round">
+        <title>Marks where the full week's target (${weekTarget}) sits on the ring — the finish line</title>
+      </line>
+      <!-- Small dot on target marker -->
+      <circle cx="${cx + r * Math.sin(-Math.PI/2 + 2*Math.PI*pctTarget)}" 
               cy="${cy - r * Math.cos(-Math.PI/2 + 2*Math.PI*pctTarget)}"
-              r="3" fill="var(--text)" opacity="0.3"/>
+              r="3" fill="var(--text)" opacity="0.3">
+        <title>Marks where the full week's target (${weekTarget}) sits on the ring — the finish line</title>
+      </circle>
     </svg>
     <div class="dial-num">
-      <div class="big" style="color:${statusColor};">${actual}</div>
-      <div class="small">done · weekly target ${weekTarget}</div>
-      <div class="projected">📈 expected from completed days: ${completedTarget}</div>
-      <div class="small" style="font-weight:600;color:${statusColor};font-size:0.65rem;">${statusText}</div>
+      <div class="big" style="color:${statusColor};" title="Stairs completed so far this week">${actual}</div>
+      <div class="small" title="The full week's target">done · weekly target ${weekTarget}</div>
+      <div class="projected" title="What you'd expect to have done by today if working exactly on pace">📈 expected from completed days: ${completedTarget}</div>
+      <div class="small" style="font-weight:600;color:${statusColor};font-size:0.65rem;" title="How today's actual compares to the pace-adjusted expectation above">${statusText}</div>
     </div>
   `;
 }
@@ -2537,17 +2558,17 @@ function drawMiniTrendProjected(weeks, person, stairEntries, holidayIndex, today
         }
       }
     }
-
+    
     const pctActual = target > 0 ? Math.min(1, actual/target) : 0;
     const pctProjected = target > 0 ? Math.min(1, projected/target) : 0;
     const heightActual = Math.max(4, Math.round(pctActual * 100));
     const heightProjected = Math.max(4, Math.round(pctProjected * 100));
-
+    
     const status = statusForProgress(actual, projected);
     const colorMap = {green:'#2ecc71', over:'#3498db', amber:'#f5a623', red:'#e74c3c', off:'#8993ab'};
     const color = colorMap[status] || '#4a90e2';
     const label = w.isCurrent ? 'Now' : fmtDateShort(w.start);
-
+    
     return `
       <div class="bar-col">
         <div class="bar-track">
@@ -2594,7 +2615,7 @@ function renderTeamSummary(leaderboardData){
         <span class="lb-dot" style="background:${d.person.color};"></span>
         <span class="lb-name">${d.person.name}</span>
         <span class="lb-figures">${d.weekActual} done · expected ${d.completedTarget}</span>
-        <span class="lb-pct ${pctClass}">${pctLabel}</span>
+        <span class="lb-pct ${pctClass}" title="Actual so far vs what's expected by today's pace — over 100% means ahead of pace">${pctLabel}</span>
       </div>
     `;
   }).join('');
@@ -2721,7 +2742,7 @@ function renderForecast(forecastEntries, holidayIndex, today) {
     if(i === 0 || i === 1) return true;
     return w.total > 0;
   });
-
+  
   if(displayWeeks.length === 0 || displayWeeks.every(w => w.total === 0)){
     container.innerHTML = '<div class="forecast-empty">No upcoming stairs found with a delivery date.</div>';
     const tileBadge = document.getElementById('tileForecastBadge');
@@ -2872,9 +2893,180 @@ function renderForecastAccuracy(stairEntries, forecastEntries, today){
 }
 
 /* =========================================================
-   ERROR LOG TRENDS
+   QUALITY VS SPEED CHART
    ========================================================= */
+function renderQualitySpeedChart(stairEntries, holidayIndex, errorEntries, today){
+  const container = document.getElementById('qualitySpeedChart');
+  if(!container) return;
+
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - (TREND_WEEKS * 7));
+
+  const points = PEOPLE.map(person => {
+    const weeks = getWeeklyTotals(person, stairEntries, holidayIndex, today, TREND_WEEKS);
+    const totalStairs = weeks.reduce((s,w) => s + w.actual, 0);
+    const totalErrorPoints = errorEntries
+      .filter(e => e.initials === person.initials && e.date >= cutoff && e.date <= today)
+      .reduce((s,e) => s + e.points, 0);
+    const errorCount = errorEntries.filter(e => e.initials === person.initials && e.date >= cutoff && e.date <= today).length;
+    return { person, totalStairs, totalErrorPoints, errorCount };
+  });
+
+  const maxStairs = Math.max(...points.map(p => p.totalStairs), 1);
+  const minPoints = Math.min(...points.map(p => p.totalErrorPoints), 0);
+
+  const size = 400, pad = 40;
+  const plotW = size - pad*2, plotH = size - pad*2;
+
+  const xFor = (stairs) => pad + (stairs / maxStairs) * plotW;
+  const yFor = (pts) => {
+    // 0 (no errors) sits near the top; most negative sits at the bottom
+    if(minPoints === 0) return pad;
+    return pad + ((0 - pts) / (0 - minPoints)) * plotH;
+  };
+
+  const dots = points.map(p => {
+    const x = xFor(p.totalStairs);
+    const y = yFor(p.totalErrorPoints);
+    return `
+      <circle cx="${x}" cy="${y}" r="9" fill="${p.person.color}" stroke="var(--card)" stroke-width="2">
+        <title>${p.person.name}: ${p.totalStairs} stairs, ${p.totalErrorPoints} error points (${p.errorCount} error${p.errorCount===1?'':'s'}) over the last ${TREND_WEEKS} weeks</title>
+      </circle>
+      <text x="${x}" y="${y - 14}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text)">${p.person.initials}</text>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:420px;display:block;margin:0 auto;">
+      <!-- Axes -->
+      <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${size-pad}" stroke="var(--card-border)" stroke-width="1.5"/>
+      <line x1="${pad}" y1="${size-pad}" x2="${size-pad}" y2="${size-pad}" stroke="var(--card-border)" stroke-width="1.5"/>
+      <!-- Axis labels -->
+      <text x="${size/2}" y="${size-8}" text-anchor="middle" font-size="11" fill="var(--muted)">Stairs completed (last ${TREND_WEEKS} weeks) →</text>
+      <text x="12" y="${size/2}" text-anchor="middle" font-size="11" fill="var(--muted)" transform="rotate(-90 12 ${size/2})">← More error points</text>
+      <!-- Corner hint -->
+      <text x="${size-pad-4}" y="${size-pad-8}" text-anchor="end" font-size="9" fill="var(--red)" opacity="0.6">fast but sloppy</text>
+      <text x="${size-pad-4}" y="${pad+12}" text-anchor="end" font-size="9" fill="var(--green)" opacity="0.6">fast &amp; clean</text>
+      ${dots}
+    </svg>
+  `;
+}
+
+/* =========================================================
+   ERROR LOG TRENDS - UPDATED WITH CORRECT LAYOUT
+   ========================================================= */
+function renderReplacementParts(rpEntries, today){
+  const totalCost = rpEntries.reduce((s,e) => s + e.cost, 0);
+  const totalCount = rpEntries.length;
+
+  const thisMonth = rpEntries.filter(e => e.date.getFullYear()===today.getFullYear() && e.date.getMonth()===today.getMonth());
+  const thisMonthCost = thisMonth.reduce((s,e) => s + e.cost, 0);
+
+  document.getElementById('rpSummaryStats').innerHTML = `
+    <div class="detail-stat-card">
+      <div class="label">Total Incidents</div>
+      <div class="value">${totalCount}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Total Cost</div>
+      <div class="value negative">£${totalCost.toFixed(2)}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">This Month</div>
+      <div class="value">${thisMonth.length}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">This Month Cost</div>
+      <div class="value negative">£${thisMonthCost.toFixed(2)}</div>
+    </div>
+  `;
+
+  // ----- Cost & count, last 6 months -----
+  const months = [];
+  for(let i=5; i>=0; i--){
+    const d = new Date(today.getFullYear(), today.getMonth()-i, 1);
+    months.push({ year:d.getFullYear(), month:d.getMonth(), label:d.toLocaleDateString('en-GB',{month:'short'}), count:0, cost:0 });
+  }
+  rpEntries.forEach(e=>{
+    const m = months.find(m2 => m2.year===e.date.getFullYear() && m2.month===e.date.getMonth());
+    if(m){ m.count++; m.cost += e.cost; }
+  });
+
+  const maxCost = Math.max(1, ...months.map(m => m.cost));
+  const costBars = months.map(m => {
+    const heightPct = Math.max(4, Math.round((m.cost/maxCost)*100));
+    return `
+      <div class="bar-col">
+        <div class="bar-track"><div class="bar-fill" style="height:${heightPct}%;background:#e74c3c;"></div></div>
+        <div class="bar-val">£${m.cost.toFixed(0)}</div>
+        <div class="bar-label">${m.label}</div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('rpCostTrend').innerHTML = `<div class="mini-trend" style="border-top:none;padding-top:0;margin-top:0;"><div class="bars">${costBars}</div></div>`;
+
+  const maxCount = Math.max(1, ...months.map(m => m.count));
+  const countBars = months.map(m => {
+    const heightPct = Math.max(4, Math.round((m.count/maxCount)*100));
+    return `
+      <div class="bar-col">
+        <div class="bar-track"><div class="bar-fill" style="height:${heightPct}%;background:#4a90e2;"></div></div>
+        <div class="bar-val">${m.count}</div>
+        <div class="bar-label">${m.label}</div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('rpCountTrend').innerHTML = `<div class="mini-trend" style="border-top:none;padding-top:0;margin-top:0;"><div class="bars">${countBars}</div></div>`;
+
+  // ----- Top reasons -----
+  function topBreakdown(field, limit){
+    const map = {};
+    rpEntries.forEach(e => {
+      const key = (e[field]||'').trim() || 'Unspecified';
+      if(!map[key]) map[key] = { count:0, cost:0 };
+      map[key].count++;
+      map[key].cost += e.cost;
+    });
+    return Object.entries(map).sort((a,b) => b[1].count - a[1].count).slice(0, limit);
+  }
+
+  function renderBreakdownList(containerId, breakdown){
+    const container = document.getElementById(containerId);
+    if(breakdown.length === 0){ container.innerHTML = '<div class="forecast-empty">No data yet.</div>'; return; }
+    container.innerHTML = breakdown.map(([name, stats], idx) => `
+      <div class="lb-row">
+        <span class="lb-rank">${idx+1}</span>
+        <span class="lb-dot" style="background:var(--muted);width:0;height:0;"></span>
+        <span class="lb-name">${name}</span>
+        <span class="lb-figures">${stats.count} incident${stats.count===1?'':'s'}</span>
+        <span class="lb-pct negative">£${stats.cost.toFixed(2)}</span>
+      </div>
+    `).join('');
+  }
+
+  renderBreakdownList('rpTopReasons', topBreakdown('reason', 6));
+  renderBreakdownList('rpTopParts', topBreakdown('part', 6));
+
+  // ----- Recent incidents -----
+  const recent = [...rpEntries].sort((a,b) => b.date - a.date).slice(0, 20);
+  const listEl = document.getElementById('rpRecentList');
+  if(recent.length === 0){
+    listEl.innerHTML = '<div class="forecast-empty">No OFFICE-caused incidents logged.</div>';
+  } else {
+    listEl.innerHTML = recent.map(e => `
+      <div class="detail-error-item">
+        <div class="error-left">
+          <div class="error-date">${fmtDate(e.date)}${e.plot ? ' · Plot ' + e.plot : ''}${e.loadNo ? ' · Load ' + e.loadNo : ''}</div>
+          <div class="error-desc">${e.part}${e.quantity>1 ? ' (x'+e.quantity+')' : ''} — ${e.reason}${e.material ? ' · '+e.material : ''}${e.operator ? ' · '+e.operator : ''}</div>
+        </div>
+        <div class="error-points">£${e.cost.toFixed(2)}</div>
+      </div>
+    `).join('');
+  }
+}
+
 function renderErrorTrends(errorEntries, today){
+  // ----- last 6 months, points & count -----
   const months = [];
   for(let i=5; i>=0; i--){
     const d = new Date(today.getFullYear(), today.getMonth()-i, 1);
@@ -2912,6 +3104,7 @@ function renderErrorTrends(errorEntries, today){
   }).join('');
   document.getElementById('errorCountTrend').innerHTML = `<div class="mini-trend" style="border-top:none;padding-top:0;margin-top:0;"><div class="bars">${countBars}</div></div>`;
 
+  // ----- TOP SECTIONS -----
   function topBreakdown(field, limit){
     const map = {};
     errorEntries.forEach(e => {
@@ -2922,7 +3115,7 @@ function renderErrorTrends(errorEntries, today){
     });
     return Object.entries(map).sort((a,b) => b[1].count - a[1].count).slice(0, limit);
   }
-
+  
   function renderBreakdownList(containerId, breakdown){
     const container = document.getElementById(containerId);
     if(breakdown.length === 0){ container.innerHTML = '<div class="forecast-empty">No data yet.</div>'; return; }
@@ -2936,9 +3129,10 @@ function renderErrorTrends(errorEntries, today){
       </div>
     `).join('');
   }
-
+  
   renderBreakdownList('topSections', topBreakdown('section', 5));
-
+  
+  // ----- Top Errors (was Top Plots) - now shows error types -----
   function topErrorTypes(limit){
     const map = {};
     errorEntries.forEach(e => {
@@ -2951,6 +3145,7 @@ function renderErrorTrends(errorEntries, today){
   }
   renderBreakdownList('topErrors', topErrorTypes(5));
 
+  // ----- BY PERSON -----
   const byPerson = PEOPLE.map(p => {
     const entries = errorEntries.filter(e => e.initials === p.initials);
     const points = entries.reduce((s,e) => s + e.points, 0);
@@ -2966,11 +3161,13 @@ function renderErrorTrends(errorEntries, today){
     </div>
   `).join('');
 
+  // ----- NEW: Repeated Errors Detection (3+ times) -----
   function getRepeatedErrors() {
     const errorMap = {};
     const personErrorMap = {};
-
+    
     errorEntries.forEach(e => {
+      // Count by error type
       const key = (e.issue||'').trim() || 'Unspecified Error';
       if(!errorMap[key]) errorMap[key] = { count:0, points:0, examples: [] };
       errorMap[key].count++;
@@ -2983,7 +3180,8 @@ function renderErrorTrends(errorEntries, today){
           plot: e.plot
         });
       }
-
+      
+      // Count by person
       if(e.initials) {
         if(!personErrorMap[e.initials]) personErrorMap[e.initials] = { count:0, points:0, errors: [] };
         personErrorMap[e.initials].count++;
@@ -2997,20 +3195,23 @@ function renderErrorTrends(errorEntries, today){
         }
       }
     });
-
+    
+    // Find repeated errors (3+ times)
     const repeatedErrors = Object.entries(errorMap)
       .filter(([_, data]) => data.count >= 3)
       .sort((a, b) => b[1].count - a[1].count);
-
+    
+    // Find people with 3+ errors
     const repeatedPeople = Object.entries(personErrorMap)
       .filter(([_, data]) => data.count >= 3)
       .sort((a, b) => b[1].count - a[1].count);
-
+    
     return { repeatedErrors, repeatedPeople };
   }
 
   const { repeatedErrors, repeatedPeople } = getRepeatedErrors();
-
+  
+  // Render Repeated Errors section
   const repeatedContainer = document.getElementById('repeatedErrors');
   if (repeatedContainer) {
     if (repeatedErrors.length === 0 && repeatedPeople.length === 0) {
@@ -3021,14 +3222,15 @@ function renderErrorTrends(errorEntries, today){
       `;
     } else {
       let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">';
-
+      
+      // Repeated errors
       if (repeatedErrors.length > 0) {
         html += `
           <div style="background:var(--section-bg);border-radius:8px;padding:12px;border:1px solid var(--card-border);">
             <div style="font-weight:700;color:var(--red);margin-bottom:8px;">🔴 Repeated Errors (3+ times)</div>
         `;
         repeatedErrors.forEach(([error, data]) => {
-          const examples = data.examples.map(ex =>
+          const examples = data.examples.map(ex => 
             `${fmtDateShort(ex.date)} - ${ex.person}${ex.section ? ' ('+ex.section+')' : ''}`
           ).join('; ');
           html += `
@@ -3041,7 +3243,8 @@ function renderErrorTrends(errorEntries, today){
         });
         html += `</div>`;
       }
-
+      
+      // People with repeated errors
       if (repeatedPeople.length > 0) {
         html += `
           <div style="background:var(--section-bg);border-radius:8px;padding:12px;border:1px solid var(--card-border);">
@@ -3051,7 +3254,7 @@ function renderErrorTrends(errorEntries, today){
           const person = PEOPLE.find(p => p.initials === initials);
           const color = person ? person.color : '#8993ab';
           const name = person ? person.name : initials;
-          const errorSummary = data.errors.map(e =>
+          const errorSummary = data.errors.map(e => 
             `${e.issue}${e.section ? ' ('+e.section+')' : ''}`
           ).slice(0, 3).join('; ');
           html += `
@@ -3067,7 +3270,7 @@ function renderErrorTrends(errorEntries, today){
         });
         html += `</div>`;
       }
-
+      
       html += '</div>';
       repeatedContainer.innerHTML = html;
     }
@@ -3095,7 +3298,7 @@ function getWeeklyTotals(person, stairEntries, holidayIndex, today, numWeeks){
   return weeks;
 }
 
-function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, today, errorEntries) {
+function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, today, errorEntries, rpEntries) {
   const detailPage = document.getElementById('detailPage');
   document.getElementById('landingPage').classList.remove('active');
   document.getElementById('kpiPage').classList.remove('active');
@@ -3103,7 +3306,7 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
   document.getElementById('holidaysPage').classList.remove('active');
   document.getElementById('forecastPage').classList.remove('active');
   detailPage.classList.add('active');
-
+  
   document.getElementById('detailPersonColor').style.background = person.color;
   document.getElementById('detailPersonName').textContent = person.name;
 
@@ -3137,15 +3340,15 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
       days.push({ date: dCopy, actual: stats.actual, target: stats.target, credit: stats.credit, code: stats.code, isWeekend: false });
     }
     let weekErrorPoints = 0;
-    const weekErrors = errorEntries.filter(e =>
-      e.initials === person.initials &&
+    const weekErrors = errorEntries.filter(e => 
+      e.initials === person.initials && 
       e.date >= week.start && e.date <= week.end
     );
     weekErrors.forEach(e => weekErrorPoints += e.points);
 
     const stairsOver = (actual + holidayCredit) - target;
     const netPoints = stairsOver + weekErrorPoints;
-
+    
     const forecastForWeek = forecastEntries
       .filter(e => e.initials === person.initials && e.deliveryDate && e.deliveryDate >= week.start && e.deliveryDate <= week.end)
       .reduce((s,e) => s + e.stairs, 0);
@@ -3272,6 +3475,30 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
         <div class="error-points">${e.points}</div>
       </div>
     `).join('');
+
+  const personRp = (rpEntries||[]).filter(e => e.initials === person.initials).sort((a,b) => b.date - a.date);
+  const personRpCost = personRp.reduce((s,e) => s + e.cost, 0);
+  document.getElementById('detailRpStats').innerHTML = `
+    <div class="detail-stat-card">
+      <div class="label">Incidents (this year)</div>
+      <div class="value">${personRp.length}</div>
+    </div>
+    <div class="detail-stat-card">
+      <div class="label">Total Cost</div>
+      <div class="value negative">£${personRpCost.toFixed(2)}</div>
+    </div>
+  `;
+  document.getElementById('detailRp').innerHTML = personRp.length === 0 ?
+    '<div style="color:var(--muted);font-style:italic;padding:8px 0;">No office-caused replacement parts logged for this year</div>' :
+    personRp.map(e => `
+      <div class="detail-error-item">
+        <div class="error-left">
+          <div class="error-date">${fmtDate(e.date)}${e.plot ? ' · Plot ' + e.plot : ''}${e.loadNo ? ' · Load ' + e.loadNo : ''}</div>
+          <div class="error-desc">${e.part}${e.quantity>1 ? ' (x'+e.quantity+')' : ''} — ${e.reason}${e.material ? ' · '+e.material : ''}</div>
+        </div>
+        <div class="error-points">£${e.cost.toFixed(2)}</div>
+      </div>
+    `).join('');
 }
 
 /* =========================================================
@@ -3280,7 +3507,7 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
 function showDayDetailPage(person, date, stairEntries, holidayIndex){
   document.getElementById('detailPage').classList.remove('active');
   document.getElementById('dayDetailPage').classList.add('active');
-
+  
   document.getElementById('dayDetailPersonColor').style.background = person.color;
   document.getElementById('dayDetailPersonName').textContent = person.name;
   document.getElementById('dayDetailDate').textContent = fmtDate(date);
@@ -3338,265 +3565,6 @@ function showDayDetailPage(person, date, stairEntries, holidayIndex){
 }
 
 /* =========================================================
-   REPLACEMENT PARTS
-   ========================================================= */
-let rpEntries = [];
-
-function parseReplacementParts(rows){
-  let headerIdx = -1;
-  for(let i=0;i<rows.length;i++){
-    const r = rows[i];
-    if(r && r.length > 2) {
-      const upper = r.map(c => (c||'').trim().toUpperCase());
-      if(upper.some(c => c.includes('DATE')) && upper.some(c => c.includes('SECTION'))) {
-        headerIdx = i;
-        break;
-      }
-    }
-  }
-  if(headerIdx === -1) return [];
-  const header = rows[headerIdx].map(c => (c||'').trim().toUpperCase());
-  const dateCol = header.findIndex(c => c.includes('DATE'));
-  const sectionCol = header.findIndex(c => c.includes('SECTION'));
-  const reasonCol = header.findIndex(c => c.includes('REASON'));
-  const partCol = header.findIndex(c => c.includes('PART'));
-  const qtyCol = header.findIndex(c => c.includes('QUANTITY'));
-  const costCol = header.findIndex(c => c.includes('COST'));
-  const initialsCol = header.findIndex(c => c.includes('INITIALS'));
-
-  const out = [];
-  for(let i=headerIdx+1;i<rows.length;i++){
-    const r = rows[i];
-    if(!r || r.length < 2) continue;
-    const section = (r[sectionCol]||'').trim().toUpperCase();
-    if(section !== 'OFFICE') continue;
-    const dateStr = (r[dateCol]||'').trim();
-    if(!dateStr) continue;
-    const date = parseUKDate(dateStr);
-    if(!date) continue;
-    const thisYear = new Date().getFullYear();
-    if(date.getFullYear() < thisYear) continue;
-    const cost = parseFloat(r[costCol]) || 0;
-    const qty = parseInt(r[qtyCol]) || 0;
-    out.push({
-      date: date,
-      section: section,
-      reason: (r[reasonCol]||'').trim() || 'Not specified',
-      part: (r[partCol]||'').trim() || 'Unspecified',
-      quantity: qty,
-      cost: cost,
-      initials: (r[initialsCol]||'').trim().toUpperCase() || 'Unknown'
-    });
-  }
-  return out;
-}
-
-/* =========================================================
-   MONTH/QUARTER REVIEW PAGE
-   ========================================================= */
-let reviewData = {};
-
-function calculateReviewPeriod(period) {
-  const now = new Date();
-  let startDate = new Date(now);
-  let endDate = new Date(now);
-
-  if (period === 'month') {
-    startDate.setDate(1);
-    startDate.setHours(0,0,0,0);
-  } else if (period === 'quarter') {
-    const quarter = Math.floor(now.getMonth() / 3);
-    startDate.setMonth(quarter * 3, 1);
-    startDate.setHours(0,0,0,0);
-  } else if (period === 'year') {
-    startDate.setMonth(0, 1);
-    startDate.setHours(0,0,0,0);
-  }
-  return { start: startDate, end: endDate };
-}
-
-function buildReviewData(period) {
-  const { start, end } = calculateReviewPeriod(period);
-
-  const completedStairs = window._stairEntries || [];
-  const periodStairs = completedStairs.filter(e => {
-    const d = new Date(e.date);
-    return d >= start && d <= end && e.initials && PEOPLE.some(p => p.initials === e.initials);
-  });
-
-  const errors = window._errorEntries || [];
-  const periodErrors = errors.filter(e => {
-    const d = new Date(e.date);
-    return d >= start && d <= end;
-  });
-
-  const rpEntries = window._rpEntries || [];
-  const periodRp = rpEntries.filter(e => {
-    const d = new Date(e.date);
-    return d >= start && d <= end;
-  });
-
-  const totalStairs = periodStairs.reduce((s,e) => s + e.stairs, 0);
-  const totalTarget = periodStairs.reduce((s,e) => {
-    const person = PEOPLE.find(p => p.initials === e.initials);
-    if (!person) return s;
-    const date = new Date(e.date);
-    const bucket = dayBucket(date);
-    if (!bucket) return s;
-    const fullDayHours = HOURS[person.initials]?.[bucket] || 9;
-    return s + Math.round(BASE_RATE * fullDayHours);
-  }, 0);
-
-  const errorCount = periodErrors.length;
-  const errorPoints = periodErrors.reduce((s,e) => s + e.points, 0);
-  const rpCount = periodRp.length;
-  const rpCost = periodRp.reduce((s,e) => s + (e.cost || 0), 0);
-
-  const personStats = PEOPLE.map(p => {
-    const personStairs = periodStairs.filter(e => e.initials === p.initials);
-    const personErrors = periodErrors.filter(e => e.initials === p.initials);
-    const personRp = periodRp.filter(e => e.initials === p.initials);
-    return {
-      person: p,
-      stairs: personStairs.reduce((s,e) => s + e.stairs, 0),
-      errors: personErrors.length,
-      errorPoints: personErrors.reduce((s,e) => s + e.points, 0),
-      rpCost: personRp.reduce((s,e) => s + (e.cost || 0), 0),
-      rpCount: personRp.length
-    };
-  });
-
-  reviewData = {
-    period: period,
-    start: start,
-    end: end,
-    totalStairs,
-    totalTarget,
-    errorCount,
-    errorPoints,
-    rpCount,
-    rpCost,
-    personStats,
-    periodStairs,
-    periodErrors,
-    periodRp
-  };
-
-  renderReview();
-}
-
-function renderReview() {
-  const d = reviewData;
-  if (!d || !d.totalStairs && !d.errorCount && !d.rpCount) {
-    document.getElementById('reviewSummary').innerHTML = `
-      <div class="detail-stat-card">
-        <div class="label">No data for this period</div>
-        <div class="value neutral">—</div>
-      </div>
-    `;
-    return;
-  }
-
-  const netPoints = d.totalStairs + d.errorPoints;
-  const outputPct = d.totalTarget > 0 ? Math.round((d.totalStairs / d.totalTarget) * 100) : 0;
-  const pctClass = outputPct >= 100 ? 'positive' : (outputPct >= 85 ? 'neutral' : 'negative');
-
-  document.getElementById('reviewSummary').innerHTML = `
-    <div class="detail-stat-card">
-      <div class="label">📊 Output</div>
-      <div class="value ${pctClass}">${d.totalStairs}</div>
-      <div style="font-size:0.7rem;color:var(--muted);">Target: ${d.totalTarget} · ${outputPct}%</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">📈 Net Points</div>
-      <div class="value ${netPoints >= 0 ? 'positive' : 'negative'}">${netPoints > 0 ? '+' : ''}${netPoints}</div>
-      <div style="font-size:0.7rem;color:var(--muted);">Stairs + Error Points</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">⚠️ Errors</div>
-      <div class="value negative">${d.errorCount}</div>
-      <div style="font-size:0.7rem;color:var(--muted);">${d.errorPoints} pts</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">🔧 Replacement Cost</div>
-      <div class="value negative">£${d.rpCost.toFixed(2)}</div>
-      <div style="font-size:0.7rem;color:var(--muted);">${d.rpCount} incidents</div>
-    </div>
-  `;
-
-  // Output chart
-  const outputHtml = `
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <div style="display:flex;justify-content:space-between;font-size:0.8rem;">
-        <span>Actual: ${d.totalStairs}</span>
-        <span>Target: ${d.totalTarget}</span>
-      </div>
-      <div style="height:20px;background:var(--card-border);border-radius:10px;overflow:hidden;">
-        <div style="height:100%;width:${Math.min(100, outputPct)}%;background:${outputPct >= 100 ? 'var(--green)' : (outputPct >= 85 ? 'var(--amber)' : 'var(--red)')};border-radius:10px;transition:width 0.5s;"></div>
-      </div>
-      <div style="font-size:0.8rem;color:var(--muted);text-align:center;">${outputPct}% of target</div>
-    </div>
-  `;
-  document.getElementById('reviewOutputChart').innerHTML = outputHtml;
-
-  // Error summary
-  const topErrors = d.periodErrors.slice(0, 5);
-  const errorHtml = topErrors.length === 0 ?
-    '<div class="forecast-empty">No errors in this period 🎉</div>' :
-    topErrors.map(e => `
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--card-border);font-size:0.8rem;">
-        <span>${e.issue || 'Unknown'}</span>
-        <span style="color:var(--red);">${e.points} pts</span>
-      </div>
-    `).join('');
-  document.getElementById('reviewErrorSummary').innerHTML = errorHtml;
-
-  // RP summary
-  const rpHtml = `
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <div style="display:flex;justify-content:space-between;font-size:0.8rem;">
-        <span>Total Cost: £${d.rpCost.toFixed(2)}</span>
-        <span>Incidents: ${d.rpCount}</span>
-      </div>
-      <div style="font-size:0.75rem;color:var(--muted);">${d.rpCount > 0 ? `${d.rpCount} office-caused part replacements` : 'No office-caused replacements 🎉'}</div>
-    </div>
-  `;
-  document.getElementById('reviewRpSummary').innerHTML = rpHtml;
-
-  // Person breakdown
-  const personHtml = d.personStats.map(p => {
-    const totalPts = p.stairs + p.errorPoints;
-    return `
-      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--card-border);font-size:0.8rem;">
-        <span class="lb-dot" style="background:${p.person.color};width:10px;height:10px;border-radius:50%;display:inline-block;"></span>
-        <span style="flex:1;font-weight:600;">${p.person.name}</span>
-        <span style="color:var(--muted);">${p.stairs} stairs</span>
-        <span style="color:${p.errorPoints < 0 ? 'var(--red)' : 'var(--green)'};">${p.errorPoints > 0 ? '+' : ''}${p.errorPoints} pts</span>
-        <span style="color:var(--muted);font-size:0.7rem;">£${p.rpCost.toFixed(2)}</span>
-      </div>
-    `;
-  }).join('');
-  document.getElementById('reviewPersonBreakdown').innerHTML = personHtml || '<div class="forecast-empty">No person data</div>';
-
-  // Detail log
-  const allEvents = [
-    ...d.periodStairs.map(e => ({ type: 'stairs', date: e.date, desc: `${e.initials} - ${e.stairs} stairs`, value: e.stairs, isPositive: true })),
-    ...d.periodErrors.map(e => ({ type: 'error', date: e.date, desc: `${e.initials}: ${e.issue || 'Error'}`, value: e.points, isPositive: false })),
-    ...d.periodRp.map(e => ({ type: 'rp', date: e.date, desc: `${e.initials}: ${e.part} (${e.reason})`, value: e.cost, isPositive: false }))
-  ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
-
-  const logHtml = allEvents.map(e => `
-    <div class="review-log-item">
-      <span class="log-type">${e.type === 'stairs' ? '📊' : (e.type === 'error' ? '⚠️' : '🔧')}</span>
-      <span style="font-size:0.7rem;color:var(--muted);min-width:80px;">${fmtDateShort(e.date)}</span>
-      <span class="log-desc">${e.desc}</span>
-      <span class="log-value ${e.isPositive ? 'positive' : 'negative'}">${e.isPositive ? '+' : ''}${e.value}</span>
-    </div>
-  `).join('');
-  document.getElementById('reviewDetailLog').innerHTML = logHtml || '<div class="forecast-empty">No events in this period</div>';
-}
-
-/* =========================================================
    NAVIGATION
    ========================================================= */
 const VIEW_IDS = {
@@ -3608,8 +3576,7 @@ const VIEW_IDS = {
   holidays: 'holidaysPage',
   forecast: 'forecastPage',
   errors: 'errorsPage',
-  replacementParts: 'replacementPartsPage',
-  review: 'reviewPage'
+  replacementParts: 'replacementPartsPage'
 };
 
 function setActiveView(view){
@@ -3642,24 +3609,19 @@ document.getElementById('tileForecast').addEventListener('click', ()=>{
 document.getElementById('tileErrors').addEventListener('click', ()=>{
   setActiveView('errors');
   if(window._errorEntries) renderErrorTrends(window._errorEntries, window._today);
+  if(window._stairEntries && window._holidayIndex && window._errorEntries) renderQualitySpeedChart(window._stairEntries, window._holidayIndex, window._errorEntries, window._today);
 });
 document.getElementById('tileReplacementParts').addEventListener('click', ()=>{
   setActiveView('replacementParts');
-  if(window._rpEntries) renderReplacementParts(window._rpEntries);
-});
-document.getElementById('tileReview').addEventListener('click', ()=>{
-  setActiveView('review');
-  const period = document.getElementById('reviewPeriod').value;
-  buildReviewData(period);
+  if(window._rpEntries) renderReplacementParts(window._rpEntries, window._today);
 });
 
 document.getElementById('backToLandingFromLoads').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromErrors').addEventListener('click', ()=> setActiveView('landing'));
+document.getElementById('backToLandingFromReplacementParts').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromKpi').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromHolidays').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToLandingFromForecast').addEventListener('click', ()=> setActiveView('landing'));
-document.getElementById('backToLandingFromReplacementParts').addEventListener('click', ()=> setActiveView('landing'));
-document.getElementById('backToLandingFromReview').addEventListener('click', ()=> setActiveView('landing'));
 document.getElementById('backToKpi').addEventListener('click', ()=> setActiveView('kpi'));
 document.getElementById('backToDetail').addEventListener('click', ()=> setActiveView('detail'));
 
@@ -3672,16 +3634,6 @@ document.getElementById('nextMonth').addEventListener('click', function(){
   window._holidayMonth++;
   if(window._holidayMonth > 11){ window._holidayMonth = 0; window._holidayYear++; }
   renderHolidayCalendar(window._holidayIndex, window._holidayMonth, window._holidayYear);
-});
-
-document.getElementById('reviewPeriod').addEventListener('change', function() {
-  buildReviewData(this.value);
-});
-document.getElementById('refreshReviewBtn').addEventListener('click', function() {
-  const period = document.getElementById('reviewPeriod').value;
-  buildReviewData(period);
-  this.textContent = '✅ Refreshed!';
-  setTimeout(() => { this.textContent = '🔄 Refresh'; }, 2000);
 });
 
 /* =========================================================
@@ -3698,139 +3650,6 @@ document.getElementById('refreshLoadsBtn').addEventListener('click', function() 
 });
 
 /* =========================================================
-   REPLACEMENT PARTS RENDER
-   ========================================================= */
-function renderReplacementParts(entries) {
-  const container = document.getElementById('rpSummaryStats');
-  if (!container) return;
-
-  const totalCost = entries.reduce((s,e) => s + e.cost, 0);
-  const totalItems = entries.reduce((s,e) => s + e.quantity, 0);
-  const avgCost = entries.length > 0 ? totalCost / entries.length : 0;
-
-  container.innerHTML = `
-    <div class="detail-stat-card">
-      <div class="label">Total Cost</div>
-      <div class="value negative">£${totalCost.toFixed(2)}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Total Items</div>
-      <div class="value">${totalItems}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Avg Cost / Incident</div>
-      <div class="value">£${avgCost.toFixed(2)}</div>
-    </div>
-    <div class="detail-stat-card">
-      <div class="label">Incidents</div>
-      <div class="value">${entries.length}</div>
-    </div>
-  `;
-
-  // Top reasons
-  const reasons = {};
-  entries.forEach(e => {
-    const key = e.reason || 'Not specified';
-    if (!reasons[key]) reasons[key] = { count: 0, cost: 0 };
-    reasons[key].count++;
-    reasons[key].cost += e.cost;
-  });
-  const sortedReasons = Object.entries(reasons).sort((a,b) => b[1].cost - a[1].cost).slice(0, 5);
-  const topReasonsContainer = document.getElementById('rpTopReasons');
-  if (topReasonsContainer) {
-    topReasonsContainer.innerHTML = sortedReasons.map(([reason, data], idx) => `
-      <div class="lb-row">
-        <span class="lb-rank">${idx+1}</span>
-        <span class="lb-dot" style="background:var(--muted);width:0;height:0;"></span>
-        <span class="lb-name">${reason}</span>
-        <span class="lb-figures">${data.count} incident${data.count > 1 ? 's' : ''}</span>
-        <span class="lb-pct negative">£${data.cost.toFixed(2)}</span>
-      </div>
-    `).join('');
-  }
-
-  // Top parts
-  const parts = {};
-  entries.forEach(e => {
-    const key = e.part || 'Unspecified';
-    if (!parts[key]) parts[key] = { count: 0, cost: 0 };
-    parts[key].count++;
-    parts[key].cost += e.cost;
-  });
-  const sortedParts = Object.entries(parts).sort((a,b) => b[1].cost - a[1].cost).slice(0, 5);
-  const topPartsContainer = document.getElementById('rpTopParts');
-  if (topPartsContainer) {
-    topPartsContainer.innerHTML = sortedParts.map(([part, data], idx) => `
-      <div class="lb-row">
-        <span class="lb-rank">${idx+1}</span>
-        <span class="lb-dot" style="background:var(--muted);width:0;height:0;"></span>
-        <span class="lb-name">${part}</span>
-        <span class="lb-figures">${data.count} incident${data.count > 1 ? 's' : ''}</span>
-        <span class="lb-pct negative">£${data.cost.toFixed(2)}</span>
-      </div>
-    `).join('');
-  }
-
-  // Recent incidents
-  const recentContainer = document.getElementById('rpRecentList');
-  if (recentContainer) {
-    recentContainer.innerHTML = entries.slice(0, 10).map(e => `
-      <div class="detail-error-item">
-        <div class="error-left">
-          <div class="error-date">${fmtDate(e.date)} · ${e.section}</div>
-          <div class="error-desc">${e.part} — ${e.reason} (x${e.quantity}) · ${e.initials}</div>
-        </div>
-        <div class="error-points">£${e.cost.toFixed(2)}</div>
-      </div>
-    `).join('') || '<div class="forecast-empty">No recent incidents</div>';
-  }
-
-  // Cost trend
-  const months = [];
-  for(let i=5; i>=0; i--){
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    months.push({ year: d.getFullYear(), month: d.getMonth(), label: d.toLocaleDateString('en-GB', {month:'short'}), cost: 0, count: 0 });
-  }
-  entries.forEach(e => {
-    const m = months.find(m2 => m2.year === e.date.getFullYear() && m2.month === e.date.getMonth());
-    if(m){ m.cost += e.cost; m.count++; }
-  });
-  const maxCost = Math.max(1, ...months.map(m => m.cost));
-  const costBars = months.map(m => {
-    const heightPct = Math.max(4, Math.round((m.cost/maxCost)*100));
-    const color = m.cost > 0 ? '#e74c3c' : '#8993ab';
-    return `
-      <div class="bar-col">
-        <div class="bar-track"><div class="bar-fill" style="height:${heightPct}%;background:${color};"></div></div>
-        <div class="bar-val">£${m.cost.toFixed(0)}</div>
-        <div class="bar-label">${m.label}</div>
-      </div>
-    `;
-  }).join('');
-  const costTrendContainer = document.getElementById('rpCostTrend');
-  if (costTrendContainer) {
-    costTrendContainer.innerHTML = `<div class="mini-trend" style="border-top:none;padding-top:0;margin-top:0;"><div class="bars">${costBars}</div></div>`;
-  }
-
-  const maxCount = Math.max(1, ...months.map(m => m.count));
-  const countBars = months.map(m => {
-    const heightPct = Math.max(4, Math.round((m.count/maxCount)*100));
-    return `
-      <div class="bar-col">
-        <div class="bar-track"><div class="bar-fill" style="height:${heightPct}%;background:#4a90e2;"></div></div>
-        <div class="bar-val">${m.count}</div>
-        <div class="bar-label">${m.label}</div>
-      </div>
-    `;
-  }).join('');
-  const countTrendContainer = document.getElementById('rpCountTrend');
-  if (countTrendContainer) {
-    countTrendContainer.innerHTML = `<div class="mini-trend" style="border-top:none;padding-top:0;margin-top:0;"><div class="bars">${countBars}</div></div>`;
-  }
-}
-
-/* =========================================================
    MAIN LOAD
    ========================================================= */
 async function loadAndRender(){
@@ -3845,7 +3664,9 @@ async function loadAndRender(){
     const { completed: stairEntries, forecast: forecastEntries } = parseStairRows(trackingRows);
     const holidayIndex = buildHolidayIndex(holidayRows);
     const errorEntries = parseErrorRows(errorRows);
-    const rpEntries = parseReplacementParts(rpRows);
+    const rpEntriesAll = parseReplacementPartsRows(rpRows);
+    const currentYear = new Date().getFullYear();
+    const rpEntries = rpEntriesAll.filter(e => e.date.getFullYear() === currentYear);
 
     const today = new Date(); today.setHours(0,0,0,0);
     const monday = mondayOf(today);
@@ -3864,7 +3685,7 @@ async function loadAndRender(){
     window._errorEntries = errorEntries;
     window._rpEntries = rpEntries;
     window._today = today;
-
+    
     loadItems = parseLoadsFromSheet(stairEntries, forecastEntries);
     updateLoadsBadge();
 
@@ -3896,27 +3717,30 @@ async function loadAndRender(){
       const initials = person.initials;
       const todayCode = getCodeForPerson(holidayIndex, person.holidayName, today);
       if(todayCode && isAbsenceCode(todayCode)) offToday.push({ person, code: todayCode });
-
+      
+      // Get today's target
       const todayTarget = targetFor(initials, today, todayCode);
-
+      
+      // Get weekly totals
       let weekActual = 0, weekTarget = 0;
       for(let d = new Date(monday); d <= friday; d.setDate(d.getDate() + 1)){
         const stats = computeDayStats(person, new Date(d), stairEntries, holidayIndex);
         weekActual += stats.actual;
         weekTarget += stats.target;
       }
-
+      
+      // NEW: Calculate completed days target (days that are fully finished)
       const { completedTarget, completedActual } = getCompletedDaysTarget(person, today, stairEntries, holidayIndex);
-
+      
       const status = statusForProgress(weekActual, completedTarget);
       const trendWeeks = getWeeklyTotals(person, stairEntries, holidayIndex, today, TREND_WEEKS);
-
-      leaderboardData.push({
-        person,
-        weekActual,
-        completedTarget,
+      
+      leaderboardData.push({ 
+        person, 
+        weekActual, 
+        completedTarget, 
         weekTarget,
-        weekProjected: completedTarget
+        weekProjected: completedTarget // for backward compatibility
       });
 
       const card = document.createElement('div');
@@ -3937,18 +3761,18 @@ async function loadAndRender(){
       const personForecast = forecastEntries
         .filter(e => e.initials === initials && e.deliveryDate && e.deliveryDate >= nextMonday && e.deliveryDate <= nextFriday)
         .reduce((s,e) => s + e.stairs, 0);
-      const forecastBadge = personForecast > 0 ? `<div class="forecast-badge">🔮 ${personForecast} next wk</div>` : '';
+      const forecastBadge = personForecast > 0 ? `<div class="forecast-badge" title="Stairs already logged against this person for next week's deliveries">🔮 ${personForecast} next wk</div>` : '';
 
       card.innerHTML = `
         <div class="status-indicator"></div>
-        <div class="points-badge ${pointsBadgeClass}">${pointsLabel}</div>
+        <div class="points-badge ${pointsBadgeClass}" title="Running total: bonus for stairs over target, minus points for logged errors — click through for the full breakdown">${pointsLabel}</div>
         ${forecastBadge}
         <h2>${person.name}</h2>
         <div class="role">${initials}${todayCode ? ' · '+ (statusLabel(todayCode)||todayCode) : ''}</div>
         <div class="dial-wrap">
           ${drawProjectedDial(weekActual, completedTarget, weekTarget, status, person, today)}
         </div>
-        <span class="badge ${status}">${statusLabelText(status, weekTarget===0 ? todayCode : null)}</span>
+        <span class="badge ${status}" title="How this week's pace compares to a straight-line pace toward the weekly target">${statusLabelText(status, weekTarget===0 ? todayCode : null)}</span>
         <div class="weekly-row">
           <div><span class="label">Today</span><span class="val">${todayTarget}</span></div>
           <div><span class="label">Errors</span><span class="val"><span class="error-count">${personErrors.length}</span></span></div>
@@ -3957,7 +3781,7 @@ async function loadAndRender(){
       `;
       card.addEventListener('click', function(){
         const p = PEOPLE.find(p => p.initials === this.dataset.person);
-        if(p) showDetailPage(p, window._stairEntries, window._forecastEntries, window._holidayIndex, window._today, window._errorEntries);
+        if(p) showDetailPage(p, window._stairEntries, window._forecastEntries, window._holidayIndex, window._today, window._errorEntries, window._rpEntries);
       });
       dialGrid.appendChild(card);
     });
@@ -3990,13 +3814,10 @@ async function loadAndRender(){
     }
     if(window._currentView === 'errors'){
       renderErrorTrends(errorEntries, today);
+      renderQualitySpeedChart(stairEntries, holidayIndex, errorEntries, today);
     }
-    if(window._currentView === 'replacementParts' && rpEntries.length > 0){
-      renderReplacementParts(rpEntries);
-    }
-    if(window._currentView === 'review'){
-      const period = document.getElementById('reviewPeriod').value;
-      buildReviewData(period);
+    if(window._currentView === 'replacementParts'){
+      renderReplacementParts(rpEntries, today);
     }
 
     document.getElementById('errorBanner').innerHTML = '';
