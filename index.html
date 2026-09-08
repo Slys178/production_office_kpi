@@ -1528,7 +1528,7 @@
     <button class="back-btn" id="backToLandingFromReplacementParts">← Production Office</button>
     <h2>🔧 Replacement Parts — Office-Caused</h2>
   </div>
-  <div class="parts-note">Showing entries logged against the OFFICE section of the Replacement Parts sheet only — parts damaged or scrapped due to an office mistake (wrong program, missing paperwork, etc.), not shop-floor or CNC-caused issues.</div>
+  <div class="parts-note">Showing entries logged against the OFFICE section of the Replacement Parts sheet, from this year onward only — parts damaged or scrapped due to an office mistake (wrong program, missing paperwork, etc.), not shop-floor or CNC-caused issues.</div>
   <div class="detail-stats" id="rpSummaryStats"></div>
   <div class="detail-section">
     <h3>💷 Cost — Last 6 Months</h3>
@@ -3626,7 +3626,9 @@ async function loadAndRender(){
     const { completed: stairEntries, forecast: forecastEntries } = parseStairRows(trackingRows);
     const holidayIndex = buildHolidayIndex(holidayRows);
     const errorEntries = parseErrorRows(errorRows);
-    const rpEntries = parseReplacementPartsRows(rpRows);
+    const rpEntriesAll = parseReplacementPartsRows(rpRows);
+    const currentYear = new Date().getFullYear();
+    const rpEntries = rpEntriesAll.filter(e => e.date.getFullYear() === currentYear);
 
     const today = new Date(); today.setHours(0,0,0,0);
     const monday = mondayOf(today);
