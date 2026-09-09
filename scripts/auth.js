@@ -4,7 +4,7 @@
  * - Starts the main app
  */
 
-import { initAndLoad, loadAndRender, REFRESH_MS } from "./main.js";
+import { initAndLoad, loadAndRender, REFRESH_MS } from "./app.js";
 
 /* =========================================================
    THEME TOGGLE
