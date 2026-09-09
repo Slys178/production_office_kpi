@@ -22,6 +22,26 @@ if (themeToggle) {
   });
 }
 
+/* =========================================================
+   AUTH - Check Permissions
+   ========================================================= */
+
+// ===== REPLACE THIS WITH YOUR ACTUAL SHEET ID =====
+// Your User List sheet URL: https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE/edit
+const USER_LIST_SHEET_ID = '1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw'; // <-- REPLACE THIS!
+const USER_LIST_GID = '0';
+
+// Check if user is logged in
+function checkLoginStatus() {
+    const email = sessionStorage.getItem('userEmail');
+    const role = sessionStorage.getItem('userRole');
+    if (!email || !role) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
 // Apply permissions based on role
 function applyPermissions() {
     const role = sessionStorage.getItem('userRole');
