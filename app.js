@@ -1,10 +1,23 @@
+/* =========================================================
+   AUTH - Check Permissions (ADD THIS SECTION)
+   ========================================================= */
+
+// ===== ADD THIS LINE =====
+const USER_LIST_SHEET_ID = 'https://docs.google.com/spreadsheets/d/1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw/edit?usp=sharing'; // <-- REPLACE THIS!
+const USER_LIST_GID = '0';
+
+// Check if user is logged in
+function checkLoginStatus() {
+    // ... rest of code
+}
+
 /**
  * Application entry point
  * - Theme toggle
  * - Starts the main app
  */
 
-import { initAndLoad, loadAndRender, REFRESH_MS } from "./app.js";
+import { initAndLoad, loadAndRender, REFRESH_MS } from "./main.js";
 
 /* =========================================================
    THEME TOGGLE
@@ -22,7 +35,76 @@ if (themeToggle) {
   });
 }
 
+/* =========================================================
+   AUTH - Check Permissions (ADD THIS SECTION)
+   ========================================================= */
 
+// Check if user is logged in
+function checkLoginStatus() {
+    const email = sessionStorage.getItem('userEmail');
+    const role = sessionStorage.getItem('userRole');
+    if (!email || !role) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+// Apply permissions based on role
+function applyPermissions() {
+    const role = sessionStorage.getItem('userRole');
+    
+    if (role === 'USER') {
+        // Hide Admin-only tiles
+        const adminTiles = ['tileKpi', 'tileErrors', 'tileReplacementParts', 'tileReview'];
+        adminTiles.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        
+        // Show a message for users
+        const landingTitle = document.querySelector('.landing-title p');
+        if (landingTitle) {
+            landingTitle.textContent = '👤 User view — limited access';
+        }
+    }
+}
+
+// Logout function
+function logout() {
+    sessionStorage.clear();
+    window.location.href = 'login.html';
+}
+
+// ===== Run auth checks on page load =====
+// This runs when the page loads
+(function initAuth() {
+    // Only run on the dashboard page (not on login page)
+    if (document.getElementById('landingPage')) {
+        if (!checkLoginStatus()) {
+            return; // Will redirect to login
+        }
+        applyPermissions();
+        
+        // Add logout button event
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', logout);
+        }
+        
+        // Show user name in header
+        const userName = sessionStorage.getItem('userName');
+        if (userName) {
+            const statusEl = document.querySelector('.status');
+            if (statusEl) {
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = '👤 ' + userName;
+                nameSpan.style.cssText = 'margin-right:12px;font-weight:600;color:var(--text);';
+                statusEl.prepend(nameSpan);
+            }
+        }
+    }
+})();
 
 /* =========================================================
    START
