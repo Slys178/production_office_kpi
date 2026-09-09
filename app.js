@@ -8,7 +8,13 @@ const USER_LIST_GID = '0';
 
 // Check if user is logged in
 function checkLoginStatus() {
-    // ... rest of code
+    const email = sessionStorage.getItem('userEmail');
+    const role = sessionStorage.getItem('userRole');
+    if (!email || !role) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -17,7 +23,7 @@ function checkLoginStatus() {
  * - Starts the main app
  */
 
-import { initAndLoad, loadAndRender, REFRESH_MS } from "./main.js";
+import { initAndLoad, loadAndRender, REFRESH_MS } from "./app.js";
 
 /* =========================================================
    THEME TOGGLE
