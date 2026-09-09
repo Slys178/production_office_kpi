@@ -4,7 +4,7 @@
  * - Starts the main app
  */
 
-import { initAndLoad, loadAndRender, REFRESH_MS } from "./app.js";
+import { initAndLoad, loadAndRender, REFRESH_MS } from "./main.js";
 
 /* =========================================================
    THEME TOGGLE
@@ -28,7 +28,7 @@ if (themeToggle) {
 
 // ===== REPLACE THIS WITH YOUR ACTUAL SHEET ID =====
 // Your User List sheet URL: https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE/edit
-const USER_LIST_SHEET_ID = '1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw'; // <-- REPLACE THIS!
+const USER_LIST_SHEET_ID = 'YOUR_SHEET_ID_HERE'; // <-- REPLACE THIS!
 const USER_LIST_GID = '0';
 
 // Check if user is logged in
