@@ -68,6 +68,8 @@ async function initGapiClient() {
       callback: (tokenResponse) => {
         if (tokenResponse && tokenResponse.access_token) {
           driveAccessToken = tokenResponse.access_token;
+          sessionStorage.setItem('driveToken', tokenResponse.access_token);
+          sessionStorage.setItem('driveTokenTime', Date.now().toString());
           gapiSignedIn = true;
           updateDriveStatus('connected', 'Connected');
         }
