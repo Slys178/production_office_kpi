@@ -294,5 +294,59 @@
 <footer>Live from Google Sheets · Drive auto-search enabled</footer>
 
 <script type="module" src="app.js"></script>
+<script>
+(function() {
+    // ==== CONFIG ====
+    const USER_LIST_SHEET_ID = '1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw';
+    const USER_LIST_GID = '0';
+
+    // 1. If not logged in, redirect to login page
+    const email = sessionStorage.getItem('userEmail');
+    const role  = sessionStorage.getItem('userRole');
+    if (!email || !role) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // 2. Show the user's name in the header
+    const userName = sessionStorage.getItem('userName');
+    if (userName) {
+        const statusEl = document.querySelector('.status');
+        if (statusEl) {
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = '👤 ' + userName;
+            nameSpan.style.cssText = 'margin-right:12px;font-weight:600;color:var(--text);';
+            statusEl.prepend(nameSpan);
+        }
+    }
+
+    // 3. Apply permissions based on role
+    if (role === 'USER') {
+        // Wait until the DOM is fully drawn so the tiles exist
+        window.addEventListener('load', function() {
+            const userHiddenTiles = ['tileKpi', 'tileErrors', 'tileReplacementParts'];
+            userHiddenTiles.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            const landingTitle = document.querySelector('.landing-title p');
+            if (landingTitle) {
+                landingTitle.textContent = '👤 User view — limited access';
+            }
+        });
+    }
+
+    // 4. Wire up the logout button
+    window.addEventListener('load', function() {
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function() {
+                sessionStorage.clear();
+                window.location.href = 'login.html';
+            });
+        }
+    });
+})();
+</script>
 </body>
 </html>
