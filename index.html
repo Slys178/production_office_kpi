@@ -297,19 +297,30 @@
 <script>
 (function() {
     // ==== CONFIG ====
-    const USER_LIST_SHEET_ID = '1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw';
-    const USER_LIST_GID = '0';
+    // (no config needed here anymore)
 
-    // 1. If not logged in, redirect to login page
-    const email = sessionStorage.getItem('userEmail');
-    const role  = sessionStorage.getItem('userRole');
-    if (!email || !role) {
+    // 1. Check login + 7-day expiry
+    const email = localStorage.getItem('userEmail');
+    const role  = localStorage.getItem('userRole');
+    const loginTime = localStorage.getItem('loginTime');
+
+    let valid = false;
+    if (email && role && loginTime) {
+        const daysSinceLogin = (Date.now() - parseInt(loginTime, 10)) / (1000 * 60 * 60 * 24);
+        if (daysSinceLogin < 7) {
+            valid = true;
+        }
+    }
+
+    if (!valid) {
+        // Clear anything stale
+        localStorage.clear();
         window.location.href = 'login.html';
         return;
     }
 
     // 2. Show the user's name in the header
-    const userName = sessionStorage.getItem('userName');
+    const userName = localStorage.getItem('userName');
     if (userName) {
         const statusEl = document.querySelector('.status');
         if (statusEl) {
@@ -322,7 +333,6 @@
 
     // 3. Apply permissions based on role
     if (role === 'USER') {
-        // Wait until the DOM is fully drawn so the tiles exist
         window.addEventListener('load', function() {
             const userHiddenTiles = ['tileKpi', 'tileErrors', 'tileReplacementParts'];
             userHiddenTiles.forEach(id => {
@@ -341,7 +351,7 @@
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', function() {
-                sessionStorage.clear();
+                localStorage.clear();
                 window.location.href = 'login.html';
             });
         }
