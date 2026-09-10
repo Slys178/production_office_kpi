@@ -207,23 +207,24 @@
             return users;
         }
 
-        async function authorizeUser(email) {
-            try {
-                const users = await fetchUserList();
-                const user = users.find(u => u.email === email.toLowerCase().trim());
-                if (user) {
-                    sessionStorage.setItem('userEmail', user.email);
-                    sessionStorage.setItem('userRole', user.rights);
-                    sessionStorage.setItem('userName', user.name);
-                    sessionStorage.setItem('userRoleText', user.role);
-                    return true;
-                }
-                return false;
-            } catch (err) {
-                console.error('Error fetching user list:', err);
-                return false;
-            }
+       async function authorizeUser(email) {
+    try {
+        const users = await fetchUserList();
+        const user = users.find(u => u.email === email.toLowerCase().trim());
+        if (user) {
+            localStorage.setItem('userEmail', user.email);
+            localStorage.setItem('userRole', user.rights);
+            localStorage.setItem('userName', user.name);
+            localStorage.setItem('userRoleText', user.role);
+            localStorage.setItem('loginTime', Date.now().toString());
+            return true;
         }
+        return false;
+    } catch (err) {
+        console.error('Error fetching user list:', err);
+        return false;
+    }
+}
 
         function loginWithGoogle() {
             showLoading();
