@@ -265,13 +265,22 @@
             tokenClient.requestAccessToken({ prompt: 'consent' });
         }
 
-        function checkExistingSession() {
-            const email = sessionStorage.getItem('userEmail');
-            const role = sessionStorage.getItem('userRole');
-            if (email && role) {
-                window.location.href = 'index.html';
-            }
+       function checkExistingSession() {
+    const email = localStorage.getItem('userEmail');
+    const role = localStorage.getItem('userRole');
+    const loginTime = localStorage.getItem('loginTime');
+    
+    if (email && role && loginTime) {
+        const daysSinceLogin = (Date.now() - parseInt(loginTime, 10)) / (1000 * 60 * 60 * 24);
+        if (daysSinceLogin < 7) {
+            // Still within 7 days — skip login
+            window.location.href = 'index.html';
+        } else {
+            // Expired — clear and stay on login page
+            localStorage.clear();
         }
+    }
+}
 
         checkExistingSession();
         loginBtn.addEventListener('click', loginWithGoogle);
