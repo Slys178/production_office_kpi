@@ -352,6 +352,9 @@ function loadsGoToPage(page) {
   renderLoads();
 }
 
+// Expose to global scope so onclick="loadsGoToPage(...)" works
+window.loadsGoToPage = loadsGoToPage;
+
 async function handleDriveClick(loadNum, button) {
   const savedLinks = getSavedDriveLinks();
   if (savedLinks[loadNum]) {
