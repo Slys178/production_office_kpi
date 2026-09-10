@@ -334,28 +334,15 @@ function renderLoads() {
   }
   
   const pagination = document.getElementById('loadsPagination');
-if (totalPages > 1) {
-  pagination.innerHTML = `
-    <button id="loadsPrevBtn" ${loadsCurrentPage === 1 ? 'disabled' : ''}>◀ Prev</button>
-    <span class="page-info">Page <span class="current">${loadsCurrentPage}</span> of ${totalPages}</span>
-    <button id="loadsNextBtn" ${loadsCurrentPage === totalPages ? 'disabled' : ''}>Next ▶</button>
-  `;
-  
-  const prevBtn = document.getElementById('loadsPrevBtn');
-  const nextBtn = document.getElementById('loadsNextBtn');
-  
-  if (prevBtn) {
-    prevBtn.addEventListener('click', function() {
-      loadsGoToPage(loadsCurrentPage - 1);
-    });
+  if (totalPages > 1) {
+    pagination.innerHTML = `
+      <button ${loadsCurrentPage === 1 ? 'disabled' : ''} onclick="loadsGoToPage(${loadsCurrentPage - 1})">◀ Prev</button>
+      <span class="page-info">Page <span class="current">${loadsCurrentPage}</span> of ${totalPages}</span>
+      <button ${loadsCurrentPage === totalPages ? 'disabled' : ''} onclick="loadsGoToPage(${loadsCurrentPage + 1})">Next ▶</button>
+    `;
+  } else {
+    pagination.innerHTML = '';
   }
-  if (nextBtn) {
-    nextBtn.addEventListener('click', function() {
-      loadsGoToPage(loadsCurrentPage + 1);
-    });
-  }
-} else {
-  pagination.innerHTML = '';
 }
 
 function loadsGoToPage(page) {
@@ -881,7 +868,7 @@ function drawProjectedDial(actual, completedTarget, weekTarget, colorClass, pers
   
   // Use the week target as the max value for the dial
   const maxVal = Math.max(weekTarget, actual, completedTarget);
-  const displayMax = Math.max(maxVal, weekTarget * 1.1, 1);
+  const displayMax = Math.max(maxVal, weekTarget * 1.1);
   
   const pctActual = Math.min(1, actual / displayMax);
   const pctCompleted = Math.min(1, completedTarget / displayMax);
