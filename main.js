@@ -60,6 +60,21 @@ function loadGoogleIdentityServices() {
 
 async function initGapiClient() {
   try {
+    // ===== CHANGE 2: Check if we already have a valid token from this session =====
+    const savedToken = sessionStorage.getItem('driveToken');
+    const savedTime = sessionStorage.getItem('driveTokenTime');
+    if (savedToken && savedTime) {
+      const ageMinutes = (Date.now() - parseInt(savedTime, 10)) / (1000 * 60);
+      if (ageMinutes < 55) {
+        // Token is still valid (Google tokens last 1 hour)
+        driveAccessToken = savedToken;
+        gapiSignedIn = true;
+        updateDriveStatus('connected', 'Connected');
+        return true;
+      }
+    }
+    // ===== END CHANGE 2 =====
+
     await loadGoogleIdentityServices();
 
     tokenClient = google.accounts.oauth2.initTokenClient({
