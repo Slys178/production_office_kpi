@@ -885,7 +885,7 @@ function drawProjectedDial(actual, completedTarget, weekTarget, colorClass, pers
   
   // Use the week target as the max value for the dial
   const maxVal = Math.max(weekTarget, actual, completedTarget);
-  const displayMax = Math.max(maxVal, weekTarget * 1.1);
+  const displayMax = Math.max(maxVal, weekTarget * 1.1, 1);
   
   const pctActual = Math.min(1, actual / displayMax);
   const pctCompleted = Math.min(1, completedTarget / displayMax);
