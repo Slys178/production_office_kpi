@@ -1145,8 +1145,8 @@ function getPrevWeekCapacity(person, forecastWeekStart, holidayIndex){
 function getWarningLevel(forecast, capacity) {
   if(capacity === 0) return { level: 'danger', label: '🔴 No capacity!', class: 'danger' };
   const ratio = forecast / capacity;
-  if(ratio > 0.95) return { level: 'danger', label: '🔴 Critical!', class: 'danger' };
-  if(ratio > 0.75) return { level: 'warning', label: '🟡 Tight', class: 'warning' };
+  if(ratio >= 0.80) return { level: 'danger', label: '🔴 Critical!', class: 'danger' };
+  if(ratio >= 0.30) return { level: 'warning', label: '🟡 Tight', class: 'warning' };
   return { level: 'ok', label: '✅ OK', class: 'ok' };
 }
 
