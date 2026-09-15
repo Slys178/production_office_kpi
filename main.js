@@ -2154,6 +2154,8 @@ async function loadAndRender(){
     const leaderboardData = [];
 
     PEOPLE.forEach(person => {
+      if (person.initials === CONFIG.excludeFromKpiDisplay) return; // Skip your own initials from KPI display
+      
       const initials = person.initials;
       const todayCode = getCodeForPerson(holidayIndex, person.holidayName, today);
       if(todayCode && isAbsenceCode(todayCode)) offToday.push({ person, code: todayCode });
