@@ -56,6 +56,9 @@ export const CONFIG = {
 
   // Loads pagination
   loadsPageSize: 12,
+
+    // Initials to exclude from KPI display (but still count internally)
+  excludeFromKpiDisplay: "SA",
 };
 
 /** @typedef {typeof CONFIG.people[number]} Person */
