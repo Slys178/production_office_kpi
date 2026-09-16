@@ -140,7 +140,7 @@ async function searchDriveForLoad(loadNumber) {
     updateDriveStatus('searching', 'Searching...');
 
     const query = `name contains '${loadNumber}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, webViewLink)')}&pageSize=10&key=${API_KEY}&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, webViewLink)')}&pageSize=10&key=${API_KEY}&supportsAllDrives=true`;
 
     const resp = await fetch(url, {
       headers: { Authorization: 'Bearer ' + driveAccessToken }
@@ -1031,12 +1031,15 @@ function renderTeamSummary(leaderboardData){
   const container = document.getElementById('teamSummary');
   if(!container) return;
 
-  const teamActual = leaderboardData.reduce((s,d) => s + d.weekActual, 0);
-  const teamCompletedTarget = leaderboardData.reduce((s,d) => s + d.completedTarget, 0);
-  const teamTarget = leaderboardData.reduce((s,d) => s + d.weekTarget, 0);
+  // Filter out self from team summary
+  const displayData = leaderboardData.filter(d => d.person.initials !== CONFIG.excludeFromKpiDisplay);
+
+  const teamActual = displayData.reduce((s,d) => s + d.weekActual, 0);
+  const teamCompletedTarget = displayData.reduce((s,d) => s + d.completedTarget, 0);
+  const teamTarget = displayData.reduce((s,d) => s + d.weekTarget, 0);
   const teamStatus = statusForProgress(teamActual, teamCompletedTarget);
 
-  const ranked = [...leaderboardData].sort((a,b) => {
+  const ranked = [...displayData].sort((a,b) => {
     const pctA = a.completedTarget > 0 ? a.weekActual / a.completedTarget : (a.weekActual > 0 ? 2 : -1);
     const pctB = b.completedTarget > 0 ? b.weekActual / b.completedTarget : (b.weekActual > 0 ? 2 : -1);
     return pctB - pctA;
@@ -1164,7 +1167,10 @@ function renderForecast(forecastEntries, holidayIndex, today) {
   }
   const lastWeekEnd = weeks[weeks.length-1].end;
 
-  forecastEntries.forEach(e=>{
+  // Filter out self from forecast display
+  const displayForecast = forecastEntries.filter(e => e.initials !== CONFIG.excludeFromKpiDisplay);
+
+  displayForecast.forEach(e=>{
     if(!e.deliveryDate) return;
     if(e.deliveryDate < startMonday || e.deliveryDate > lastWeekEnd) return;
     const wk = weeks.find(w => e.deliveryDate >= w.start && e.deliveryDate <= w.end);
@@ -1249,7 +1255,7 @@ function renderForecast(forecastEntries, holidayIndex, today) {
         </div>
         <div class="fw-breakdown">${chips.join('')}</div>
         ${holidayWarning}
-        ${warning.level === 'danger' ? `<div style="margin-top:6px;font-size:0.7rem;color:var(--red);font-weight:700;">⚠️ Manpower shortage — ${totalCapacity} capacity vs ${w.total} required. May need overtime.</div>` : ''}
+        ${warning.level === 'danger' ? `<div style="margin-top:6px;font-size:0.7rem;color:var(--red);font-weight:700;">⚠️ Manpower shortage — ${totalCapacity} capacity vs ${w.total} required.</div>` : ''}
         ${warning.level === 'warning' ? `<div style="margin-top:6px;font-size:0.65rem;color:var(--amber);">⚠️ Getting tight — ${totalCapacity} capacity vs ${w.total} required.</div>` : ''}
       </div>
     `;
@@ -1292,7 +1298,7 @@ function renderLookaheadBanner(forecastEntries, holidayIndex, today){
   const msg = short
     ? `Next week needs ${nextWeekTotal} stairs, capacity is ${capacity} — ${Math.abs(diff)} short`
     : `Next week needs ${nextWeekTotal} stairs, capacity is ${capacity} — comfortable`;
-  container.innerHTML = `<div style="background:${bg};border:1px solid ${color};border-radius:10px;padding:10px 16px;margin-bottom:16px;text-align:center;font-size:0.85rem;font-weight:600;color:${color};max-width:900px;margin-left:auto;margin-right:auto;">${short?'⚠️':'✅'} ${msg}</div>`;
+  container.innerHTML = `<div style="background:${bg};border:1px solid ${color};border-radius:10px;padding:10px 16px;margin-bottom:16px;text-align:center;font-size:0.85rem;font-weight:600;color:${color};">${msg}</div>`;
 }
 
 function renderForecastAccuracy(stairEntries, forecastEntries, today){
@@ -1342,7 +1348,10 @@ function renderQualitySpeedChart(stairEntries, holidayIndex, errorEntries, today
   const cutoff = new Date(today);
   cutoff.setDate(cutoff.getDate() - (TREND_WEEKS * 7));
 
-  const points = PEOPLE.map(person => {
+  // Exclude self from quality chart
+  const displayPeople = PEOPLE.filter(p => p.initials !== CONFIG.excludeFromKpiDisplay);
+
+  const points = displayPeople.map(person => {
     const weeks = getWeeklyTotals(person, stairEntries, holidayIndex, today, TREND_WEEKS);
     const totalStairs = weeks.reduce((s,w) => s + w.actual, 0);
     const totalErrorPoints = errorEntries
@@ -2288,8 +2297,5 @@ async function initAndLoad() {
   }
   await loadAndRender();
 }
-
-
-
 
 export { initAndLoad, loadAndRender, setActiveView, REFRESH_MS };
