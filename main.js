@@ -140,7 +140,7 @@ async function searchDriveForLoad(loadNumber) {
     updateDriveStatus('searching', 'Searching...');
 
     const query = `name contains '${loadNumber}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, webViewLink)')}&pageSize=10&key=${API_KEY}&supportsAllDrives=true`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, webViewLink)')}&pageSize=10&key=${API_KEY}&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`;
 
     const resp = await fetch(url, {
       headers: { Authorization: 'Bearer ' + driveAccessToken }
@@ -418,16 +418,11 @@ button.textContent = '🔍 Searching...';
       window.open(link, '_blank');
       renderLoads();
     } else {
-      button.textContent = '❌ Not found';
+      // API didn't return a direct folder link — open Drive search straight away (no popup)
+      button.textContent = '🔍 Find in Drive';
       button.classList.remove('searching');
       button.disabled = false;
-      const openSearch = confirm(`No folder found for load #${loadNum}.\n\nWould you like to open Google Drive and search for it manually?`);
-      if (openSearch) {
-        window.open(`https://drive.google.com/drive/search?q=${loadNum}`, '_blank');
-      }
-      setTimeout(() => {
-        button.textContent = '🔍 Find in Drive';
-      }, 3000);
+      window.open(`https://drive.google.com/drive/search?q=${encodeURIComponent(loadNum)}`, '_blank');
     }
   } catch (error) {
     console.error('Drive search error:', error);
