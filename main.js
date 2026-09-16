@@ -399,7 +399,9 @@ async function handleDriveClick(loadNum, button) {
    }, 500);
    return;
  }
-  button.textContent = '🔍 Searching...';
+  if (!gapiSignedIn) { showDriveSignIn(); return; }
+
+button.textContent = '🔍 Searching...';
   button.classList.add('searching');
   button.disabled = true;
   try {
