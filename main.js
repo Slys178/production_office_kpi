@@ -398,6 +398,13 @@ async function handleDriveClick(loadNum, button) {
    return;
  }
 
+// Make sure we actually have a token before searching
+if (!driveAccessToken) {
+   // Token hasn't arrived yet — wait a moment and retry
+   setTimeout(() => handleDriveClick(loadNum, button), 500);
+   return;
+}
+
 button.textContent = '🔍 Searching...';
   button.classList.add('searching');
   button.disabled = true;
