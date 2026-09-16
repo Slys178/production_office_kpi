@@ -385,14 +385,20 @@ async function handleDriveClick(loadNum, button) {
     return;
   }
   if (!gapiSignedIn) {
-    showDriveSignIn();
-    setTimeout(() => {
-      if (gapiSignedIn) {
-        handleDriveClick(loadNum, button);
-      }
-    }, 2000);
-    return;
-  }
+   showDriveSignIn();
+   // Poll for sign-in to complete (max 15 seconds)
+   let attempts = 0;
+   const poll = setInterval(() => {
+     attempts++;
+     if (gapiSignedIn) {
+       clearInterval(poll);
+       handleDriveClick(loadNum, button);
+     } else if (attempts > 30) {
+       clearInterval(poll);
+     }
+   }, 500);
+   return;
+ }
   button.textContent = '🔍 Searching...';
   button.classList.add('searching');
   button.disabled = true;
