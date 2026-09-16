@@ -131,12 +131,10 @@ async function searchDriveForLoad(loadNumber) {
     return null;
   }
   if (!gapiSignedIn || !driveAccessToken) {
-    const gotToken = await requestDriveToken(true);
-    if (!gotToken) {
-      updateDriveStatus('disconnected', 'Sign in needed');
-      return null;
-    }
-  }
+   // handleDriveClick already handles sign-in — don't trigger it again here
+   updateDriveStatus('disconnected', 'Sign in needed');
+   return null;
+ }
 
   try {
     updateDriveStatus('searching', 'Searching...');
