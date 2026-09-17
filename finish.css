@@ -5,6 +5,8 @@
 .finish-summary .finish-headline.danger{color:var(--red)}
 .finish-summary .finish-meta{font-size:0.8rem;color:var(--muted);line-height:1.45}
 .finish-summary .finish-meta strong{color:var(--text)}
+.finish-privacy-note{font-size:0.75rem;color:var(--muted);margin-bottom:10px;padding:8px 12px;background:var(--section-bg);border-radius:8px}
+.finish-privacy-note strong{color:var(--text)}
 .finish-person-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:14px}
 .finish-person-card{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:14px 16px}
 .finish-person-card .fp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
