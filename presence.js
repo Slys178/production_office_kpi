@@ -25,13 +25,11 @@ function isManagerViewer(userName, userEmail, userRole) {
   const n = (userName || "").trim().toUpperCase();
   const e = (userEmail || "").trim().toLowerCase();
 
-  // Initials / name forms for SA
   if (n === "SA" || n.startsWith("SA ") || n.endsWith(" SA") || n === "S.A" || n === "S A") return true;
   if (/\bSA\b/.test(n)) return true;
   if (n.includes("SIMON ASK")) return true;
   if (n.includes("ASK") && n.includes("SIMON")) return true;
 
-  // Email forms
   if (e.includes("simon.ask")) return true;
   if (e.includes("simon_ask")) return true;
   if (e.startsWith("sa@") || e.includes(".sa@")) return true;
@@ -50,7 +48,6 @@ function getViewer() {
   } catch (_) {}
 
   const canSeeAll = isManagerViewer(userName, userEmail, userRole);
-  // Helpful in browser console if panel is missing
   console.log("[presence] viewer", { userName, userEmail, userRole, canSeeAll });
 
   return { userName, userEmail, userRole, canSeeAll };
@@ -70,21 +67,19 @@ function sendHeartbeat() {
 
   const img = new Image();
   img.referrerPolicy = "no-referrer";
-  img.src = `${PRESENCE.scriptUrl}?${params.toString()}`;
+  img.src = PRESENCE.scriptUrl + "?" + params.toString();
 }
 
 function parseGvizDate(cell) {
   if (cell == null || cell === "") return null;
   if (typeof cell === "object" && cell instanceof Date) return cell;
   if (typeof cell === "string" && cell.startsWith("Date(")) {
-    const nums = cell.replace(/Date\(|\)/g, "").split(",").map(n => parseInt(n, 10));
+    const nums = cell.replace(/Date\(|\)/g, "").split(",").map(function (n) { return parseInt(n, 10); });
     if (nums.length >= 3) {
       return new Date(nums[0], nums[1], nums[2], nums[3] || 0, nums[4] || 0, nums[5] || 0);
     }
   }
-  // Google sometimes returns serial or ISO
   if (typeof cell === "number") {
-    // Sheets serial date → JS (days since 1899-12-30)
     const ms = (cell - 25569) * 86400 * 1000;
     const d = new Date(ms);
     return isNaN(d.getTime()) ? null : d;
@@ -94,15 +89,15 @@ function parseGvizDate(cell) {
 }
 
 function fetchPresenceRows() {
-  return new Promise((resolve, reject) => {
+  return new Promise(function (resolve, reject) {
     if (!PRESENCE.sheetId) {
       reject(new Error("No presence sheet configured"));
       return;
     }
-    const cb = `__presenceCb_${Date.now()}`;
+    const cb = "__presenceCb_" + Date.now();
     const script = document.createElement("script");
     let settled = false;
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(function () {
       if (settled) return;
       settled = true;
       cleanup();
@@ -128,14 +123,14 @@ function fetchPresenceRows() {
         const rows = [];
         for (let i = 0; i < table.rows.length; i++) {
           const c = table.rows[i].c || [];
-          const email = (c[0]?.v ?? c[0]?.f ?? "").toString().trim().toLowerCase();
+          const email = String((c[0] && (c[0].v != null ? c[0].v : c[0].f)) || "").trim().toLowerCase();
           if (!email || email === "email") continue;
-          const name = (c[1]?.v ?? c[1]?.f ?? "").toString().trim();
-          const role = (c[2]?.v ?? c[2]?.f ?? "").toString().trim();
-          const rawSeen = c[3]?.v ?? c[3]?.f ?? "";
+          const name = String((c[1] && (c[1].v != null ? c[1].v : c[1].f)) || "").trim();
+          const role = String((c[2] && (c[2].v != null ? c[2].v : c[2].f)) || "").trim();
+          const rawSeen = c[3] ? (c[3].v != null ? c[3].v : c[3].f) : "";
           const lastSeen = parseGvizDate(rawSeen);
           if (!lastSeen || isNaN(lastSeen.getTime())) continue;
-          rows.push({ email, name, role, lastSeen });
+          rows.push({ email: email, name: name, role: role, lastSeen: lastSeen });
         }
         resolve(rows);
       } catch (e) {
@@ -143,32 +138,31 @@ function fetchPresenceRows() {
       }
     };
 
-    script.onerror = () => {
+    script.onerror = function () {
       if (settled) return;
       settled = true;
       cleanup();
       reject(new Error("Failed to load presence sheet"));
     };
 
-    const gidPart = PRESENCE.sheetGid ? `&gid=${PRESENCE.sheetGid}` : "";
-    script.src = `https://docs.google.com/spreadsheets/d/${PRESENCE.sheetId}/gviz/tq?tqx=out:json;responseHandler:${cb}${gidPart}`;
+    const gidPart = PRESENCE.sheetGid ? "&gid=" + PRESENCE.sheetGid : "";
+    script.src = "https://docs.google.com/spreadsheets/d/" + PRESENCE.sheetId + "/gviz/tq?tqx=out:json;responseHandler:" + cb + gidPart;
     document.body.appendChild(script);
   });
 }
 
 function formatAgo(ms) {
   if (ms < 60 * 1000) return "just now";
-  if (ms < 60 * 60 * 1000) return `${Math.round(ms / 60000)} min ago`;
-  if (ms < 24 * 60 * 60 * 1000) return `${Math.round(ms / 3600000)} hr ago`;
-  return `${Math.round(ms / 86400000)} day(s) ago`;
+  if (ms < 60 * 60 * 1000) return Math.round(ms / 60000) + " min ago";
+  if (ms < 24 * 60 * 60 * 1000) return Math.round(ms / 3600000) + " hr ago";
+  return Math.round(ms / 86400000) + " day(s) ago";
 }
 
+/** Safe HTML escape without embedding entity literals that get corrupted in transit. */
 function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/"/g, """);
+  const d = document.createElement("div");
+  d.textContent = String(s);
+  return d.innerHTML;
 }
 
 async function renderPresencePanel() {
@@ -189,55 +183,60 @@ async function renderPresencePanel() {
   try {
     const rows = await fetchPresenceRows();
     const now = Date.now();
-    rows.sort((a, b) => b.lastSeen - a.lastSeen);
+    rows.sort(function (a, b) { return b.lastSeen - a.lastSeen; });
 
-    const active = rows.filter(r => now - r.lastSeen.getTime() <= PRESENCE.activeWithinMs);
-    const recent = rows.filter(r => {
+    const active = rows.filter(function (r) {
+      return now - r.lastSeen.getTime() <= PRESENCE.activeWithinMs;
+    });
+    const recent = rows.filter(function (r) {
       const age = now - r.lastSeen.getTime();
       return age > PRESENCE.activeWithinMs && age <= PRESENCE.recentWithinMs;
     });
-    const older = rows.filter(r => now - r.lastSeen.getTime() > PRESENCE.recentWithinMs).slice(0, 8);
+    const older = rows.filter(function (r) {
+      return now - r.lastSeen.getTime() > PRESENCE.recentWithinMs;
+    }).slice(0, 8);
 
     function rowHtml(r, cls) {
       const age = now - r.lastSeen.getTime();
-      return `
-        <div class="presence-row ${cls}">
-          <span class="presence-dot"></span>
-          <span class="presence-name">${escapeHtml(r.name || r.email)}</span>
-          <span class="presence-role">${escapeHtml(r.role || "")}</span>
-          <span class="presence-ago">${formatAgo(age)}</span>
-        </div>`;
+      return (
+        '<div class="presence-row ' + cls + '">' +
+          '<span class="presence-dot"></span>' +
+          '<span class="presence-name">' + escapeHtml(r.name || r.email) + '</span>' +
+          '<span class="presence-role">' + escapeHtml(r.role || "") + '</span>' +
+          '<span class="presence-ago">' + formatAgo(age) + '</span>' +
+        '</div>'
+      );
     }
 
     let body = "";
     if (active.length) {
-      body += `<div class="presence-group-label">Active now</div>`;
-      body += active.map(r => rowHtml(r, "active")).join("");
+      body += '<div class="presence-group-label">Active now</div>';
+      body += active.map(function (r) { return rowHtml(r, "active"); }).join("");
     }
     if (recent.length) {
-      body += `<div class="presence-group-label">Last hour</div>`;
-      body += recent.map(r => rowHtml(r, "recent")).join("");
+      body += '<div class="presence-group-label">Last hour</div>';
+      body += recent.map(function (r) { return rowHtml(r, "recent"); }).join("");
     }
     if (!active.length && !recent.length) {
-      body += `<div class="presence-empty">No one active in the last hour yet — open the app and wait ~1 min, or check the Presence sheet for rows.</div>`;
+      body += '<div class="presence-empty">No one active in the last hour yet — leave the app open ~1 min, or check the Presence sheet for rows.</div>';
     }
     if (older.length) {
-      body += `<div class="presence-group-label">Earlier</div>`;
-      body += older.map(r => rowHtml(r, "older")).join("");
+      body += '<div class="presence-group-label">Earlier</div>';
+      body += older.map(function (r) { return rowHtml(r, "older"); }).join("");
     }
 
-    el.innerHTML = `
-      <div class="presence-card">
-        <div class="presence-title">👥 Who's online <span class="presence-sub">admin only · last 10 min = active</span></div>
-        <div class="presence-list">${body}</div>
-      </div>`;
+    el.innerHTML =
+      '<div class="presence-card">' +
+        '<div class="presence-title">Who\'s online <span class="presence-sub">admin only · last 10 min = active</span></div>' +
+        '<div class="presence-list">' + body + '</div>' +
+      '</div>';
   } catch (e) {
     console.warn("presence panel", e);
-    el.innerHTML = `
-      <div class="presence-card">
-        <div class="presence-title">👥 Who's online</div>
-        <div class="presence-setup">Could not load presence sheet (${escapeHtml(e.message || e)}). Check the Presence tab is shared (Anyone with link → Viewer) and gid is correct.</div>
-      </div>`;
+    el.innerHTML =
+      '<div class="presence-card">' +
+        '<div class="presence-title">Who\'s online</div>' +
+        '<div class="presence-setup">Could not load presence sheet (' + escapeHtml(e.message || e) + '). Check the Presence tab is shared (Anyone with link → Viewer) and gid is correct.</div>' +
+      '</div>';
   }
 }
 
@@ -245,7 +244,7 @@ export function startPresence() {
   sendHeartbeat();
   setInterval(sendHeartbeat, PRESENCE.heartbeatMs);
 
-  document.addEventListener("visibilitychange", () => {
+  document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") sendHeartbeat();
   });
 
@@ -254,7 +253,7 @@ export function startPresence() {
     renderPresencePanel();
     setInterval(renderPresencePanel, PRESENCE.refreshPanelMs);
   } else {
-    console.warn("[presence] Panel hidden — login is not recognised as SA/ADMIN. userRole should be ADMIN in the user list sheet, or name/email should match SA.");
+    console.warn("[presence] Panel hidden — not recognised as SA/ADMIN. Set Rights to ADMIN on your user list row, then log out and back in.");
   }
 }
 
