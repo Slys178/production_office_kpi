@@ -18,6 +18,7 @@
 .finish-person-card .fp-badge.off{background:rgba(137,147,171,0.12);color:var(--muted)}
 .finish-person-card .fp-row{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin:3px 0}
 .finish-person-card .fp-row .val{color:var(--text);font-weight:600}
+.finish-person-card .fp-row.fp-pace .pace-note{font-weight:400;color:var(--muted);font-size:0.65rem}
 .finish-person-card .fp-days{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid var(--card-border)}
 .finish-person-card .fp-day-chip{font-size:0.65rem;padding:2px 8px;border-radius:6px;background:var(--section-bg);color:var(--muted)}
 .finish-person-card .fp-day-chip.available{color:var(--green);background:rgba(46,204,113,0.1)}
