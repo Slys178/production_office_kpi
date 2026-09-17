@@ -1,6 +1,15 @@
-// This-week finish day prediction (loaded after main.js helpers exist)
-function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
-  const container = document.getElementById('currentWeekFinish');
+/**
+ * This-week finish day prediction module.
+ * Imports helpers from the known-good CDN build.
+ */
+import { mondayOf, dayBucket, sameDay } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/utils.js";
+import { getCodeForPerson, targetFor, isAbsenceCode, statusLabel } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/data.js";
+import { CONFIG } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/config.js";
+
+const PEOPLE = CONFIG.people;
+
+export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
+  const container = document.getElementById("currentWeekFinish");
   if (!container) return;
 
   const monday = mondayOf(today);
@@ -35,7 +44,7 @@ function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
 
       const isPast = day < todayStart;
       const isToday = sameDay(day, todayStart);
-      const remainingCapacity = (isPast ? 0 : dayTarget);
+      const remainingCapacity = isPast ? 0 : dayTarget;
 
       dayInfo.push({
         date: new Date(day),
@@ -65,11 +74,11 @@ function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
       }
     }
     if (remaining === 0) {
-      finishLabel = 'Already done';
+      finishLabel = "Already done";
     } else if (finishDay) {
       finishLabel = sameDay(finishDay, todayStart)
-        ? 'Today'
-        : finishDay.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+        ? "Today"
+        : finishDay.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
     } else {
       finishLabel = "Won't hit target";
     }
@@ -86,7 +95,7 @@ function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
 
   let teamRemaining = personStats.reduce((s, p) => s + p.remaining, 0);
   let teamFinishDay = null;
-  let teamFinishLabel = 'Already done';
+  let teamFinishLabel = "Already done";
   if (teamRemaining > 0) {
     const remainingDays = days.filter(d => d >= todayStart);
     let left = teamRemaining;
@@ -99,8 +108,8 @@ function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
       if (left <= 0) {
         teamFinishDay = day;
         teamFinishLabel = sameDay(day, todayStart)
-          ? 'Today'
-          : day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+          ? "Today"
+          : day.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
         break;
       }
     }
@@ -110,16 +119,16 @@ function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
   const teamWeekTarget = personStats.reduce((s, p) => s + p.weekTarget, 0);
   const teamActual = personStats.reduce((s, p) => s + p.actualSoFar, 0);
   const teamRemCap = personStats.reduce((s, p) => s + p.remainingCapacityTotal, 0);
-  const headlineClass = teamRemaining === 0 ? 'ok' : (teamFinishDay ? 'ok' : 'danger');
+  const headlineClass = teamRemaining === 0 ? "ok" : (teamFinishDay ? "ok" : "danger");
 
   let html = `
     <div class="finish-summary">
       <div class="finish-headline ${headlineClass}">
         ${teamRemaining === 0
-          ? '🎯 Week targets already met'
+          ? "🎯 Week targets already met"
           : (teamFinishDay
               ? `📅 Predicted finish: ${teamFinishLabel}`
-              : '⚠️ Short of capacity this week')}
+              : "⚠️ Short of capacity this week")}
       </div>
       <div class="finish-meta">
         Team done <strong>${teamActual}</strong> of <strong>${teamWeekTarget}</strong>
@@ -132,34 +141,34 @@ function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
   html += '<div class="finish-person-grid">';
   personStats.forEach(ps => {
     const { person, weekTarget, actualSoFar, remaining, finishLabel, dayInfo, fullyOff, remainingCapacityTotal } = ps;
-    let badgeClass = 'friday';
+    let badgeClass = "friday";
     let badgeText = finishLabel;
-    if (fullyOff) { badgeClass = 'off'; badgeText = 'Off this week'; }
-    else if (remaining === 0) { badgeClass = 'done'; badgeText = '✅ Done'; }
-    else if (finishLabel === 'Today') { badgeClass = 'today'; badgeText = 'Today'; }
-    else if (finishLabel === "Won't hit target") { badgeClass = 'short'; badgeText = 'Short'; }
+    if (fullyOff) { badgeClass = "off"; badgeText = "Off this week"; }
+    else if (remaining === 0) { badgeClass = "done"; badgeText = "✅ Done"; }
+    else if (finishLabel === "Today") { badgeClass = "today"; badgeText = "Today"; }
+    else if (finishLabel === "Won't hit target") { badgeClass = "short"; badgeText = "Short"; }
 
     const dayChips = dayInfo.map(di => {
-      const dayName = di.date.toLocaleDateString('en-GB', { weekday: 'short' });
-      let cls = 'available';
+      const dayName = di.date.toLocaleDateString("en-GB", { weekday: "short" });
+      let cls = "available";
       let tip = `${di.target} target`;
       if (di.code && isAbsenceCode(di.code)) {
-        cls = 'off';
+        cls = "off";
         tip = statusLabel(di.code) || di.code;
-      } else if (di.target > 0 && di.target < targetFor(person.initials, di.date, '')) {
-        cls = 'partial';
-        tip = `${di.code || 'partial'}: ${di.target}`;
+      } else if (di.target > 0 && di.target < targetFor(person.initials, di.date, "")) {
+        cls = "partial";
+        tip = `${di.code || "partial"}: ${di.target}`;
       } else if (di.target === 0) {
-        cls = 'off';
-        tip = 'No capacity';
+        cls = "off";
+        tip = "No capacity";
       }
-      return `<span class="fp-day-chip ${cls}" title="${tip}">${dayName}${di.isToday ? '*' : ''}</span>`;
-    }).join('');
+      return `<span class="fp-day-chip ${cls}" title="${tip}">${dayName}${di.isToday ? "*" : ""}</span>`;
+    }).join("");
 
     html += `
       <div class="finish-person-card">
         <div class="fp-header">
-          <span class="fp-name"><span class="dot" style="background:${person.color};"></span>${person.initials} · ${person.name.split(' ')[0]}</span>
+          <span class="fp-name"><span class="dot" style="background:${person.color};"></span>${person.initials} · ${person.name.split(" ")[0]}</span>
           <span class="fp-badge ${badgeClass}">${badgeText}</span>
         </div>
         <div class="fp-row"><span>Week target</span><span class="val">${weekTarget}</span></div>
@@ -170,7 +179,7 @@ function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
       </div>
     `;
   });
-  html += '</div>';
+  html += "</div>";
 
   const remainingDays = days.filter(d => d >= todayStart);
   if (remainingDays.length > 0 && teamRemaining > 0) {
@@ -196,18 +205,18 @@ function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
       const before = running;
       running = Math.max(0, running - dayCap);
       const isFinish = before > 0 && running === 0;
-      const dayName = day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
-      const todayMark = sameDay(day, todayStart) ? ' (today)' : '';
+      const dayName = day.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+      const todayMark = sameDay(day, todayStart) ? " (today)" : "";
       html += `
-        <tr class="${isFinish ? 'finish-row' : ''}">
+        <tr class="${isFinish ? "finish-row" : ""}">
           <td class="day-label">${dayName}${todayMark}</td>
           <td class="cap-cell">${dayCap}</td>
           <td class="rem-cell">${running}</td>
-          <td>${isFinish ? '🏁 Finish' : (running === 0 ? '—' : '')}</td>
+          <td>${isFinish ? "🏁 Finish" : (running === 0 ? "—" : "")}</td>
         </tr>
       `;
     });
-    html += '</tbody></table></div>';
+    html += "</tbody></table></div>";
   }
 
   container.innerHTML = html;

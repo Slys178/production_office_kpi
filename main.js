@@ -8,6 +8,9 @@ import {
   REFRESH_MS
 } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/main.js";
 
+// Side-effect import: registers window.renderCurrentWeekFinish
+import "./finish-week.js";
+
 export { REFRESH_MS };
 
 function callFinishIfReady() {
@@ -35,7 +38,6 @@ export async function loadAndRender() {
   return result;
 }
 
-// Refresh the finish panel when opening the Forecast page
 document.addEventListener("DOMContentLoaded", () => {
   const tile = document.getElementById("tileForecast");
   if (tile) {
