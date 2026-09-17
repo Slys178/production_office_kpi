@@ -1,0 +1,64 @@
+/* Admin-only presence panel */
+.presence-card{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:12px;
+  padding:14px 16px;
+  margin:0 0 16px;
+}
+.presence-title{
+  font-weight:800;
+  font-size:0.95rem;
+  margin-bottom:10px;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:8px;
+}
+.presence-sub{
+  font-weight:500;
+  font-size:0.7rem;
+  color:var(--muted);
+}
+.presence-setup{
+  font-size:0.8rem;
+  color:var(--muted);
+  line-height:1.45;
+}
+.presence-setup code{
+  font-size:0.75rem;
+  background:var(--section-bg);
+  padding:1px 6px;
+  border-radius:4px;
+}
+.presence-list{display:flex;flex-direction:column;gap:4px}
+.presence-group-label{
+  font-size:0.65rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  color:var(--muted);
+  margin-top:8px;
+  margin-bottom:2px;
+}
+.presence-row{
+  display:grid;
+  grid-template-columns:12px 1fr auto auto;
+  gap:8px 10px;
+  align-items:center;
+  font-size:0.8rem;
+  padding:6px 8px;
+  border-radius:8px;
+  background:var(--section-bg);
+}
+.presence-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--muted);
+}
+.presence-row.active .presence-dot{background:var(--green);box-shadow:0 0 0 3px rgba(46,204,113,0.2)}
+.presence-row.recent .presence-dot{background:var(--amber)}
+.presence-row.older .presence-dot{background:var(--muted)}
+.presence-name{font-weight:600;color:var(--text)}
+.presence-role{font-size:0.7rem;color:var(--muted)}
+.presence-ago{font-size:0.7rem;color:var(--muted);white-space:nowrap}
+.presence-empty{font-size:0.8rem;color:var(--muted);padding:6px 0}
