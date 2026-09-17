@@ -1,1 +1,356 @@
-@file:///home/workdir/artifacts/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Production Office</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.json">
+<style>
+  @keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+
+
+<header>
+  <div class="brand">
+    <svg class="brand-logo" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="98" fill="#00A99D"/>
+      <rect x="2" y="58" width="133" height="20" fill="white"/>
+      <rect x="58" y="2" width="20" height="133" fill="white"/>
+      <rect x="65" y="122" width="133" height="20" fill="white"/>
+      <rect x="122" y="65" width="20" height="133" fill="white"/>
+    </svg>
+    <div class="brand-text">
+      <span class="brand-name">STAIRCRAFT</span>
+      <span class="brand-sub">Production Office</span>
+    </div>
+  </div>
+  
+  <div class="header-right">
+    <div class="status">
+        <span class="dot"></span>
+        <span id="lastUpdated">Loading…</span>
+    </div>
+    <div class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">
+        <span class="icon sun">☀️</span>
+        <span class="icon moon">🌙</span>
+        <div class="dot"></div>
+    </div>
+    <button id="logoutBtn" style="background:var(--card-border);border:none;color:var(--text);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-family:inherit;">🚪 Logout</button>
+  </div>
+</header>
+
+<div id="errorBanner"></div>
+<div id="loadingMsg" class="loading">Loading live figures…</div>
+
+<!-- ============ LANDING PAGE ============ -->
+<div id="landingPage" class="page-view">
+  <div class="landing-title">
+    <h1>📊 PRODUCTION OFFICE</h1>
+    <p>Choose a section</p>
+  </div>
+  <div id="lookaheadBanner"></div>
+  <div class="tile-grid">
+    <div class="nav-tile" id="tileKpi">
+      <div class="tile-icon">📈</div>
+      <div class="tile-label">OFFICE KPI</div>
+      <div class="tile-sub">Daily &amp; weekly stair targets per person</div>
+      <div class="tile-badge" id="tileKpiBadge" style="display:none;"></div>
+    </div>
+    <div class="nav-tile" id="tileLoads">
+      <div class="tile-icon">📦</div>
+      <div class="tile-label">LOADS</div>
+      <div class="tile-sub">Track all loads with auto Drive search</div>
+      <div class="tile-badge" id="tileLoadsBadge" style="display:none;"></div>
+    </div>
+    <div class="nav-tile" id="tileHolidays">
+      <div class="tile-icon">📅</div>
+      <div class="tile-label">HOLIDAYS</div>
+      <div class="tile-sub">Team holiday &amp; absence calendar</div>
+    </div>
+    <div class="nav-tile" id="tileForecast">
+      <div class="tile-icon">🔮</div>
+      <div class="tile-label">FORECAST</div>
+      <div class="tile-sub">Stairs due out, week by week</div>
+      <div class="tile-badge" id="tileForecastBadge" style="display:none;"></div>
+    </div>
+    <div class="nav-tile" id="tileErrors">
+      <div class="tile-icon">⚠️</div>
+      <div class="tile-label">ERROR LOG</div>
+      <div class="tile-sub">Trends, patterns &amp; points over time</div>
+    </div>
+    <div class="nav-tile" id="tileReplacementParts">
+      <div class="tile-icon">🔧</div>
+      <div class="tile-label">REPLACEMENT PARTS</div>
+      <div class="tile-sub">Office-caused parts, cost &amp; trends</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ OFFICE KPI PAGE ============ -->
+<div id="kpiPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromKpi">← Production Office</button>
+    <h2>📈 Office KPI</h2>
+  </div>
+  <div id="todayOffBanner"></div>
+  <div id="teamSummary"></div>
+  <div class="grid" id="dialGrid"></div>
+</div>
+
+<!-- ============ LOADS PAGE ============ -->
+<div id="loadsPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromLoads">← Production Office</button>
+    <h2>📦 Loads</h2>
+    <button class="back-btn" id="refreshLoadsBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
+  </div>
+  
+  <div id="loadsContainer">
+    <div class="loads-controls">
+      <div class="loads-search">
+        <input type="text" id="loadSearch" placeholder="🔍 Search by load number..." />
+      </div>
+      <div class="loads-filters">
+        <select id="personFilter">
+          <option value="all">👤 All People</option>
+        </select>
+        <select id="statusFilter">
+          <option value="all">📊 All Status</option>
+          <option value="in-progress">🔄 In Progress</option>
+          <option value="completed">✅ Completed</option>
+          <option value="pending">⏳ Pending</option>
+        </select>
+      </div>
+      <div class="loads-stats">
+        Showing <span class="highlight" id="loadsShowing">0</span> of <span class="highlight" id="loadsTotal">0</span> loads
+      </div>
+      <div class="drive-auth-status" id="driveAuthStatus">
+        <span class="status-dot disconnected" id="driveStatusDot"></span>
+        <span id="driveStatusText">Drive: Disconnected</span>
+      </div>
+    </div>
+    <div class="loads-grid" id="loadsGrid"></div>
+    <div class="loads-pagination" id="loadsPagination"></div>
+  </div>
+</div>
+
+<!-- ============ PERSON DETAIL PAGE ============ -->
+<div id="detailPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToKpi">← Back to KPI</button>
+    <h2><span class="person-color" id="detailPersonColor"></span><span id="detailPersonName"></span></h2>
+  </div>
+  <div class="detail-stats" id="detailStats"></div>
+  <div class="detail-section">
+    <h3>📊 Weekly Breakdown (incl. error points & forecast)</h3>
+    <div class="detail-week-grid" id="detailWeeks"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📅 Daily Details <span style="font-weight:400;color:var(--muted);font-size:0.7rem;">(tap a day for parts breakdown)</span></h3>
+    <div class="detail-daily-grid" id="detailDays"></div>
+  </div>
+  <div class="detail-section">
+    <h3>⚠️ Error Log</h3>
+    <div class="detail-errors" id="detailErrors"></div>
+  </div>
+  <div class="detail-section">
+    <h3>🔧 Replacement Parts — Office-Caused (this year)</h3>
+    <div class="detail-stats" id="detailRpStats"></div>
+    <div class="detail-errors" id="detailRp"></div>
+  </div>
+</div>
+
+<!-- ============ DAY DETAIL PAGE ============ -->
+<div id="dayDetailPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToDetail">← Back</button>
+    <h2><span class="person-color" id="dayDetailPersonColor"></span><span id="dayDetailPersonName"></span> — <span id="dayDetailDate"></span></h2>
+  </div>
+  <div class="detail-section">
+    <h3>🧩 Parts Breakdown</h3>
+    <div class="parts-note">Totals from completed rows for this person on this day (Columns H–N)</div>
+    <div class="detail-stats" id="dayDetailStats"></div>
+  </div>
+</div>
+
+<!-- ============ HOLIDAYS PAGE ============ -->
+<div id="holidaysPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromHolidays">← Production Office</button>
+    <h2>📅 Holidays</h2>
+  </div>
+  <div class="holiday-page-inner" id="holidayPageInner">
+    <div class="holiday-header">
+      <h3>Team calendar</h3>
+      <div class="month-nav">
+        <button id="prevMonth">◀</button>
+        <span class="month-label" id="monthLabel">Jan 2026</span>
+        <button id="nextMonth">▶</button>
+      </div>
+    </div>
+    <div id="holidayGrid"></div>
+    <div class="holiday-legend">
+      <div class="legend-item"><span class="color-dot SF"></span> SF</div>
+      <div class="legend-item"><span class="color-dot LA"></span> LA</div>
+      <div class="legend-item"><span class="color-dot AS"></span> AS</div>
+      <div class="legend-item"><span class="color-dot DF"></span> DF</div>
+      <div class="legend-item">H = Full day holiday</div>
+      <div class="legend-item">h/am, h/pm = Half day</div>
+      <div class="legend-item">C = Carrier</div>
+      <div class="legend-item">B = Bank holiday</div>
+      <div class="legend-item">O = Other</div>
+      <div class="legend-item">2nd = 2nd Fix help</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FORECAST PAGE ============ -->
+<div id="forecastPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromForecast">← Production Office</button>
+    <h2>🔮 Forecast &amp; Manpower Check</h2>
+  </div>
+
+  <!-- Current week finish prediction -->
+  <div class="detail-section" style="margin-bottom:20px;">
+    <h3>🏁 This Week — Predicted Finish Day</h3>
+    <div class="forecast-note" style="margin-bottom:12px;">
+      Uses remaining weekly stair targets vs who is available each remaining day (holidays / half-days / carrier already subtracted).
+      Projects the earliest day the team can clear this week's targets.
+    </div>
+    <div id="currentWeekFinish"></div>
+  </div>
+
+  <div class="forecast-note">Upcoming stairs grouped by delivery week. Capacity for each week is based on who's available the week before (the week the team would actually be building it). 🔴 = shortfall — may need overtime.</div>
+  <div class="forecast-week-grid" id="forecastWeeks"></div>
+  <div class="detail-section" style="margin-top:16px;">
+    <h3>📊 Past 4 Weeks — Forecast Accuracy</h3>
+    <div class="detail-week-grid" id="forecastAccuracy"></div>
+  </div>
+</div>
+
+<!-- ============ ERROR LOG TRENDS PAGE ============ -->
+<div id="errorsPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromErrors">← Production Office</button>
+    <h2>⚠️ Error Log — Trends</h2>
+  </div>
+  <div class="detail-section">
+    <h3>🎯 Quality vs Speed</h3>
+    <div class="parts-note">Each dot is one person over the last 4 weeks. Further right = more stairs completed. Higher up = fewer/lighter errors. Bottom-right is the "fast but sloppy" corner worth a closer look.</div>
+    <div id="qualitySpeedChart"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📈 Error Points — Last 6 Months</h3>
+    <div class="parts-note">Monthly total of error points logged. More negative = worse month.</div>
+    <div id="errorPointsTrend"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📅 Error Count — Last 6 Months</h3>
+    <div id="errorCountTrend"></div>
+  </div>
+  <div class="detail-section">
+    <h3>⚠️ Repeated Errors & Patterns</h3>
+    <div class="parts-note">Errors that occur 3+ times, or people with 3+ errors. Flagged for attention.</div>
+    <div id="repeatedErrors"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📍 Top Sections</h3>
+    <div class="leaderboard" id="topSections"></div>
+  </div>
+  <div class="detail-section">
+    <h3>🔥 Top Errors</h3>
+    <div class="parts-note">Most common error types.</div>
+    <div class="leaderboard" id="topErrors"></div>
+  </div>
+  <div class="detail-section">
+    <h3>👤 By Person</h3>
+    <div class="leaderboard" id="errorsByPerson"></div>
+  </div>
+</div>
+
+<!-- ============ REPLACEMENT PARTS PAGE ============ -->
+<div id="replacementPartsPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromReplacementParts">← Production Office</button>
+    <h2>🔧 Replacement Parts — Office-Caused</h2>
+  </div>
+  <div class="parts-note">Showing entries logged against the OFFICE section of the Replacement Parts sheet, from this year onward only — parts damaged or scrapped due to an office mistake (wrong program, missing paperwork, etc.), not shop-floor or CNC-caused issues.</div>
+  <div class="detail-stats" id="rpSummaryStats"></div>
+  <div class="detail-section">
+    <h3>💷 Cost — Last 6 Months</h3>
+    <div id="rpCostTrend"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📅 Incident Count — Last 6 Months</h3>
+    <div id="rpCountTrend"></div>
+  </div>
+  <div class="detail-section">
+    <h3>📋 Top Reasons</h3>
+    <div class="leaderboard" id="rpTopReasons"></div>
+  </div>
+  <div class="detail-section">
+    <h3>🪵 Top Parts Affected</h3>
+    <div class="leaderboard" id="rpTopParts"></div>
+  </div>
+  <div class="detail-section">
+    <h3>🕒 Recent Incidents</h3>
+    <div id="rpRecentList"></div>
+  </div>
+</div>
+
+
+<footer>Live from Google Sheets · Drive auto-search enabled</footer>
+
+<script type="module" src="app.js"></script>
+<script>
+(function() {
+    const email = localStorage.getItem('userEmail');
+    const role  = localStorage.getItem('userRole');
+    const loginTime = localStorage.getItem('loginTime');
+    let valid = false;
+    if (email && role && loginTime) {
+        const daysSinceLogin = (Date.now() - parseInt(loginTime, 10)) / (1000 * 60 * 60 * 24);
+        if (daysSinceLogin < 7) valid = true;
+    }
+    if (!valid) {
+        localStorage.clear();
+        window.location.href = 'login.html';
+        return;
+    }
+    const userName = localStorage.getItem('userName');
+    if (userName) {
+        const statusEl = document.querySelector('.status');
+        if (statusEl) {
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = '👤 ' + userName;
+            nameSpan.style.cssText = 'margin-right:12px;font-weight:600;color:var(--text);';
+            statusEl.prepend(nameSpan);
+        }
+    }
+    if (role === 'USER') {
+        window.addEventListener('load', function() {
+            ['tileKpi', 'tileErrors', 'tileReplacementParts'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            const landingTitle = document.querySelector('.landing-title p');
+            if (landingTitle) landingTitle.textContent = '👤 User view — limited access';
+        });
+    }
+    window.addEventListener('load', function() {
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function() {
+                localStorage.clear();
+                window.location.href = 'login.html';
+            });
+        }
+    });
+})();
+</script>
+</body>
+</html>
