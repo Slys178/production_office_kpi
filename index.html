@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Production Office</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="presence.css">
+<link rel="stylesheet" href="finish.css">
 <link rel="manifest" href="manifest.json">
 <style>
   @keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -51,12 +53,13 @@
     <h1>📊 PRODUCTION OFFICE</h1>
     <p>Choose a section</p>
   </div>
+  <div id="presencePanel" style="display:none;"></div>
   <div id="lookaheadBanner"></div>
   <div class="tile-grid">
     <div class="nav-tile" id="tileKpi">
       <div class="tile-icon">📈</div>
       <div class="tile-label">OFFICE KPI</div>
-      <div class="tile-sub">Daily &amp; weekly stair targets per person</div>
+      <div class="tile-sub">Daily & weekly stair targets per person</div>
       <div class="tile-badge" id="tileKpiBadge" style="display:none;"></div>
     </div>
     <div class="nav-tile" id="tileLoads">
@@ -68,7 +71,7 @@
     <div class="nav-tile" id="tileHolidays">
       <div class="tile-icon">📅</div>
       <div class="tile-label">HOLIDAYS</div>
-      <div class="tile-sub">Team holiday &amp; absence calendar</div>
+      <div class="tile-sub">Team holiday & absence calendar</div>
     </div>
     <div class="nav-tile" id="tileForecast">
       <div class="tile-icon">🔮</div>
@@ -79,12 +82,12 @@
     <div class="nav-tile" id="tileErrors">
       <div class="tile-icon">⚠️</div>
       <div class="tile-label">ERROR LOG</div>
-      <div class="tile-sub">Trends, patterns &amp; points over time</div>
+      <div class="tile-sub">Trends, patterns & points over time</div>
     </div>
     <div class="nav-tile" id="tileReplacementParts">
       <div class="tile-icon">🔧</div>
       <div class="tile-label">REPLACEMENT PARTS</div>
-      <div class="tile-sub">Office-caused parts, cost &amp; trends</div>
+      <div class="tile-sub">Office-caused parts, cost & trends</div>
     </div>
   </div>
 </div>
@@ -211,7 +214,7 @@
 <div id="forecastPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromForecast">← Production Office</button>
-    <h2>🔮 Forecast &amp; Manpower Check</h2>
+    <h2>🔮 Forecast & Manpower Check</h2>
   </div>
 
   <!-- Current week finish prediction -->
