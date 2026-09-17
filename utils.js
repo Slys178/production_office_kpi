@@ -1,73 +1,48 @@
 /**
- * Shared utility helpers (dates, formatting, etc.)
+ * Shared utility helpers — dates, formatting, toasts, loading overlay.
+ * These are the real functions actually used by main.js (moved here, not rewritten).
  */
 
-/**
- * Parse a UK-style date string (DD/MM/YYYY or DD-MM-YYYY)
- * @param {string} str
- * @returns {Date|null}
- */
-export function parseUKDate(str) {
-  if (!str) return null;
+export function parseUKDate(str){
+  if(!str) return null;
   const parts = str.trim().split(/[\/\-]/);
-  if (parts.length !== 3) return null;
-  let [d, m, y] = parts.map((p) => parseInt(p, 10));
-  if (y < 100) y += 2000;
-  if (!d || !m || !y) return null;
-  return new Date(y, m - 1, d);
+  if(parts.length !== 3) return null;
+  let [d,m,y] = parts.map(p=>parseInt(p,10));
+  if(y < 100) y += 2000;
+  if(!d || !m || !y) return null;
+  return new Date(y, m-1, d);
 }
 
-/**
- * @param {Date} a
- * @param {Date} b
- */
-export function sameDay(a, b) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+export function sameDay(a,b){
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
 }
 
-/**
- * Return the Monday of the week containing the given date
- * @param {Date} date
- */
-export function mondayOf(date) {
+export function mondayOf(date){
   const monday = new Date(date);
-  const dow = (date.getDay() + 6) % 7;
-  monday.setDate(date.getDate() - dow);
-  monday.setHours(0, 0, 0, 0);
+  const dow = (date.getDay()+6)%7;
+  monday.setDate(date.getDate()-dow);
+  monday.setHours(0,0,0,0);
   return monday;
 }
 
-/**
- * @param {Date} date
- * @returns {'MonThu'|'Fri'|null}
- */
-export function dayBucket(date) {
+export function dayBucket(date){
   const dow = date.getDay();
-  if (dow === 5) return "Fri";
-  if (dow >= 1 && dow <= 4) return "MonThu";
+  if(dow===5) return 'Fri';
+  if(dow>=1 && dow<=4) return 'MonThu';
   return null;
 }
 
-export function fmtDate(d) {
-  if (!d) return "";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+export function fmtDate(d){
+  return d.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
 }
 
-export function fmtDateShort(d) {
-  if (!d) return "";
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+export function fmtDateShort(d){
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 }
 
 /**
- * Simple toast notification system
+ * Simple toast notification system (available for future use — not yet
+ * called anywhere in main.js, kept here so it's ready when needed).
  */
 export function showToast(message, type = "info", duration = 4000) {
   let container = document.getElementById("toast-container");
@@ -104,11 +79,6 @@ export function showToast(message, type = "info", duration = 4000) {
   }, duration);
 }
 
-/**
- * Show / hide a simple full-page or section loading overlay
- * @param {boolean} show
- * @param {string} [message]
- */
 export function setLoading(show, message = "Loading data…") {
   let el = document.getElementById("global-loader");
   if (show) {
