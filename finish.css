@@ -1,0 +1,31 @@
+/* This-week finish prediction */
+.finish-summary{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:16px 18px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px}
+.finish-summary .finish-headline{font-size:1.15rem;font-weight:800}
+.finish-summary .finish-headline.ok{color:var(--green)}
+.finish-summary .finish-headline.danger{color:var(--red)}
+.finish-summary .finish-meta{font-size:0.8rem;color:var(--muted);line-height:1.45}
+.finish-summary .finish-meta strong{color:var(--text)}
+.finish-person-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:14px}
+.finish-person-card{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:14px 16px}
+.finish-person-card .fp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.finish-person-card .fp-name{font-weight:700;font-size:0.95rem;display:flex;align-items:center;gap:8px}
+.finish-person-card .fp-name .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.finish-person-card .fp-badge{font-size:0.65rem;font-weight:700;padding:2px 10px;border-radius:999px}
+.finish-person-card .fp-badge.done{background:rgba(46,204,113,0.15);color:var(--green)}
+.finish-person-card .fp-badge.friday{background:rgba(52,152,219,0.15);color:var(--blue)}
+.finish-person-card .fp-badge.today{background:rgba(46,204,113,0.2);color:var(--green)}
+.finish-person-card .fp-badge.short{background:rgba(231,76,60,0.15);color:var(--red)}
+.finish-person-card .fp-badge.off{background:rgba(137,147,171,0.12);color:var(--muted)}
+.finish-person-card .fp-row{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin:3px 0}
+.finish-person-card .fp-row .val{color:var(--text);font-weight:600}
+.finish-person-card .fp-days{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid var(--card-border)}
+.finish-person-card .fp-day-chip{font-size:0.65rem;padding:2px 8px;border-radius:6px;background:var(--section-bg);color:var(--muted)}
+.finish-person-card .fp-day-chip.available{color:var(--green);background:rgba(46,204,113,0.1)}
+.finish-person-card .fp-day-chip.off{color:var(--red);background:rgba(231,76,60,0.1);text-decoration:line-through}
+.finish-person-card .fp-day-chip.partial{color:var(--amber);background:rgba(245,166,35,0.1)}
+.finish-day-timeline{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:14px 16px;overflow-x:auto}
+.finish-day-timeline table{width:100%;border-collapse:collapse;font-size:0.8rem}
+.finish-day-timeline th,.finish-day-timeline td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--card-border)}
+.finish-day-timeline th{color:var(--muted);font-weight:600;font-size:0.7rem;text-transform:uppercase}
+.finish-day-timeline td.day-label{text-align:left;font-weight:600}
+.finish-day-timeline tr.finish-row td{background:rgba(46,204,113,0.08);font-weight:700;color:var(--green)}
