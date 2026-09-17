@@ -3,19 +3,12 @@
  * - Every logged-in user sends a quiet heartbeat while the app is open.
  * - SA (manager) and ADMIN see a small panel on the landing page: who is active now.
  * - SF and other production users do not see the panel.
- *
- * Requires a one-time Google Apps Script deploy — see PRESENCE_SETUP.md
- * Until scriptUrl is set, heartbeats are skipped and the panel shows a setup hint.
  */
 
 const PRESENCE = {
-  // Paste your Apps Script web-app URL after deploying (PRESENCE_SETUP.md)
-  scriptUrl: "",
-
-  // Same spreadsheet as the login user list; add a tab named "Presence"
+  scriptUrl: "https://script.google.com/macros/s/AKfycbwW_MHHk7pJuihmkQzugfI22XfaUx4n7drJf7fcVfR0eJiKBcQZ8MP-h3QWl9VRy8pH/exec",
   sheetId: "1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw",
-  // Set after creating the Presence tab (from the sheet URL: gid=……)
-  sheetGid: "",
+  sheetGid: "1449433029",
 
   heartbeatMs: 2 * 60 * 1000,
   activeWithinMs: 10 * 60 * 1000,
@@ -176,8 +169,7 @@ async function renderPresencePanel() {
         <div class="presence-title">👥 Who's online</div>
         <div class="presence-setup">
           Presence is almost ready. Complete the short setup in
-          <code>PRESENCE_SETUP.md</code> (create Presence tab, deploy Apps Script,
-          paste script URL + gid into <code>presence.js</code>).
+          <code>PRESENCE_SETUP.md</code>.
         </div>
       </div>`;
     return;
