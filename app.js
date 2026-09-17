@@ -2,11 +2,10 @@
  * Application entry point
  * - Theme toggle
  * - Starts the main app
- * - Presence heartbeat (last-seen for admins)
+ * - Presence heartbeat (loaded separately so it cannot block the app)
  */
 
 import { initAndLoad, loadAndRender, REFRESH_MS } from "./main.js";
-import "./presence.js";
 
 /* =========================================================
    THEME TOGGLE
@@ -25,9 +24,32 @@ if (themeToggle) {
 }
 
 /* =========================================================
-   START
+   START — never let optional features block the main app
    ========================================================= */
-initAndLoad();
-setInterval(loadAndRender, REFRESH_MS);
+function showLoadError(err) {
+  console.error("initAndLoad failed", err);
+  const el = document.getElementById("loadingMsg");
+  if (el) {
+    el.classList.remove("loading");
+    el.style.display = "block";
+    el.style.color = "var(--red, #e74c3c)";
+    el.textContent = "Could not load live figures. Check your connection and refresh. (" + (err && err.message ? err.message : String(err)) + ")";
+  }
+  const banner = document.getElementById("errorBanner");
+  if (banner) {
+    banner.textContent = "Load error: " + (err && err.message ? err.message : String(err));
+    banner.style.display = "block";
+  }
+}
+
+initAndLoad().catch(showLoadError);
+setInterval(() => {
+  loadAndRender().catch(e => console.warn("refresh failed", e));
+}, REFRESH_MS);
+
+// Presence is optional — load after a tick so it never blocks startup
+setTimeout(() => {
+  import("./presence.js").catch(e => console.warn("presence module failed", e));
+}, 0);
 
 console.log("%cProduction Office KPI – modular build", "color:#00A99D;font-weight:bold");
