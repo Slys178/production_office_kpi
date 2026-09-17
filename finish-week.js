@@ -1,7 +1,8 @@
 /**
  * This-week finish day prediction module.
  * Uses actual pace (stairs per hour) when available; falls back to capacity targets.
- * Privacy: team members only see their own person card; SF (and ADMIN role) see all four.
+ * Privacy: team members only see their own person card;
+ * SA (manager) and ADMIN role see all four. SF is a normal user.
  * Team-level predicted finish day is always visible.
  */
 import { mondayOf, dayBucket, sameDay } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/utils.js";
@@ -9,9 +10,6 @@ import { getCodeForPerson, targetFor, isAbsenceCode, statusLabel, hoursLostForCo
 import { CONFIG } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/config.js";
 
 const PEOPLE = CONFIG.people;
-
-/** Who can see everyone's individual figures on this panel. */
-const FULL_VIEW_INITIALS = new Set(["SF"]);
 
 /** Typical office start time used to estimate hours elapsed today. */
 const WORK_START_HOUR = 8;
@@ -25,10 +23,6 @@ function availableHours(initials, date, code) {
   return Math.max(0, full - lost);
 }
 
-/**
- * Hours worked so far today (0 if before start, capped at available hours).
- * Linear from WORK_START; good enough without clock-in data.
- */
 function hoursElapsedToday(initials, today, code) {
   const avail = availableHours(initials, today, code);
   if (avail <= 0) return 0;
@@ -52,10 +46,17 @@ function formatTimeEstimate(hoursFromNow) {
   return finish.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-/**
- * Resolve logged-in user → person initials (or null if unknown).
- * Uses localStorage keys set by login.html: userName, userEmail, userRole.
- */
+/** Manager SA (not in production PEOPLE list) + ADMIN role get full view. */
+function isManagerViewer(userName, userEmail, userRole) {
+  if ((userRole || "").toUpperCase() === "ADMIN") return true;
+  const n = (userName || "").trim().toUpperCase();
+  const e = (userEmail || "").trim().toLowerCase();
+  if (n === "SA" || n.startsWith("SA ") || /\bSA\b/.test(n)) return true;
+  if (n.includes("SIMON ASK")) return true;
+  if (e.includes("simon.ask")) return true;
+  return false;
+}
+
 function resolveViewer() {
   let userName = "";
   let userEmail = "";
@@ -78,9 +79,7 @@ function resolveViewer() {
       || (p.initials && nameUpper === p.initials.toUpperCase());
   }) || null;
 
-  const canSeeAll =
-    userRole === "ADMIN"
-    || (matched && FULL_VIEW_INITIALS.has(matched.initials));
+  const canSeeAll = isManagerViewer(userName, userEmail, userRole);
 
   return {
     userName,
@@ -112,7 +111,7 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
   }
 
   const people = PEOPLE.filter(p => p.initials !== CONFIG.excludeFromKpiDisplay);
-  const baseRate = CONFIG.baseRate; // ~6.22 stairs/hour at 56/9
+  const baseRate = CONFIG.baseRate;
 
   const personStats = people.map(person => {
     let weekTarget = 0;
@@ -161,7 +160,6 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
 
     const remaining = Math.max(0, weekTarget - actualSoFar);
 
-    // Pace from actual work so far this week; fall back to base rate if thin data
     let pace = null;
     let paceSource = "target";
     if (hoursWorkedSoFar >= 1 && actualSoFar > 0) {
@@ -260,7 +258,6 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
     };
   });
 
-  // Team finish: always computed from full team (needed for headline)
   let teamRemaining = personStats.reduce((s, p) => s + p.remaining, 0);
   let teamFinishDay = null;
   let teamFinishLabel = "Already done";
@@ -313,7 +310,6 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
 
   const anyoneUsingPace = personStats.some(p => p.paceSource === "actual" || p.paceSource === "blended");
 
-  // Privacy: which person cards to show
   const visibleStats = viewer.canSeeAll
     ? personStats
     : personStats.filter(ps => viewer.initials && ps.person.initials === viewer.initials);
@@ -406,8 +402,6 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
   });
   html += "</div>";
 
-  // Team timeline only for full-view users (avoids exposing per-day team pressure in a way that fuels arguments)
-  // Non-managers still get the headline predicted finish day above.
   const remainingDays = days.filter(d => d >= todayStart);
   if (viewer.canSeeAll && remainingDays.length > 0 && teamRemaining > 0) {
     let running = teamRemaining;
