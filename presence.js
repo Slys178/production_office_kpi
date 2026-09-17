@@ -18,12 +18,24 @@ const PRESENCE = {
 
 /** Manager SA + ADMIN role get the who's-online panel. */
 function isManagerViewer(userName, userEmail, userRole) {
-  if ((userRole || "").toUpperCase() === "ADMIN") return true;
+  const role = (userRole || "").toUpperCase().trim();
+  if (role === "ADMIN" || role === "ADMINISTRATOR" || role === "MANAGER" || role.includes("ADMIN")) {
+    return true;
+  }
   const n = (userName || "").trim().toUpperCase();
   const e = (userEmail || "").trim().toLowerCase();
-  if (n === "SA" || n.startsWith("SA ") || /\bSA\b/.test(n)) return true;
+
+  // Initials / name forms for SA
+  if (n === "SA" || n.startsWith("SA ") || n.endsWith(" SA") || n === "S.A" || n === "S A") return true;
+  if (/\bSA\b/.test(n)) return true;
   if (n.includes("SIMON ASK")) return true;
+  if (n.includes("ASK") && n.includes("SIMON")) return true;
+
+  // Email forms
   if (e.includes("simon.ask")) return true;
+  if (e.includes("simon_ask")) return true;
+  if (e.startsWith("sa@") || e.includes(".sa@")) return true;
+
   return false;
 }
 
@@ -37,12 +49,11 @@ function getViewer() {
     userRole = (localStorage.getItem("userRole") || "").trim().toUpperCase();
   } catch (_) {}
 
-  return {
-    userName,
-    userEmail,
-    userRole,
-    canSeeAll: isManagerViewer(userName, userEmail, userRole)
-  };
+  const canSeeAll = isManagerViewer(userName, userEmail, userRole);
+  // Helpful in browser console if panel is missing
+  console.log("[presence] viewer", { userName, userEmail, userRole, canSeeAll });
+
+  return { userName, userEmail, userRole, canSeeAll };
 }
 
 function sendHeartbeat() {
@@ -63,12 +74,20 @@ function sendHeartbeat() {
 }
 
 function parseGvizDate(cell) {
-  if (!cell) return null;
+  if (cell == null || cell === "") return null;
+  if (typeof cell === "object" && cell instanceof Date) return cell;
   if (typeof cell === "string" && cell.startsWith("Date(")) {
     const nums = cell.replace(/Date\(|\)/g, "").split(",").map(n => parseInt(n, 10));
     if (nums.length >= 3) {
       return new Date(nums[0], nums[1], nums[2], nums[3] || 0, nums[4] || 0, nums[5] || 0);
     }
+  }
+  // Google sometimes returns serial or ISO
+  if (typeof cell === "number") {
+    // Sheets serial date → JS (days since 1899-12-30)
+    const ms = (cell - 25569) * 86400 * 1000;
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? null : d;
   }
   const d = new Date(cell);
   return isNaN(d.getTime()) ? null : d;
@@ -114,7 +133,7 @@ function fetchPresenceRows() {
           const name = (c[1]?.v ?? c[1]?.f ?? "").toString().trim();
           const role = (c[2]?.v ?? c[2]?.f ?? "").toString().trim();
           const rawSeen = c[3]?.v ?? c[3]?.f ?? "";
-          const lastSeen = parseGvizDate(rawSeen) || (typeof rawSeen === "string" ? new Date(rawSeen) : null);
+          const lastSeen = parseGvizDate(rawSeen);
           if (!lastSeen || isNaN(lastSeen.getTime())) continue;
           rows.push({ email, name, role, lastSeen });
         }
@@ -154,26 +173,18 @@ function escapeHtml(s) {
 
 async function renderPresencePanel() {
   const el = document.getElementById("presencePanel");
-  if (!el) return;
+  if (!el) {
+    console.warn("[presence] #presencePanel not found in page");
+    return;
+  }
 
   const viewer = getViewer();
   if (!viewer.canSeeAll) {
     el.style.display = "none";
+    el.innerHTML = "";
     return;
   }
-  el.style.display = "";
-
-  if (!PRESENCE.scriptUrl || !PRESENCE.sheetGid) {
-    el.innerHTML = `
-      <div class="presence-card">
-        <div class="presence-title">👥 Who's online</div>
-        <div class="presence-setup">
-          Presence is almost ready. Complete the short setup in
-          <code>PRESENCE_SETUP.md</code>.
-        </div>
-      </div>`;
-    return;
-  }
+  el.style.display = "block";
 
   try {
     const rows = await fetchPresenceRows();
@@ -208,7 +219,7 @@ async function renderPresencePanel() {
       body += recent.map(r => rowHtml(r, "recent")).join("");
     }
     if (!active.length && !recent.length) {
-      body += `<div class="presence-empty">No one active in the last hour</div>`;
+      body += `<div class="presence-empty">No one active in the last hour yet — open the app and wait ~1 min, or check the Presence sheet for rows.</div>`;
     }
     if (older.length) {
       body += `<div class="presence-group-label">Earlier</div>`;
@@ -225,7 +236,7 @@ async function renderPresencePanel() {
     el.innerHTML = `
       <div class="presence-card">
         <div class="presence-title">👥 Who's online</div>
-        <div class="presence-setup">Could not load presence sheet. Check the tab is shared (Anyone with link → Viewer) and gid is correct.</div>
+        <div class="presence-setup">Could not load presence sheet (${escapeHtml(e.message || e)}). Check the Presence tab is shared (Anyone with link → Viewer) and gid is correct.</div>
       </div>`;
   }
 }
@@ -242,6 +253,8 @@ export function startPresence() {
   if (viewer.canSeeAll) {
     renderPresencePanel();
     setInterval(renderPresencePanel, PRESENCE.refreshPanelMs);
+  } else {
+    console.warn("[presence] Panel hidden — login is not recognised as SA/ADMIN. userRole should be ADMIN in the user list sheet, or name/email should match SA.");
   }
 }
 
