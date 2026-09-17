@@ -729,6 +729,21 @@ function parseErrorRows(rows){
   const additionalPointsCol = header.findIndex(c => c.includes('ADDITIONAL'));
   const loadCol = header.findIndex(c => c.includes('LOAD'));
 
+  function matchPerson(raw) {
+    const name = (raw || '').trim();
+    if (!name) return null;
+    const upper = name.toUpperCase();
+    return PEOPLE.find(p =>
+      p.initials === upper ||
+      p.initials === name ||
+      p.name.toUpperCase() === upper ||
+      p.name.toUpperCase().startsWith(upper) ||
+      upper.startsWith(p.name.toUpperCase()) ||
+      p.name.split(' ')[0].toUpperCase() === upper ||
+      upper.includes(p.initials)
+    ) || null;
+  }
+
   const out = [];
   for(let i=headerIdx+1;i<rows.length;i++){
     const r = rows[i];
@@ -737,11 +752,12 @@ function parseErrorRows(rows){
     if(!dateStr) continue;
     const date = parseUKDate(dateStr);
     if(!date) continue;
-    const personName = (r[personCol]||'').trim().toUpperCase();
-    const person = PEOPLE.find(p => p.initials === personName);
+    const person = matchPerson(r[personCol]);
     if(!person) continue;
-    const points = parseInt(r[pointsCol],10) || 0;
-    const additional = parseInt(r[additionalPointsCol],10) || 0;
+    const basePoints = pointsCol >= 0 ? (parseInt(r[pointsCol], 10) || 0) : 0;
+    const additional = additionalPointsCol >= 0 ? (parseInt(r[additionalPointsCol], 10) || 0) : 0;
+    // Combined total used everywhere on dials / badges / trends
+    const points = basePoints + additional;
     out.push({
       initials: person.initials,
       date: date,
@@ -751,6 +767,7 @@ function parseErrorRows(rows){
       section: (r[sectionCol]||'').trim(),
       impact: (r[impactCol]||'').trim(),
       points: points,
+      basePoints: basePoints,
       additionalPoints: additional,
       loadLink: (r[loadCol]||'').trim()
     });
@@ -1928,7 +1945,7 @@ function showDetailPage(person, stairEntries, forecastEntries, holidayIndex, tod
       <div class="detail-error-item">
         <div class="error-left">
           <div class="error-date">${fmtDate(e.date)} ${e.section ? '· ' + e.section : ''} ${e.plot ? '· Plot ' + e.plot : ''}</div>
-          <div class="error-desc">${e.issue}${e.quantity > 1 ? ' (x'+e.quantity+')' : ''} ${e.impact ? '— ' + e.impact : ''}</div>
+          <div class="error-desc">${e.issue}${e.quantity > 1 ? ' (x'+e.quantity+')' : ''} ${e.impact ? '— ' + e.impact : ''}${e.additionalPoints ? ' <span style="color:var(--muted);font-size:0.75em;">(incl. '+e.additionalPoints+' additional)</span>' : ''}</div>
         </div>
         <div class="error-points">${e.points}</div>
       </div>
