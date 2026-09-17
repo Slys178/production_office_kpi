@@ -5,9 +5,9 @@
  * SA (manager) and ADMIN role see all four. SF is a normal user.
  * Team-level predicted finish day is always visible.
  */
-import { mondayOf, dayBucket, sameDay } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/utils.js";
-import { getCodeForPerson, targetFor, isAbsenceCode, statusLabel, hoursLostForCode } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/data.js";
-import { CONFIG } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/config.js";
+import { mondayOf, dayBucket, sameDay } from "./utils.js";
+import { getCodeForPerson, targetFor, isAbsenceCode, statusLabel, hoursLostForCode } from "./data.js";
+import { CONFIG } from "./config.js";
 
 const PEOPLE = CONFIG.people;
 
