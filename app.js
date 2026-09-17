@@ -2,9 +2,11 @@
  * Application entry point
  * - Theme toggle
  * - Starts the main app
+ * - Presence heartbeat (last-seen for admins)
  */
 
 import { initAndLoad, loadAndRender, REFRESH_MS } from "./main.js";
+import "./presence.js";
 
 /* =========================================================
    THEME TOGGLE
