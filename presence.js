@@ -1,7 +1,8 @@
 /**
  * Live "last seen" presence.
  * - Every logged-in user sends a quiet heartbeat while the app is open.
- * - ADMIN (and SF) see a small panel on the landing page: who is active now.
+ * - SA (manager) and ADMIN see a small panel on the landing page: who is active now.
+ * - SF and other production users do not see the panel.
  *
  * Requires a one-time Google Apps Script deploy — see PRESENCE_SETUP.md
  * Until scriptUrl is set, heartbeats are skipped and the panel shows a setup hint.
@@ -16,13 +17,22 @@ const PRESENCE = {
   // Set after creating the Presence tab (from the sheet URL: gid=……)
   sheetGid: "",
 
-  heartbeatMs: 2 * 60 * 1000,       // ping every 2 minutes
-  activeWithinMs: 10 * 60 * 1000,   // green = seen in last 10 min
-  recentWithinMs: 60 * 60 * 1000,   // amber = seen in last hour
-  refreshPanelMs: 60 * 1000,        // re-read sheet every minute for admins
+  heartbeatMs: 2 * 60 * 1000,
+  activeWithinMs: 10 * 60 * 1000,
+  recentWithinMs: 60 * 60 * 1000,
+  refreshPanelMs: 60 * 1000,
 };
 
-const FULL_VIEW_INITIALS = new Set(["SF"]);
+/** Manager SA + ADMIN role get the who's-online panel. */
+function isManagerViewer(userName, userEmail, userRole) {
+  if ((userRole || "").toUpperCase() === "ADMIN") return true;
+  const n = (userName || "").trim().toUpperCase();
+  const e = (userEmail || "").trim().toLowerCase();
+  if (n === "SA" || n.startsWith("SA ") || /\bSA\b/.test(n)) return true;
+  if (n.includes("SIMON ASK")) return true;
+  if (e.includes("simon.ask")) return true;
+  return false;
+}
 
 function getViewer() {
   let userName = "";
@@ -34,29 +44,14 @@ function getViewer() {
     userRole = (localStorage.getItem("userRole") || "").trim().toUpperCase();
   } catch (_) {}
 
-  const nameUpper = userName.toUpperCase();
-  const people = [
-    { initials: "SF", name: "Simon Faulks" },
-    { initials: "LA", name: "Liam Aiello" },
-    { initials: "AS", name: "Adam Stanislawski" },
-    { initials: "DF", name: "Dominika Formanowicz" },
-  ];
-  const matched = people.find(p => {
-    const full = p.name.toUpperCase();
-    return full === nameUpper
-      || nameUpper === full.split(" ")[0]
-      || full.startsWith(nameUpper)
-      || nameUpper === p.initials;
-  }) || null;
-
-  const canSeeAll =
-    userRole === "ADMIN"
-    || (matched && FULL_VIEW_INITIALS.has(matched.initials));
-
-  return { userName, userEmail, userRole, canSeeAll };
+  return {
+    userName,
+    userEmail,
+    userRole,
+    canSeeAll: isManagerViewer(userName, userEmail, userRole)
+  };
 }
 
-/** Fire-and-forget heartbeat (GET avoids CORS hassle with Apps Script). */
 function sendHeartbeat() {
   if (!PRESENCE.scriptUrl) return;
   const { userName, userEmail, userRole } = getViewer();
@@ -69,7 +64,6 @@ function sendHeartbeat() {
     t: String(Date.now()),
   });
 
-  // Image beacon — works cross-origin, no CORS preflight
   const img = new Image();
   img.referrerPolicy = "no-referrer";
   img.src = `${PRESENCE.scriptUrl}?${params.toString()}`;
@@ -77,7 +71,6 @@ function sendHeartbeat() {
 
 function parseGvizDate(cell) {
   if (!cell) return null;
-  // GViz sometimes returns Date(yyyy,m,d,h,min,s) as string in v
   if (typeof cell === "string" && cell.startsWith("Date(")) {
     const nums = cell.replace(/Date\(|\)/g, "").split(",").map(n => parseInt(n, 10));
     if (nums.length >= 3) {
@@ -121,7 +114,6 @@ function fetchPresenceRows() {
         }
         const table = response.table;
         const rows = [];
-        // Expect header: Email | Name | Role | LastSeen
         for (let i = 0; i < table.rows.length; i++) {
           const c = table.rows[i].c || [];
           const email = (c[0]?.v ?? c[0]?.f ?? "").toString().trim().toLowerCase();
@@ -157,6 +149,14 @@ function formatAgo(ms) {
   if (ms < 60 * 60 * 1000) return `${Math.round(ms / 60000)} min ago`;
   if (ms < 24 * 60 * 60 * 1000) return `${Math.round(ms / 3600000)} hr ago`;
   return `${Math.round(ms / 86400000)} day(s) ago`;
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, """);
 }
 
 async function renderPresencePanel() {
@@ -238,16 +238,7 @@ async function renderPresencePanel() {
   }
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 export function startPresence() {
-  // Heartbeat for everyone
   sendHeartbeat();
   setInterval(sendHeartbeat, PRESENCE.heartbeatMs);
 
@@ -255,7 +246,6 @@ export function startPresence() {
     if (document.visibilityState === "visible") sendHeartbeat();
   });
 
-  // Admin panel
   const viewer = getViewer();
   if (viewer.canSeeAll) {
     renderPresencePanel();
@@ -263,5 +253,4 @@ export function startPresence() {
   }
 }
 
-// Auto-start when loaded as module
 startPresence();
