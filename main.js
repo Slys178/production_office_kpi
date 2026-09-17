@@ -1,6 +1,8 @@
 /**
  * Local main.js – loads the known-good modular build from CDN,
  * then wires in the "This Week Predicted Finish Day" feature.
+ * Finish prediction is loaded dynamically so a failure there cannot
+ * leave the whole app stuck on "Loading…".
  */
 import {
   initAndLoad as _initAndLoad,
@@ -8,10 +10,9 @@ import {
   REFRESH_MS
 } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/main.js";
 
-// Side-effect import: registers window.renderCurrentWeekFinish
-import "./finish-week.js";
-
 export { REFRESH_MS };
+
+let finishReady = false;
 
 function callFinishIfReady() {
   try {
@@ -25,6 +26,14 @@ function callFinishIfReady() {
     console.warn("finish prediction error", e);
   }
 }
+
+// Load finish module in the background (does not block initAndLoad)
+import("./finish-week.js")
+  .then(() => {
+    finishReady = true;
+    callFinishIfReady();
+  })
+  .catch(e => console.warn("finish-week module failed", e));
 
 export async function initAndLoad() {
   const result = await _initAndLoad();
