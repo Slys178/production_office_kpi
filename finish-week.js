@@ -1,12 +1,52 @@
 /**
  * This-week finish day prediction module.
+ * Uses actual pace (stairs per hour) when available; falls back to capacity targets.
  * Imports helpers from the known-good CDN build.
  */
 import { mondayOf, dayBucket, sameDay } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/utils.js";
-import { getCodeForPerson, targetFor, isAbsenceCode, statusLabel } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/data.js";
+import { getCodeForPerson, targetFor, isAbsenceCode, statusLabel, hoursLostForCode } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/data.js";
 import { CONFIG } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/config.js";
 
 const PEOPLE = CONFIG.people;
+
+/** Typical office start time used to estimate hours elapsed today. */
+const WORK_START_HOUR = 8;
+const WORK_START_MIN = 0;
+
+function availableHours(initials, date, code) {
+  const bucket = dayBucket(date);
+  if (!bucket) return 0;
+  const full = CONFIG.hours[initials]?.[bucket] ?? 0;
+  const lost = hoursLostForCode(code, full);
+  return Math.max(0, full - lost);
+}
+
+/**
+ * Hours worked so far today (0 if before start, capped at available hours).
+ * Linear from WORK_START; good enough without clock-in data.
+ */
+function hoursElapsedToday(initials, today, code) {
+  const avail = availableHours(initials, today, code);
+  if (avail <= 0) return 0;
+  const now = new Date();
+  if (!sameDay(now, today)) return avail;
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), WORK_START_HOUR, WORK_START_MIN);
+  const elapsedMs = now - start;
+  if (elapsedMs <= 0) return 0;
+  return Math.min(avail, elapsedMs / 3600000);
+}
+
+function formatPace(pace) {
+  if (pace == null || !isFinite(pace) || pace <= 0) return null;
+  return pace.toFixed(1);
+}
+
+function formatTimeEstimate(hoursFromNow) {
+  if (hoursFromNow == null || !isFinite(hoursFromNow) || hoursFromNow < 0) return null;
+  const now = new Date();
+  const finish = new Date(now.getTime() + hoursFromNow * 3600000);
+  return finish.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
 
 export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
   const container = document.getElementById("currentWeekFinish");
@@ -26,100 +66,215 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
   }
 
   const people = PEOPLE.filter(p => p.initials !== CONFIG.excludeFromKpiDisplay);
+  const baseRate = CONFIG.baseRate; // ~6.22 stairs/hour at 56/9
 
   const personStats = people.map(person => {
     let weekTarget = 0;
     let actualSoFar = 0;
+    let hoursWorkedSoFar = 0;
     const dayInfo = [];
 
     days.forEach(day => {
       const code = getCodeForPerson(holidayIndex, person.holidayName, day);
       const dayTarget = targetFor(person.initials, day, code);
+      const dayHours = availableHours(person.initials, day, code);
       const dayActual = stairEntries
         .filter(e => e.initials === person.initials && sameDay(e.date, day))
         .reduce((s, e) => s + e.stairs, 0);
 
       weekTarget += dayTarget;
-      if (day <= todayStart) actualSoFar += dayActual;
 
       const isPast = day < todayStart;
       const isToday = sameDay(day, todayStart);
-      const remainingCapacity = isPast ? 0 : dayTarget;
+
+      if (isPast) {
+        actualSoFar += dayActual;
+        hoursWorkedSoFar += dayHours;
+      } else if (isToday) {
+        actualSoFar += dayActual;
+        hoursWorkedSoFar += hoursElapsedToday(person.initials, todayStart, code);
+      }
+
+      const remainingHoursToday = isToday
+        ? Math.max(0, dayHours - hoursElapsedToday(person.initials, todayStart, code))
+        : (isPast ? 0 : dayHours);
 
       dayInfo.push({
         date: new Date(day),
         target: dayTarget,
         actual: dayActual,
+        hours: dayHours,
+        remainingHours: isPast ? 0 : remainingHoursToday,
         code,
         isPast,
         isToday,
-        remainingCapacity,
+        remainingCapacity: isPast ? 0 : dayTarget,
         available: dayTarget > 0
       });
     });
 
     const remaining = Math.max(0, weekTarget - actualSoFar);
 
+    // Pace from actual work so far this week; fall back to base rate if thin data
+    let pace = null;
+    let paceSource = "target";
+    if (hoursWorkedSoFar >= 1 && actualSoFar > 0) {
+      pace = actualSoFar / hoursWorkedSoFar;
+      paceSource = "actual";
+    } else if (hoursWorkedSoFar >= 0.5 && actualSoFar > 0) {
+      // Thin data: blend toward base rate
+      const raw = actualSoFar / hoursWorkedSoFar;
+      pace = 0.6 * raw + 0.4 * baseRate;
+      paceSource = "blended";
+    } else {
+      pace = baseRate;
+      paceSource = "target";
+    }
+
+    // Simulate remaining days using pace × remaining hours (not just stair targets)
     let left = remaining;
     let finishDay = null;
     let finishLabel = null;
-    for (const di of dayInfo) {
-      if (di.isPast) continue;
-      if (left <= 0) break;
-      if (di.remainingCapacity <= 0) continue;
-      left -= di.remainingCapacity;
-      if (left <= 0) {
-        finishDay = di.date;
-        break;
-      }
-    }
+    let finishTimeLabel = null;
+    let hoursUntilFinish = null;
+
     if (remaining === 0) {
       finishLabel = "Already done";
-    } else if (finishDay) {
-      finishLabel = sameDay(finishDay, todayStart)
-        ? "Today"
-        : finishDay.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
     } else {
-      finishLabel = "Won't hit target";
+      for (const di of dayInfo) {
+        if (di.isPast) continue;
+        if (left <= 0) break;
+        const hrs = di.remainingHours;
+        if (hrs <= 0) continue;
+
+        const expectedOut = pace * hrs;
+        if (expectedOut <= 0) continue;
+
+        if (left <= expectedOut) {
+          // Finishes part-way through this day's remaining hours
+          const hrsNeeded = left / pace;
+          hoursUntilFinish = (di.isToday ? 0 : 0) + hrsNeeded;
+          // Accumulate hours from earlier remaining days today already accounted as 0 wait
+          if (!di.isToday) {
+            // Sum full remaining hours of days before this one
+            let waitHrs = 0;
+            for (const earlier of dayInfo) {
+              if (earlier.isPast) continue;
+              if (sameDay(earlier.date, di.date)) break;
+              waitHrs += earlier.remainingHours;
+            }
+            hoursUntilFinish = waitHrs + hrsNeeded;
+          } else {
+            hoursUntilFinish = hrsNeeded;
+          }
+
+          finishDay = di.date;
+          if (di.isToday) {
+            const t = formatTimeEstimate(hrsNeeded);
+            finishLabel = t ? `Today ~${t}` : "Today";
+            finishTimeLabel = t;
+          } else {
+            finishLabel = di.date.toLocaleDateString("en-GB", {
+              weekday: "long",
+              day: "numeric",
+              month: "short"
+            });
+          }
+          left = 0;
+          break;
+        }
+
+        left -= expectedOut;
+      }
+
+      if (left > 0) {
+        finishLabel = "Won't hit target";
+        finishDay = null;
+      }
     }
 
     const remainingCapacityTotal = dayInfo
       .filter(di => !di.isPast)
       .reduce((s, di) => s + di.remainingCapacity, 0);
 
+    const expectedRemainingOut = dayInfo
+      .filter(di => !di.isPast)
+      .reduce((s, di) => s + pace * di.remainingHours, 0);
+
     return {
-      person, weekTarget, actualSoFar, remaining, remainingCapacityTotal,
-      finishDay, finishLabel, dayInfo, fullyOff: weekTarget === 0
+      person,
+      weekTarget,
+      actualSoFar,
+      remaining,
+      remainingCapacityTotal,
+      expectedRemainingOut,
+      finishDay,
+      finishLabel,
+      finishTimeLabel,
+      hoursUntilFinish,
+      dayInfo,
+      fullyOff: weekTarget === 0,
+      pace,
+      paceSource,
+      hoursWorkedSoFar
     };
   });
 
+  // Team finish: simulate day-by-day with each person's pace-based output
   let teamRemaining = personStats.reduce((s, p) => s + p.remaining, 0);
   let teamFinishDay = null;
   let teamFinishLabel = "Already done";
+  let teamFinishTimeLabel = null;
+
   if (teamRemaining > 0) {
     const remainingDays = days.filter(d => d >= todayStart);
     let left = teamRemaining;
     for (const day of remainingDays) {
-      const dayCap = personStats.reduce((s, ps) => {
+      let dayExpected = 0;
+      let dayRemainingHrsTeam = 0;
+      personStats.forEach(ps => {
         const di = ps.dayInfo.find(x => sameDay(x.date, day));
-        return s + (di ? di.remainingCapacity : 0);
-      }, 0);
-      left -= dayCap;
-      if (left <= 0) {
+        if (!di || di.remainingHours <= 0) return;
+        dayExpected += ps.pace * di.remainingHours;
+        dayRemainingHrsTeam += di.remainingHours;
+      });
+
+      if (dayExpected <= 0) continue;
+
+      if (left <= dayExpected) {
         teamFinishDay = day;
-        teamFinishLabel = sameDay(day, todayStart)
-          ? "Today"
-          : day.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+        const isToday = sameDay(day, todayStart);
+        if (isToday && dayRemainingHrsTeam > 0) {
+          // Rough team time: remaining / team rate
+          const teamRate = dayExpected / dayRemainingHrsTeam;
+          const hrsNeeded = teamRate > 0 ? left / teamRate : 0;
+          const t = formatTimeEstimate(hrsNeeded);
+          teamFinishLabel = t ? `Today ~${t}` : "Today";
+          teamFinishTimeLabel = t;
+        } else {
+          teamFinishLabel = isToday
+            ? "Today"
+            : day.toLocaleDateString("en-GB", {
+                weekday: "long",
+                day: "numeric",
+                month: "short"
+              });
+        }
+        left = 0;
         break;
       }
+      left -= dayExpected;
     }
-    if (!teamFinishDay) teamFinishLabel = "Won't hit target this week";
+    if (left > 0) teamFinishLabel = "Won't hit target this week";
   }
 
   const teamWeekTarget = personStats.reduce((s, p) => s + p.weekTarget, 0);
   const teamActual = personStats.reduce((s, p) => s + p.actualSoFar, 0);
   const teamRemCap = personStats.reduce((s, p) => s + p.remainingCapacityTotal, 0);
+  const teamExpectedOut = personStats.reduce((s, p) => s + p.expectedRemainingOut, 0);
   const headlineClass = teamRemaining === 0 ? "ok" : (teamFinishDay ? "ok" : "danger");
+
+  const anyoneUsingPace = personStats.some(p => p.paceSource === "actual" || p.paceSource === "blended");
 
   let html = `
     <div class="finish-summary">
@@ -134,18 +289,24 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
         Team done <strong>${teamActual}</strong> of <strong>${teamWeekTarget}</strong>
         · Remaining <strong>${teamRemaining}</strong>
         · Capacity left <strong>${teamRemCap}</strong>
+        · At current pace ~<strong>${Math.round(teamExpectedOut)}</strong> more possible
+        ${anyoneUsingPace ? " · <em>using actual pace</em>" : " · <em>using target rate (limited data yet)</em>"}
       </div>
     </div>
   `;
 
   html += '<div class="finish-person-grid">';
   personStats.forEach(ps => {
-    const { person, weekTarget, actualSoFar, remaining, finishLabel, dayInfo, fullyOff, remainingCapacityTotal } = ps;
+    const {
+      person, weekTarget, actualSoFar, remaining, finishLabel, dayInfo,
+      fullyOff, remainingCapacityTotal, pace, paceSource
+    } = ps;
+
     let badgeClass = "friday";
     let badgeText = finishLabel;
     if (fullyOff) { badgeClass = "off"; badgeText = "Off this week"; }
     else if (remaining === 0) { badgeClass = "done"; badgeText = "✅ Done"; }
-    else if (finishLabel === "Today") { badgeClass = "today"; badgeText = "Today"; }
+    else if (finishLabel && finishLabel.startsWith("Today")) { badgeClass = "today"; badgeText = finishLabel; }
     else if (finishLabel === "Won't hit target") { badgeClass = "short"; badgeText = "Short"; }
 
     const dayChips = dayInfo.map(di => {
@@ -165,6 +326,12 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
       return `<span class="fp-day-chip ${cls}" title="${tip}">${dayName}${di.isToday ? "*" : ""}</span>`;
     }).join("");
 
+    const paceStr = formatPace(pace);
+    const paceNote =
+      paceSource === "actual" ? "from this week"
+        : paceSource === "blended" ? "blended (early data)"
+        : "target rate";
+
     html += `
       <div class="finish-person-card">
         <div class="fp-header">
@@ -175,6 +342,7 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
         <div class="fp-row"><span>Done so far</span><span class="val">${actualSoFar}</span></div>
         <div class="fp-row"><span>Still needed</span><span class="val">${remaining}</span></div>
         <div class="fp-row"><span>Capacity left</span><span class="val">${remainingCapacityTotal}</span></div>
+        <div class="fp-row fp-pace"><span>Pace</span><span class="val">${paceStr ? paceStr + "/hr" : "—"} <span class="pace-note">(${paceNote})</span></span></div>
         <div class="fp-days">${dayChips}</div>
       </div>
     `;
@@ -190,7 +358,8 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
           <thead>
             <tr>
               <th>Day</th>
-              <th>Team capacity</th>
+              <th>Expected (pace)</th>
+              <th>Capacity</th>
               <th>Remaining after</th>
               <th></th>
             </tr>
@@ -198,18 +367,24 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
           <tbody>
     `;
     remainingDays.forEach(day => {
-      const dayCap = personStats.reduce((s, ps) => {
+      let dayCap = 0;
+      let dayExpected = 0;
+      personStats.forEach(ps => {
         const di = ps.dayInfo.find(x => sameDay(x.date, day));
-        return s + (di ? di.remainingCapacity : 0);
-      }, 0);
+        if (!di) return;
+        dayCap += di.remainingCapacity;
+        dayExpected += ps.pace * di.remainingHours;
+      });
+      dayExpected = Math.round(dayExpected);
       const before = running;
-      running = Math.max(0, running - dayCap);
+      running = Math.max(0, running - dayExpected);
       const isFinish = before > 0 && running === 0;
       const dayName = day.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
       const todayMark = sameDay(day, todayStart) ? " (today)" : "";
       html += `
         <tr class="${isFinish ? "finish-row" : ""}">
           <td class="day-label">${dayName}${todayMark}</td>
+          <td class="cap-cell">${dayExpected}</td>
           <td class="cap-cell">${dayCap}</td>
           <td class="rem-cell">${running}</td>
           <td>${isFinish ? "🏁 Finish" : (running === 0 ? "—" : "")}</td>
