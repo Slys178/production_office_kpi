@@ -20,6 +20,14 @@
     line-height:1.4;
   }
 </style>
+<!-- Remap CDN config to local so hours/people edits in config.js apply everywhere -->
+<script type="importmap">
+{
+  "imports": {
+    "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/config.js": "./config.js"
+  }
+}
+</script>
 </head>
 <body>
 
@@ -342,7 +350,6 @@
             statusEl.prepend(nameSpan);
         }
     }
-    // USER role: hide management-only sections, but KPI stays visible (team dial only)
     if (role === 'USER') {
         window.addEventListener('load', function() {
             ['tileErrors', 'tileReplacementParts'].forEach(id => {
