@@ -40,10 +40,13 @@ export const CONFIG = {
   ],
 
   // Working hours per person
+  // Standard week (SF/LA): Mon–Thu 9h + Fri 6.5h = 42.5h
+  // Adam (AS) night shift: same 42.5h compressed into Mon–Thu only (Fri off)
+  // DF: part-time hours
   hours: {
     SF: { MonThu: 9, Fri: 6.5 },
     LA: { MonThu: 9, Fri: 6.5 },
-    AS: { MonThu: 9, Fri: 6.5 },
+    AS: { MonThu: 10.625, Fri: 0 },
     DF: { MonThu: 6, Fri: 3.5 },
   },
 
@@ -57,7 +60,7 @@ export const CONFIG = {
   // Loads pagination
   loadsPageSize: 12,
 
-    // Initials to exclude from KPI display (but still count internally)
+  // Initials to exclude from KPI display (but still count internally)
   excludeFromKpiDisplay: "SA",
 };
 
