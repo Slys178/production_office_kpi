@@ -8,9 +8,11 @@
  * Correct: stairsOver = actual - target (target already reflects absences).
  * Holiday credit remains informational only.
  */
-import { mondayOf, dayBucket, sameDay, fmtDateShort } from "./utils.js";
+import { mondayOf, dayBucket, fmtDateShort } from "./utils.js";
 import { computeDayStats } from "./data.js";
 import { CONFIG } from "./config.js";
+
+let patching = false;
 
 function findPersonByDetailName() {
   const nameEl = document.getElementById("detailPersonName");
@@ -21,6 +23,7 @@ function findPersonByDetailName() {
 }
 
 function recalcAndPatchDetail() {
+  if (patching) return;
   const person = findPersonByDetailName();
   const stairEntries = window._stairEntries;
   const forecastEntries = window._forecastEntries || [];
@@ -103,39 +106,44 @@ function recalcAndPatchDetail() {
   const diffClass = totalNetPoints > 0 ? "positive" : (totalNetPoints < 0 ? "negative" : "neutral");
   const diffDisplay = totalNetPoints > 0 ? "+" + totalNetPoints : String(totalNetPoints);
 
-  const statsEl = document.getElementById("detailStats");
-  if (statsEl) {
-    statsEl.innerHTML =
-      '<div class="detail-stat-card"><div class="label">Total Stairs</div><div class="value">' + totalActual + '</div></div>' +
-      '<div class="detail-stat-card"><div class="label">Target</div><div class="value">' + totalTarget + '</div></div>' +
-      '<div class="detail-stat-card"><div class="label">Holiday Credit</div><div class="value">+' + totalHolidayCredit + '</div></div>' +
-      '<div class="detail-stat-card"><div class="label">Total Error Points</div><div class="value negative">' + totalErrorPoints + '</div></div>' +
-      '<div class="detail-stat-card"><div class="label">Net Points</div><div class="value ' + diffClass + '">' + diffDisplay + '</div></div>';
-  }
+  patching = true;
+  try {
+    const statsEl = document.getElementById("detailStats");
+    if (statsEl) {
+      statsEl.innerHTML =
+        '<div class="detail-stat-card"><div class="label">Total Stairs</div><div class="value">' + totalActual + '</div></div>' +
+        '<div class="detail-stat-card"><div class="label">Target</div><div class="value">' + totalTarget + '</div></div>' +
+        '<div class="detail-stat-card"><div class="label">Holiday Credit</div><div class="value">+' + totalHolidayCredit + '</div></div>' +
+        '<div class="detail-stat-card"><div class="label">Total Error Points</div><div class="value negative">' + totalErrorPoints + '</div></div>' +
+        '<div class="detail-stat-card"><div class="label">Net Points</div><div class="value ' + diffClass + '">' + diffDisplay + '</div></div>';
+    }
 
-  const weeksEl = document.getElementById("detailWeeks");
-  if (weeksEl) {
-    weeksEl.innerHTML = weekData.map(function (w) {
-      const overClass = w.stairsOver > 0 ? "positive" : (w.stairsOver < 0 ? "negative" : "neutral");
-      const netClass = w.netPoints > 0 ? "gold" : (w.netPoints < 0 ? "negative" : "neutral");
-      const creditNote = w.holidayCredit > 0
-        ? ' <span style="color:var(--muted);font-weight:400">(target reduced for holiday)</span>'
-        : "";
-      return (
-        '<div class="detail-week-card">' +
-          '<div class="week-label">' + w.label + '</div>' +
-          '<div class="week-row"><span>Stairs</span><span class="val">' + w.actual + ' / ' + w.target + creditNote + '</span></div>' +
-          '<div class="week-row"><span>Over target</span><span class="val ' + overClass + '">' + (w.stairsOver > 0 ? "+" : "") + w.stairsOver + '</span></div>' +
-          '<div class="week-row error-points-row"><span>Error points</span><span class="val negative">' + w.errorPoints + '</span></div>' +
-          '<div class="week-row" style="border-top:1px solid var(--card-border);padding-top:4px;margin-top:4px;">' +
-            '<span><strong>Net points</strong></span>' +
-            '<span class="val ' + netClass + '"><strong>' + (w.netPoints > 0 ? "+" : "") + w.netPoints + '</strong></span>' +
-          '</div>' +
-          '<div class="week-row forecast-row"><span>Forecast (uncompleted)</span><span class="val" style="color:var(--blue);">' + w.forecast + '</span></div>' +
-          (w.errorCount > 0 ? '<div style="font-size:0.6rem;color:var(--muted);margin-top:4px;">' + w.errorCount + ' error(s) this week</div>' : '') +
-        '</div>'
-      );
-    }).join("");
+    const weeksEl = document.getElementById("detailWeeks");
+    if (weeksEl) {
+      weeksEl.innerHTML = weekData.map(function (w) {
+        const overClass = w.stairsOver > 0 ? "positive" : (w.stairsOver < 0 ? "negative" : "neutral");
+        const netClass = w.netPoints > 0 ? "gold" : (w.netPoints < 0 ? "negative" : "neutral");
+        const creditNote = w.holidayCredit > 0
+          ? ' <span style="color:var(--muted);font-weight:400">(target reduced for holiday)</span>'
+          : "";
+        return (
+          '<div class="detail-week-card">' +
+            '<div class="week-label">' + w.label + '</div>' +
+            '<div class="week-row"><span>Stairs</span><span class="val">' + w.actual + ' / ' + w.target + creditNote + '</span></div>' +
+            '<div class="week-row"><span>Over target</span><span class="val ' + overClass + '">' + (w.stairsOver > 0 ? "+" : "") + w.stairsOver + '</span></div>' +
+            '<div class="week-row error-points-row"><span>Error points</span><span class="val negative">' + w.errorPoints + '</span></div>' +
+            '<div class="week-row" style="border-top:1px solid var(--card-border);padding-top:4px;margin-top:4px;">' +
+              '<span><strong>Net points</strong></span>' +
+              '<span class="val ' + netClass + '"><strong>' + (w.netPoints > 0 ? "+" : "") + w.netPoints + '</strong></span>' +
+            '</div>' +
+            '<div class="week-row forecast-row"><span>Forecast (uncompleted)</span><span class="val" style="color:var(--blue);">' + w.forecast + '</span></div>' +
+            (w.errorCount > 0 ? '<div style="font-size:0.6rem;color:var(--muted);margin-top:4px;">' + w.errorCount + ' error(s) this week</div>' : '') +
+          '</div>'
+        );
+      }).join("");
+    }
+  } finally {
+    patching = false;
   }
 }
 
@@ -145,22 +153,24 @@ function watchDetailPage() {
 
   const run = function () {
     if (detailPage.classList.contains("active")) {
-      // Original render is sync on click; patch shortly after
       setTimeout(recalcAndPatchDetail, 50);
-      setTimeout(recalcAndPatchDetail, 200);
+      setTimeout(recalcAndPatchDetail, 250);
     }
   };
 
   const obs = new MutationObserver(run);
   obs.observe(detailPage, { attributes: true, attributeFilter: ["class"] });
 
-  // Also when stats content is written
+  // When original code fills stats, re-run once (guarded against our own writes)
   const statsEl = document.getElementById("detailStats");
   if (statsEl) {
     const obs2 = new MutationObserver(function () {
-      if (detailPage.classList.contains("active")) recalcAndPatchDetail();
+      if (patching) return;
+      if (detailPage.classList.contains("active")) {
+        setTimeout(recalcAndPatchDetail, 30);
+      }
     });
-    obs2.observe(statsEl, { childList: true, subtree: true });
+    obs2.observe(statsEl, { childList: true });
   }
 }
 
