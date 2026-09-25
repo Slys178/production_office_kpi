@@ -1,6 +1,6 @@
 /**
  * Local main.js – loads the known-good modular build from CDN,
- * then wires in finish prediction + KPI privacy.
+ * then wires in finish prediction, KPI privacy, and detail net-points fix.
  */
 import {
   initAndLoad as _initAndLoad,
@@ -40,6 +40,9 @@ import("./finish-week.js")
 import("./kpi-privacy.js")
   .then(() => { callKpiPrivacy(); })
   .catch(e => console.warn("kpi-privacy module failed", e));
+
+import("./detail-net-fix.js")
+  .catch(e => console.warn("detail-net-fix module failed", e));
 
 export async function initAndLoad() {
   const result = await _initAndLoad();
