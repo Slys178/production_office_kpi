@@ -1,8 +1,6 @@
 /**
  * Local main.js – loads the known-good modular build from CDN,
- * then wires in the "This Week Predicted Finish Day" feature.
- * Finish prediction is loaded dynamically so a failure there cannot
- * leave the whole app stuck on "Loading…".
+ * then wires in finish prediction + KPI privacy.
  */
 import {
   initAndLoad as _initAndLoad,
@@ -11,8 +9,6 @@ import {
 } from "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/main.js";
 
 export { REFRESH_MS };
-
-let finishReady = false;
 
 function callFinishIfReady() {
   try {
@@ -27,31 +23,49 @@ function callFinishIfReady() {
   }
 }
 
-// Load finish module in the background (does not block initAndLoad)
+function callKpiPrivacy() {
+  try {
+    if (typeof window.applyKpiPrivacy === "function") {
+      window.applyKpiPrivacy();
+    }
+  } catch (e) {
+    console.warn("kpi privacy error", e);
+  }
+}
+
 import("./finish-week.js")
-  .then(() => {
-    finishReady = true;
-    callFinishIfReady();
-  })
+  .then(() => { callFinishIfReady(); })
   .catch(e => console.warn("finish-week module failed", e));
+
+import("./kpi-privacy.js")
+  .then(() => { callKpiPrivacy(); })
+  .catch(e => console.warn("kpi-privacy module failed", e));
 
 export async function initAndLoad() {
   const result = await _initAndLoad();
   callFinishIfReady();
+  callKpiPrivacy();
   return result;
 }
 
 export async function loadAndRender() {
   const result = await _loadAndRender();
   callFinishIfReady();
+  callKpiPrivacy();
   return result;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const tile = document.getElementById("tileForecast");
-  if (tile) {
-    tile.addEventListener("click", () => {
+  const tileForecast = document.getElementById("tileForecast");
+  if (tileForecast) {
+    tileForecast.addEventListener("click", () => {
       setTimeout(callFinishIfReady, 150);
+    });
+  }
+  const tileKpi = document.getElementById("tileKpi");
+  if (tileKpi) {
+    tileKpi.addEventListener("click", () => {
+      setTimeout(callKpiPrivacy, 150);
     });
   }
 });
