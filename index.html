@@ -10,6 +10,15 @@
 <link rel="manifest" href="manifest.json">
 <style>
   @keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .kpi-team-only-note{
+    font-size:0.8rem;
+    color:var(--muted);
+    margin:8px 0 16px;
+    padding:10px 14px;
+    background:var(--section-bg, rgba(137,147,171,0.08));
+    border-radius:10px;
+    line-height:1.4;
+  }
 </style>
 </head>
 <body>
@@ -59,7 +68,7 @@
     <div class="nav-tile" id="tileKpi">
       <div class="tile-icon">📈</div>
       <div class="tile-label">OFFICE KPI</div>
-      <div class="tile-sub">Daily & weekly stair targets per person</div>
+      <div class="tile-sub">Whole-office weekly target</div>
       <div class="tile-badge" id="tileKpiBadge" style="display:none;"></div>
     </div>
     <div class="nav-tile" id="tileLoads">
@@ -217,7 +226,6 @@
     <h2>🔮 Forecast & Manpower Check</h2>
   </div>
 
-  <!-- Current week finish prediction -->
   <div class="detail-section" style="margin-bottom:20px;">
     <h3>🏁 This Week — Predicted Finish Day</h3>
     <div class="forecast-note" style="margin-bottom:12px;">
@@ -334,14 +342,15 @@
             statusEl.prepend(nameSpan);
         }
     }
+    // USER role: hide management-only sections, but KPI stays visible (team dial only)
     if (role === 'USER') {
         window.addEventListener('load', function() {
-            ['tileKpi', 'tileErrors', 'tileReplacementParts'].forEach(id => {
+            ['tileErrors', 'tileReplacementParts'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
             const landingTitle = document.querySelector('.landing-title p');
-            if (landingTitle) landingTitle.textContent = '👤 User view — limited access';
+            if (landingTitle) landingTitle.textContent = '👤 User view — team KPI & loads';
         });
     }
     window.addEventListener('load', function() {
