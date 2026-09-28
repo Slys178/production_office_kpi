@@ -1,6 +1,9 @@
 /* Restore full styles from known-good commit via jsDelivr CDN */
 @import url('https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/styles.css');
 
+/* SA calendar-only (manager) */
+.color-dot.SA { background: #9b59b6; }
+
 /* This-week finish prediction */
 .finish-summary{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:16px 18px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px}
 .finish-summary .finish-headline{font-size:1.15rem;font-weight:800}
