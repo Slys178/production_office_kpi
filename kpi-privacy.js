@@ -1,9 +1,9 @@
 /**
- * KPI privacy
+ * KPI privacy + Monday status fix
  * - SA / ADMIN: full view (individual dials + pace leaderboard)
  * - Everyone else: whole-office team dial only — no personal targets or rankings
- *
- * Daily/person targets stay available for managers as a guide only.
+ * - When there are no completed days yet (e.g. Monday), do not show "Off today"
+ *   unless the person is actually marked absent on the holiday sheet.
  */
 
 function isManagerViewer() {
@@ -32,12 +32,53 @@ function isManagerViewer() {
 }
 
 /**
- * After the KPI page is rendered, strip individual figures for non-managers.
+ * Pace is measured vs completed days only. On Monday that total is 0, so the
+ * core app labels everyone "Off today". Rewrite those badges unless the role
+ * line shows a real absence code for today.
+ */
+function fixFalseOffBadges() {
+  const today = window._today ? new Date(window._today) : new Date();
+  const dow = today.getDay(); // 0 Sun … 1 Mon … 6 Sat
+  const earlyWeek = dow === 0 || dow === 1 || dow === 6;
+
+  document.querySelectorAll("#dialGrid .card, #teamSummary .team-dial-card").forEach(function (card) {
+    const badge = card.querySelector(".badge.off, .badge");
+    if (!badge) return;
+
+    const text = (badge.textContent || "").trim();
+    if (text !== "Off today" && text !== "Off") return;
+
+    // Person dials put absence on the role line: "SF · Full day off"
+    const role = (card.querySelector(".role") || {}).textContent || "";
+    const actuallyOff = role.indexOf(" · ") !== -1;
+
+    if (actuallyOff) return;
+
+    badge.textContent = earlyWeek ? "Week just started" : "No pace data yet";
+    badge.className = "badge off";
+    badge.title = "Pace is measured against finished days only — nothing to compare until tomorrow.";
+  });
+
+  // Team summary badge (no .role line)
+  document.querySelectorAll("#teamSummary .badge").forEach(function (badge) {
+    const text = (badge.textContent || "").trim();
+    if (text !== "Off today" && text !== "Off") return;
+    badge.textContent = earlyWeek ? "Week just started" : "No pace data yet";
+    badge.className = "badge off";
+    badge.title = "Pace is measured against finished days only — nothing to compare until tomorrow.";
+  });
+}
+
+/**
+ * After the KPI page is rendered, strip individual figures for non-managers
+ * and correct Monday "Off today" false positives.
  */
 export function applyKpiPrivacy() {
   const manager = isManagerViewer();
   const kpiPage = document.getElementById("kpiPage");
   if (!kpiPage) return;
+
+  fixFalseOffBadges();
 
   // Individual person dials
   const dialGrid = document.getElementById("dialGrid");
