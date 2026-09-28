@@ -32,22 +32,26 @@ export const CONFIG = {
   },
 
   // Team members
+  // SA is calendar-only: shown on the Holidays page, excluded from KPI dials / targets / capacity
   people: [
     { initials: "SF", name: "Simon Faulks",        holidayName: "Simon Faulks",        color: "#4a90e2" },
     { initials: "LA", name: "Liam Aiello",          holidayName: "Liam Aiello",          color: "#2ecc71" },
     { initials: "AS", name: "Adam Stanislawski",    holidayName: "Adam Stanislawski",    color: "#f5a623" },
     { initials: "DF", name: "Dominika Formanowicz", holidayName: "Dominika Formanowicz", color: "#e74c3c" },
+    { initials: "SA", name: "Simon Askew",          holidayName: "Simon Askew",          color: "#9b59b6" },
   ],
 
   // Working hours per person
   // Standard week (SF/LA): Mon–Thu 9h + Fri 6.5h = 42.5h
   // Adam (AS) night shift: same 42.5h compressed into Mon–Thu only (Fri off)
   // DF: part-time hours
+  // SA: zero hours — holidays show on the calendar only, never affect targets/capacity
   hours: {
     SF: { MonThu: 9, Fri: 6.5 },
     LA: { MonThu: 9, Fri: 6.5 },
     AS: { MonThu: 10.625, Fri: 0 },
     DF: { MonThu: 6, Fri: 3.5 },
+    SA: { MonThu: 0, Fri: 0 },
   },
 
   // KPI targets & timing
@@ -60,7 +64,7 @@ export const CONFIG = {
   // Loads pagination
   loadsPageSize: 12,
 
-  // Initials to exclude from KPI display (but still count internally)
+  // Initials to exclude from KPI display (but still show on holiday calendar)
   excludeFromKpiDisplay: "SA",
 };
 
