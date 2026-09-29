@@ -3,10 +3,9 @@
  *
  *   Needed (that week)     = loads total if entered, else defaultWeeklyStairs (710)
  *   Who can build          = sum of each person's capacity the WEEK BEFORE
- *                           (that's when the work for that delivery week is done)
- *   Balance                = capacity − needed
+ *   Result                 = capacity − needed  (shown as a full formula)
  *
- * Example: 264+264+264+170 = 962 capacity, needed 710 → +252 OK
+ * Example: Result = 962 − 710 = +252 above needed
  */
 import { CONFIG } from "./config.js";
 import { mondayOf, dayBucket, fmtDateShort } from "./utils.js";
@@ -90,9 +89,10 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
       return e.deliveryDate >= w.start && e.deliveryDate <= w.end;
     });
     if (!wk) return;
-    wk.loadTotal += e.stairs;
+    const stairs = Number(e.stairs) || 0;
+    wk.loadTotal += stairs;
     const key = e.initials || "UNASSIGNED";
-    wk.byPerson[key] = (wk.byPerson[key] || 0) + e.stairs;
+    wk.byPerson[key] = (wk.byPerson[key] || 0) + stairs;
   });
 
   let hasManpowerWarning = false;
@@ -115,18 +115,17 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     });
 
     const warning = getWarningLevel(needed, totalCapacity);
-    if (warning.level === "danger" || warning.level === "warning") {
-      if (warning.level === "danger") hasManpowerWarning = true;
-    }
+    if (warning.level === "danger") hasManpowerWarning = true;
 
     const headLabel = w.isCurrent ? "This week" : ("W/C " + fmtDateShort(w.start));
 
-    // e.g. 264 + 264 + 264 + 170 = 962
     const sumParts = perPerson.map(function (p) { return String(p.capacity); }).join(" + ");
     const whoLine = sumParts + " = " + totalCapacity;
 
     const gap = totalCapacity - needed;
-    const resultLine = totalCapacity + " − " + needed + " = " +
+    // Full formula: Result = 902 − 770 = +132 above needed
+    const resultFormula =
+      "Result = " + totalCapacity + " − " + needed + " = " +
       (gap >= 0 ? ("+" + gap + " above needed") : (Math.abs(gap) + " short"));
 
     let holidayWarning = "";
@@ -142,21 +141,26 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     }
 
     const neededNote = fromLoads
-      ? " <span style=\"color:var(--muted);font-weight:400\">(from loads — replaces default " + defaultNeeded + ")</span>"
-      : " <span style=\"color:var(--muted);font-weight:400\">(default)</span>";
+      ? " <span style=\"color:var(--muted);font-weight:400\">(from loads)</span>"
+      : " <span style=\"color:var(--muted);font-weight:400\">(default " + defaultNeeded + ")</span>";
 
     return (
       '<div class="forecast-week-card ' + warning.className + '">' +
-        '<div class="fw-header">' +
-          '<div class="fw-title">' + headLabel + '</div>' +
+        '<div class="fw-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">' +
+          '<div class="fw-title" style="font-weight:700;">' + headLabel + '</div>' +
           '<div class="fw-badge ' + warning.className + '">' + warning.label + '</div>' +
         '</div>' +
-        '<div class="fw-row"><span>Needed that week</span><span class="val">' + needed + neededNote + '</span></div>' +
-        '<div class="fw-row"><span>Who can build (week before)</span><span class="val" style="font-size:0.8rem;">' +
-          escapeHtml(whoLine) + '</span></div>' +
-        '<div class="fw-row" style="border-top:1px solid var(--card-border);padding-top:6px;margin-top:4px;">' +
-          '<span><strong>Result</strong></span>' +
-          '<span class="val"><strong>' + escapeHtml(resultLine) + '</strong></span>' +
+        '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:4px 0;">' +
+          '<span>Needed that week</span>' +
+          '<span class="val">' + needed + neededNote + '</span>' +
+        '</div>' +
+        '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:4px 0;">' +
+          '<span>Who can build (week before)</span>' +
+          '<span class="val" style="font-size:0.8rem;text-align:right;">' + escapeHtml(whoLine) + '</span>' +
+        '</div>' +
+        '<div style="border-top:1px solid var(--card-border);padding-top:8px;margin-top:8px;' +
+          'font-weight:700;font-size:0.95rem;letter-spacing:0.01em;">' +
+          escapeHtml(resultFormula) +
         '</div>' +
         holidayWarning +
       '</div>'
@@ -167,8 +171,7 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     '<div class="forecast-note" style="margin-bottom:12px;line-height:1.45;">' +
       '<strong>Simple check:</strong> Needed that week (default <strong>' + defaultNeeded + '</strong>, or real loads if entered) ' +
       'versus who is in the <strong>week before</strong> (when that work is built). ' +
-      'Example: 264+264+264+170 = 962 capacity, needed ' + defaultNeeded +
-      ' → result ' + (962 - defaultNeeded >= 0 ? "+" : "") + (962 - defaultNeeded) + '.' +
+      'Example: Result = 962 − ' + defaultNeeded + ' = +' + (962 - defaultNeeded) + ' above needed.' +
     '</div>';
 
   container.innerHTML = note + '<div class="forecast-week-grid-inner">' + html + '</div>';
@@ -205,11 +208,10 @@ function updateLookaheadBanner(weeks, holidayIndex, defaultNeeded) {
   const color = short ? "var(--red)" : "var(--green)";
   const bg = short ? "rgba(231,76,60,0.08)" : "rgba(46,204,113,0.08)";
   const src = fromLoads ? "from loads" : "default " + defaultNeeded;
-  const msg = short
-    ? ("Next week: needed " + needed + " (" + src + "), can build " + capacity +
-       " → " + Math.abs(gap) + " short")
-    : ("Next week: needed " + needed + " (" + src + "), can build " + capacity +
-       " → +" + gap + " above needed");
+  const msg =
+    "Next week: Result = " + capacity + " − " + needed +
+    " (" + src + ") = " +
+    (short ? (Math.abs(gap) + " short") : ("+" + gap + " above needed"));
 
   container.innerHTML =
     '<div style="background:' + bg + ';border:1px solid ' + color +
