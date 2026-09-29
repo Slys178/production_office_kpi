@@ -61,6 +61,12 @@ export const CONFIG = {
   forecastWeeks: 8,
   trendWeeks: 4,
 
+  // Default weekly stairs demand when no loads/delivery dates are entered yet.
+  // Used for longer-range manpower checks (holidays vs capacity).
+  // Once you enter loads for a week, the real stair total replaces this default.
+  // Change this number anytime to match your usual weekly limit.
+  defaultWeeklyStairs: 900,
+
   // Loads pagination
   loadsPageSize: 12,
 
