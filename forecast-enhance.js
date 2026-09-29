@@ -1,10 +1,12 @@
 /**
- * Longer-range forecast with a default weekly stair demand.
+ * Simple forecast manpower check:
  *
- * - Weeks with load/delivery stairs entered → use those totals (real data).
- * - Weeks with no loads yet → use CONFIG.defaultWeeklyStairs as an estimate.
- * - Capacity still comes from who is available the week before (holidays applied).
- * - Shows all forecastWeeks so you can spot holiday pinch-points early.
+ *   Needed (that week)     = loads total if entered, else defaultWeeklyStairs (710)
+ *   Who can build          = sum of each person's capacity the WEEK BEFORE
+ *                           (that's when the work for that delivery week is done)
+ *   Balance                = capacity − needed
+ *
+ * Example: 264+264+264+170 = 962 capacity, needed 710 → +252 OK
  */
 import { CONFIG } from "./config.js";
 import { mondayOf, dayBucket, fmtDateShort } from "./utils.js";
@@ -32,12 +34,17 @@ function getPrevWeekCapacity(person, forecastWeekStart, holidayIndex) {
     }
     capacity += targetFor(person.initials, dCopy, code);
   }
-  return { prevWeekStart: prevWeekStart, prevWeekEnd: prevWeekEnd, capacity: capacity, offDays: offDays };
+  return {
+    prevWeekStart: prevWeekStart,
+    prevWeekEnd: prevWeekEnd,
+    capacity: Math.round(capacity),
+    offDays: offDays,
+  };
 }
 
-function getWarningLevel(demand, capacity) {
-  const shortfall = demand - capacity;
-  if (shortfall >= 80) return { level: "danger", label: "🔴 Critical!", className: "danger" };
+function getWarningLevel(needed, capacity) {
+  const shortfall = needed - capacity;
+  if (shortfall >= 80) return { level: "danger", label: "🔴 Short", className: "danger" };
   if (shortfall >= 30) return { level: "warning", label: "🟡 Tight", className: "warning" };
   return { level: "ok", label: "✅ OK", className: "ok" };
 }
@@ -52,7 +59,7 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
   const container = document.getElementById("forecastWeeks");
   if (!container || !holidayIndex || !today) return;
 
-  const defaultDemand = Number(CONFIG.defaultWeeklyStairs) || 0;
+  const defaultNeeded = Math.round(Number(CONFIG.defaultWeeklyStairs) || 0);
   const startMonday = mondayOf(today);
   const numWeeks = CONFIG.forecastWeeks || 8;
 
@@ -92,82 +99,76 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
 
   const html = weeks.map(function (w) {
     const fromLoads = w.loadTotal > 0;
-    const demand = fromLoads ? w.loadTotal : defaultDemand;
-    const sourceLabel = fromLoads ? "From loads" : "Default estimate";
+    const needed = fromLoads ? Math.round(w.loadTotal) : defaultNeeded;
 
     let totalCapacity = 0;
+    const perPerson = [];
     const holidayImpacts = [];
+
     PEOPLE.forEach(function (person) {
       const cap = getPrevWeekCapacity(person, w.start, holidayIndex);
       totalCapacity += cap.capacity;
+      perPerson.push({ initials: person.initials, capacity: cap.capacity, color: person.color });
       if (cap.offDays.length > 0) {
-        holidayImpacts.push({ person: person, offDays: cap.offDays });
+        holidayImpacts.push({ person: person, offDays: cap.offDays, capacity: cap.capacity });
       }
     });
 
-    const warning = getWarningLevel(demand, totalCapacity);
-    if (warning.level === "danger") hasManpowerWarning = true;
-
-    const chips = [];
-    if (fromLoads) {
-      Object.keys(w.byPerson).forEach(function (initials) {
-        const person = PEOPLE.find(function (p) { return p.initials === initials; });
-        const color = person ? person.color : "#8993ab";
-        const name = person ? initials : "Unassigned";
-        chips.push(
-          '<span class="fw-person-chip"><span class="dot" style="background:' + color + ';"></span>' +
-          name + ": " + w.byPerson[initials] + "</span>"
-        );
-      });
+    const warning = getWarningLevel(needed, totalCapacity);
+    if (warning.level === "danger" || warning.level === "warning") {
+      if (warning.level === "danger") hasManpowerWarning = true;
     }
+
+    const headLabel = w.isCurrent ? "This week" : ("W/C " + fmtDateShort(w.start));
+
+    // e.g. 264 + 264 + 264 + 170 = 962
+    const sumParts = perPerson.map(function (p) { return String(p.capacity); }).join(" + ");
+    const whoLine = sumParts + " = " + totalCapacity;
+
+    const gap = totalCapacity - needed;
+    const resultLine = totalCapacity + " − " + needed + " = " +
+      (gap >= 0 ? ("+" + gap + " above needed") : (Math.abs(gap) + " short"));
 
     let holidayWarning = "";
     if (holidayImpacts.length > 0) {
-      holidayWarning = '<div class="holiday-impact">⚠️ Build-week absences: ';
+      holidayWarning = '<div class="holiday-impact" style="margin-top:8px;font-size:0.75rem;">⚠️ Off in the build week (week before): ';
       holidayImpacts.forEach(function (p) {
-        const days = p.offDays.map(function (o) {
-          return fmtDateShort(o.date);
-        }).join(", ");
-        holidayWarning += '<span class="chip">' + escapeHtml(p.person.initials) + ": " + days + "</span> ";
+        const days = p.offDays.map(function (o) { return fmtDateShort(o.date); }).join(", ");
+        holidayWarning +=
+          '<span class="chip">' + escapeHtml(p.person.initials) + " " + days +
+          " (only " + p.capacity + " left)</span> ";
       });
       holidayWarning += "</div>";
     }
 
-    const headLabel = w.isCurrent
-      ? "This week"
-      : ("W/C " + fmtDateShort(w.start));
-
-    const sourceBadge = fromLoads
-      ? '<span class="fw-source loads">📋 From loads</span>'
-      : '<span class="fw-source default">📐 Default (' + defaultDemand + ')</span>';
-
-    const gap = totalCapacity - demand;
-    const gapText = gap >= 0
-      ? ("+" + gap + " spare")
-      : (Math.abs(gap) + " short");
+    const neededNote = fromLoads
+      ? " <span style=\"color:var(--muted);font-weight:400\">(from loads — replaces default " + defaultNeeded + ")</span>"
+      : " <span style=\"color:var(--muted);font-weight:400\">(default)</span>";
 
     return (
-      '<div class="forecast-week-card ' + warning.className + (fromLoads ? "" : " estimate") + '">' +
+      '<div class="forecast-week-card ' + warning.className + '">' +
         '<div class="fw-header">' +
-          '<div class="fw-title">' + headLabel + ' ' + sourceBadge + '</div>' +
+          '<div class="fw-title">' + headLabel + '</div>' +
           '<div class="fw-badge ' + warning.className + '">' + warning.label + '</div>' +
         '</div>' +
-        '<div class="fw-row"><span>Demand</span><span class="val">' + demand +
-          (fromLoads ? "" : " <span style=\"color:var(--muted);font-weight:400\">(estimate)</span>") +
-        '</span></div>' +
-        '<div class="fw-row"><span>Capacity (prev week)</span><span class="val">' + totalCapacity + '</span></div>' +
-        '<div class="fw-row"><span>Balance</span><span class="val">' + gapText + '</span></div>' +
-        (chips.length ? '<div class="fw-chips">' + chips.join("") + '</div>' : '') +
+        '<div class="fw-row"><span>Needed that week</span><span class="val">' + needed + neededNote + '</span></div>' +
+        '<div class="fw-row"><span>Who can build (week before)</span><span class="val" style="font-size:0.8rem;">' +
+          escapeHtml(whoLine) + '</span></div>' +
+        '<div class="fw-row" style="border-top:1px solid var(--card-border);padding-top:6px;margin-top:4px;">' +
+          '<span><strong>Result</strong></span>' +
+          '<span class="val"><strong>' + escapeHtml(resultLine) + '</strong></span>' +
+        '</div>' +
         holidayWarning +
       '</div>'
     );
   }).join("");
 
   const note =
-    '<div class="forecast-note" style="margin-bottom:12px;">' +
-      'Weeks with no loads yet use a <strong>default of ' + defaultDemand + ' stairs</strong> ' +
-      '(set in config as defaultWeeklyStairs). When you enter loads and delivery dates for a week, ' +
-      'that total <strong>replaces</strong> the default for that week only.' +
+    '<div class="forecast-note" style="margin-bottom:12px;line-height:1.45;">' +
+      '<strong>Simple check:</strong> Needed that week (default <strong>' + defaultNeeded + '</strong>, or real loads if entered) ' +
+      'versus who is in the <strong>week before</strong> (when that work is built). ' +
+      'Example: 264+264+264+170 = 962 capacity, needed ' + defaultNeeded +
+      ' → result ' + (962 - defaultNeeded >= 0 ? "+" : "") + (962 - defaultNeeded) + '.' +
     '</div>';
 
   container.innerHTML = note + '<div class="forecast-week-grid-inner">' + html + '</div>';
@@ -183,33 +184,32 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     }
   }
 
-  // Landing lookahead: next week demand = loads if any, else default
-  updateLookaheadBanner(weeks, holidayIndex, defaultDemand);
+  updateLookaheadBanner(weeks, holidayIndex, defaultNeeded);
 }
 
-function updateLookaheadBanner(weeks, holidayIndex, defaultDemand) {
+function updateLookaheadBanner(weeks, holidayIndex, defaultNeeded) {
   const container = document.getElementById("lookaheadBanner");
   if (!container || !weeks || weeks.length < 2) return;
 
   const next = weeks[1];
   const fromLoads = next.loadTotal > 0;
-  const demand = fromLoads ? next.loadTotal : defaultDemand;
+  const needed = fromLoads ? Math.round(next.loadTotal) : defaultNeeded;
 
   let capacity = 0;
   PEOPLE.forEach(function (person) {
     capacity += getPrevWeekCapacity(person, next.start, holidayIndex).capacity;
   });
 
-  const diff = capacity - demand;
-  const short = diff < 0;
+  const gap = capacity - needed;
+  const short = gap < 0;
   const color = short ? "var(--red)" : "var(--green)";
   const bg = short ? "rgba(231,76,60,0.08)" : "rgba(46,204,113,0.08)";
-  const source = fromLoads ? "from loads" : "default estimate";
+  const src = fromLoads ? "from loads" : "default " + defaultNeeded;
   const msg = short
-    ? ("Next week needs " + demand + " stairs (" + source + "), capacity is " + capacity +
-       " — " + Math.abs(diff) + " short")
-    : ("Next week needs " + demand + " stairs (" + source + "), capacity is " + capacity +
-       " — comfortable");
+    ? ("Next week: needed " + needed + " (" + src + "), can build " + capacity +
+       " → " + Math.abs(gap) + " short")
+    : ("Next week: needed " + needed + " (" + src + "), can build " + capacity +
+       " → +" + gap + " above needed");
 
   container.innerHTML =
     '<div style="background:' + bg + ';border:1px solid ' + color +
