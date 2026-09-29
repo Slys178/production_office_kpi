@@ -3,6 +3,10 @@
  * - Every logged-in user sends a quiet heartbeat while the app is open.
  * - SA (manager) and ADMIN see a small panel on the landing page: who is active now.
  * - SF and other production users do not see the panel.
+ *
+ * Heartbeats call a Google Apps Script web app which writes the Presence sheet.
+ * If LastSeen stops updating, re-paste the fixed doGet() from PRESENCE_SETUP.md
+ * (old script crashed on update: "data has 1 but the range has 5").
  */
 
 const PRESENCE = {
@@ -28,10 +32,12 @@ function isManagerViewer(userName, userEmail, userRole) {
   if (n === "SA" || n.startsWith("SA ") || n.endsWith(" SA") || n === "S.A" || n === "S A") return true;
   if (/\bSA\b/.test(n)) return true;
   if (n.includes("SIMON ASK")) return true;
+  if (n.includes("ASKEW")) return true;
   if (n.includes("ASK") && n.includes("SIMON")) return true;
 
   if (e.includes("simon.ask")) return true;
   if (e.includes("simon_ask")) return true;
+  if (e.includes("askew")) return true;
   if (e.startsWith("sa@") || e.includes(".sa@")) return true;
 
   return false;
@@ -48,15 +54,21 @@ function getViewer() {
   } catch (_) {}
 
   const canSeeAll = isManagerViewer(userName, userEmail, userRole);
-  console.log("[presence] viewer", { userName, userEmail, userRole, canSeeAll });
+  console.log("[presence] viewer", { userName: userName, userEmail: userEmail, userRole: userRole, canSeeAll: canSeeAll });
 
-  return { userName, userEmail, userRole, canSeeAll };
+  return { userName: userName, userEmail: userEmail, userRole: userRole, canSeeAll: canSeeAll };
 }
 
 function sendHeartbeat() {
   if (!PRESENCE.scriptUrl) return;
-  const { userName, userEmail, userRole } = getViewer();
-  if (!userEmail) return;
+  const viewer = getViewer();
+  const userEmail = viewer.userEmail;
+  const userName = viewer.userName;
+  const userRole = viewer.userRole;
+  if (!userEmail) {
+    console.warn("[presence] heartbeat skipped — no userEmail in localStorage");
+    return;
+  }
 
   const params = new URLSearchParams({
     email: userEmail,
@@ -64,10 +76,22 @@ function sendHeartbeat() {
     role: userRole || "",
     t: String(Date.now()),
   });
+  const url = PRESENCE.scriptUrl + "?" + params.toString();
 
-  const img = new Image();
-  img.referrerPolicy = "no-referrer";
-  img.src = PRESENCE.scriptUrl + "?" + params.toString();
+  // Prefer fetch (no-cors): survives Apps Script redirects better than <img> in some browsers
+  try {
+    fetch(url, { method: "GET", mode: "no-cors", cache: "no-store", credentials: "omit", keepalive: true })
+      .then(function () { console.log("[presence] heartbeat sent", userEmail); })
+      .catch(function () {
+        const img = new Image();
+        img.referrerPolicy = "no-referrer";
+        img.src = url;
+      });
+  } catch (_) {
+    const img = new Image();
+    img.referrerPolicy = "no-referrer";
+    img.src = url;
+  }
 }
 
 function parseGvizDate(cell) {
@@ -158,7 +182,6 @@ function formatAgo(ms) {
   return Math.round(ms / 86400000) + " day(s) ago";
 }
 
-/** Safe HTML escape without embedding entity literals that get corrupted in transit. */
 function escapeHtml(s) {
   const d = document.createElement("div");
   d.textContent = String(s);
