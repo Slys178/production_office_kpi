@@ -1,16 +1,18 @@
 /**
- * Forecast manpower check (kept simple):
+ * Forecast manpower check
  *
- *   Completed   = loads with delivery date in that week, programs done
- *   Still to do = loads with delivery date in that week, not done yet
+ * Target rhythm:
+ *   Mon–Thu  → finishing / working NEXT week’s deliveries
+ *   Fri AM   → should be starting WEEK AFTER NEXT
  *
- *   If still to do = 0 and some completed → week is DONE (no shortfall)
- *   If still to do > 0 → Result = capacity − still to do
- *   If no loads at all → use defaultWeeklyStairs as planning estimate
+ * So capacity for a delivery week D is the people available on:
+ *   • Friday of the week two weeks before D  (start of that work)
+ *   • Mon–Thu of the week before D           (main build)
  *
- *   Capacity = who is available the WEEK BEFORE (when that work is built).
- *   If that build week is the current week AND there is still work to do,
- *   only remaining days count (Mon already gone on a Tuesday, etc.).
+ * Loads:
+ *   Completed / still to do from the tracking sheet.
+ *   Done weeks (0 outstanding) → Done, no shortfall.
+ *   No loads yet → defaultWeeklyStairs estimate.
  */
 import { CONFIG } from "./config.js";
 import { mondayOf, dayBucket, fmtDateShort } from "./utils.js";
@@ -26,29 +28,48 @@ function startOfDay(d) {
   return x;
 }
 
-function getPrevWeekCapacity(person, forecastWeekStart, holidayIndex, today, onlyRemainingDays) {
-  const prevWeekStart = new Date(forecastWeekStart);
-  prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-  const prevWeekEnd = new Date(prevWeekStart);
-  prevWeekEnd.setDate(prevWeekStart.getDate() + 4);
+/** Build days that serve delivery week starting forecastWeekStart (Monday). */
+function getBuildDays(forecastWeekStart) {
+  // Week before (D-1): Mon–Thu
+  const d1Mon = new Date(forecastWeekStart);
+  d1Mon.setDate(d1Mon.getDate() - 7);
+  const days = [];
+  for (let i = 0; i <= 3; i++) {
+    const d = new Date(d1Mon);
+    d.setDate(d1Mon.getDate() + i);
+    days.push(d);
+  }
+  // Friday of week two before (D-2)
+  const d2Mon = new Date(forecastWeekStart);
+  d2Mon.setDate(d2Mon.getDate() - 14);
+  const fri = new Date(d2Mon);
+  fri.setDate(d2Mon.getDate() + 4);
+  days.push(fri);
+  days.sort(function (a, b) { return a - b; });
+  return days;
+}
 
+function getBuildCapacity(person, forecastWeekStart, holidayIndex, today, onlyRemainingDays) {
+  const buildDays = getBuildDays(forecastWeekStart);
   const todayStart = today ? startOfDay(today) : null;
-  const buildWeekIsCurrent =
-    todayStart &&
-    todayStart >= startOfDay(prevWeekStart) &&
-    todayStart <= startOfDay(prevWeekEnd);
-
-  const trimDays = onlyRemainingDays && buildWeekIsCurrent;
 
   let capacity = 0;
-  let fullWeekCapacity = 0;
+  let fullCapacity = 0;
   const offDays = [];
   let daysCounted = 0;
   let daysSkippedPast = 0;
+  let anyDayCurrentOrFuture = false;
+  let anyDayInCurrentWeek = false;
 
-  for (let d = new Date(prevWeekStart); d <= prevWeekEnd; d.setDate(d.getDate() + 1)) {
-    const dCopy = new Date(d);
-    if (!dayBucket(dCopy)) continue;
+  const thisMon = today ? mondayOf(today) : null;
+
+  buildDays.forEach(function (dCopy) {
+    if (!dayBucket(dCopy)) return;
+
+    if (thisMon) {
+      const dayMon = mondayOf(dCopy);
+      if (dayMon.getTime() === thisMon.getTime()) anyDayInCurrentWeek = true;
+    }
 
     const code = getCodeForPerson(holidayIndex, person.holidayName, dCopy);
     let dayCap = 0;
@@ -57,24 +78,27 @@ function getPrevWeekCapacity(person, forecastWeekStart, holidayIndex, today, onl
     } else {
       dayCap = targetFor(person.initials, dCopy, code);
     }
-    fullWeekCapacity += dayCap;
+    fullCapacity += dayCap;
 
-    if (trimDays && startOfDay(dCopy) < todayStart) {
+    if (onlyRemainingDays && todayStart && startOfDay(dCopy) < todayStart) {
       daysSkippedPast += 1;
-      continue;
+      return;
     }
+
+    if (todayStart && startOfDay(dCopy) >= todayStart) anyDayCurrentOrFuture = true;
 
     capacity += dayCap;
     daysCounted += 1;
-  }
+  });
 
   return {
     capacity: Math.round(capacity),
-    fullWeekCapacity: Math.round(fullWeekCapacity),
+    fullCapacity: Math.round(fullCapacity),
     offDays: offDays,
-    buildWeekIsCurrent: !!buildWeekIsCurrent,
     daysCounted: daysCounted,
     daysSkippedPast: daysSkippedPast,
+    anyDayInCurrentWeek: anyDayInCurrentWeek,
+    buildDays: buildDays,
   };
 }
 
@@ -106,6 +130,14 @@ function addToWeek(weeks, startMonday, lastWeekEnd, e, bucket) {
   else wk.outstanding += stairs;
 }
 
+function buildWindowLabel(forecastWeekStart) {
+  const days = getBuildDays(forecastWeekStart);
+  if (!days.length) return "";
+  const first = days[0];
+  const last = days[days.length - 1];
+  return fmtDateShort(first) + " → " + fmtDateShort(last) + " (Fri start + Mon–Thu)";
+}
+
 export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
   const container = document.getElementById("forecastWeeks");
   if (!container || !holidayIndex || !today) return;
@@ -131,11 +163,9 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
   }
   const lastWeekEnd = weeks[weeks.length - 1].end;
 
-  // Completed rows (programs done)
   (stairEntries || []).forEach(function (e) {
     addToWeek(weeks, startMonday, lastWeekEnd, e, "done");
   });
-  // Outstanding rows (not done yet)
   (forecastEntries || []).forEach(function (e) {
     addToWeek(weeks, startMonday, lastWeekEnd, e, "out");
   });
@@ -148,8 +178,6 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     const hasLoads = completed + outstanding > 0;
     const isDone = hasLoads && outstanding === 0;
 
-    // What we still need capacity for (shortfall check)
-    // Done weeks → 0. Weeks with loads → outstanding only. Empty weeks → default estimate.
     const needed = isDone ? 0 : (hasLoads ? outstanding : defaultNeeded);
     const onlyRemaining = !isDone && outstanding > 0;
 
@@ -157,24 +185,24 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     let totalFullCapacity = 0;
     const perPerson = [];
     const holidayImpacts = [];
-    let anyBuildWeekCurrent = false;
+    let anyBuildInCurrentWeek = false;
     let daysLeftNote = "";
 
     PEOPLE.forEach(function (person) {
-      const cap = getPrevWeekCapacity(
+      const cap = getBuildCapacity(
         person, w.start, holidayIndex, today, onlyRemaining
       );
       totalCapacity += cap.capacity;
-      totalFullCapacity += cap.fullWeekCapacity;
+      totalFullCapacity += cap.fullCapacity;
       perPerson.push({ initials: person.initials, capacity: cap.capacity });
-      if (cap.buildWeekIsCurrent) anyBuildWeekCurrent = true;
+      if (cap.anyDayInCurrentWeek) anyBuildInCurrentWeek = true;
       if (cap.offDays.length > 0) {
         holidayImpacts.push({ person: person, offDays: cap.offDays, capacity: cap.capacity });
       }
-      if (cap.buildWeekIsCurrent && onlyRemaining && !daysLeftNote) {
+      if (onlyRemaining && cap.daysSkippedPast > 0 && !daysLeftNote) {
         daysLeftNote =
-          cap.daysCounted + " day(s) left to finish remaining work" +
-          (cap.daysSkippedPast ? " (" + cap.daysSkippedPast + " day(s) already used)" : "");
+          cap.daysCounted + " build day(s) left" +
+          " (" + cap.daysSkippedPast + " already passed)";
       }
     });
 
@@ -184,6 +212,7 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     const headLabel = w.isCurrent ? "This week" : ("W/C " + fmtDateShort(w.start));
     const sumParts = perPerson.map(function (p) { return String(p.capacity); }).join(" + ");
     const whoLine = sumParts + " = " + totalCapacity;
+    const windowLine = buildWindowLabel(w.start);
 
     let resultFormula;
     if (isDone) {
@@ -197,7 +226,7 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
 
     let holidayWarning = "";
     if (!isDone && holidayImpacts.length > 0) {
-      holidayWarning = '<div class="holiday-impact" style="margin-top:8px;font-size:0.75rem;">⚠️ Off in the build week: ';
+      holidayWarning = '<div class="holiday-impact" style="margin-top:8px;font-size:0.75rem;">⚠️ Off in the build window: ';
       holidayImpacts.forEach(function (p) {
         const days = p.offDays.map(function (o) { return fmtDateShort(o.date); }).join(", ");
         holidayWarning +=
@@ -212,12 +241,11 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
       : ("no loads yet — using default " + defaultNeeded);
 
     const midWeekNote =
-      !isDone && anyBuildWeekCurrent && outstanding > 0
+      !isDone && onlyRemaining && daysLeftNote
         ? '<div style="font-size:0.75rem;color:var(--muted);margin-top:6px;">' +
-            "⏱ Still building this week — capacity is only days left" +
-            (daysLeftNote ? ": " + escapeHtml(daysLeftNote) : "") +
+            "⏱ " + escapeHtml(daysLeftNote) +
             (totalFullCapacity > totalCapacity
-              ? " (full week was " + totalFullCapacity + ")"
+              ? " · full window was " + totalFullCapacity
               : "") +
           "</div>"
         : "";
@@ -239,7 +267,11 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
               '<span class="val">' + needed + '</span>' +
             '</div>' +
             '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:4px 0;">' +
-              '<span>Who can build (week before)</span>' +
+              '<span>Build window</span>' +
+              '<span class="val" style="font-size:0.75rem;text-align:right;">' + escapeHtml(windowLine) + '</span>' +
+            '</div>' +
+            '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:4px 0;">' +
+              '<span>Who can build</span>' +
               '<span class="val" style="font-size:0.8rem;text-align:right;">' + escapeHtml(whoLine) + '</span>' +
             '</div>') +
         '<div style="border-top:1px solid var(--card-border);padding-top:8px;margin-top:8px;' +
@@ -254,9 +286,10 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
 
   const note =
     '<div class="forecast-note" style="margin-bottom:12px;line-height:1.45;">' +
-      '<strong>Done weeks</strong> (all loads ticked complete) show as Done — they cannot show short. ' +
-      '<strong>Short / OK</strong> only looks at <strong>still to do</strong> vs who is available the week before. ' +
-      'Weeks with no loads yet use the default of <strong>' + defaultNeeded + '</strong>.' +
+      '<strong>Target rhythm:</strong> by first thing <strong>Friday</strong> you should be starting ' +
+      '<strong>week after next</strong>. Capacity for a delivery week = ' +
+      '<strong>that Friday two weeks before</strong> + <strong>Mon–Thu of the week before</strong>. ' +
+      'Done weeks stay Done. Empty weeks use default <strong>' + defaultNeeded + '</strong>.' +
     '</div>';
 
   container.innerHTML = note + '<div class="forecast-week-grid-inner">' + html + '</div>';
@@ -279,7 +312,6 @@ function updateLookaheadBanner(weeks, holidayIndex, defaultNeeded, today) {
   const container = document.getElementById("lookaheadBanner");
   if (!container || !weeks || weeks.length < 2) return;
 
-  // Prefer the next week that still has work, else next calendar week
   let focus = weeks[1];
   for (let i = 1; i < weeks.length; i++) {
     if (weeks[i].outstanding > 0 || (weeks[i].completed + weeks[i].outstanding === 0)) {
@@ -297,7 +329,7 @@ function updateLookaheadBanner(weeks, holidayIndex, defaultNeeded, today) {
 
   let capacity = 0;
   PEOPLE.forEach(function (person) {
-    capacity += getPrevWeekCapacity(
+    capacity += getBuildCapacity(
       person, focus.start, holidayIndex, today, onlyRemaining
     ).capacity;
   });
