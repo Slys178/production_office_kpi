@@ -65,7 +65,7 @@ export const CONFIG = {
   // Used for longer-range manpower checks (holidays vs capacity).
   // Once you enter loads for a week, the real stair total replaces this default.
   // Change this number anytime to match your usual weekly limit.
-  defaultWeeklyStairs: 710,
+  defaultWeeklyStairs: 760,
 
   // Loads pagination
   loadsPageSize: 12,
