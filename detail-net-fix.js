@@ -1,13 +1,12 @@
 /**
  * Fix net points on the person detail page.
  *
- * 1) Holiday days: stairsOver = actual - target (target already reduced; no double credit).
- * 2) Current week: compare to completed-days target only (days before today),
- *    so mid-week does not look massively negative against a full-week target.
- * 3) Top "Net Points" total: completed weeks only (last 3 finished weeks),
- *    so an in-progress week cannot drag the rolling score down unfairly.
+ * 1) Holiday days: stairsOver = actual - target (target already reduced).
+ * 2) Current week: compare to days from Monday through TODAY (inclusive),
+ *    so Monday stairs are never ignored until Tuesday.
+ * 3) Top Net Points: finished weeks only.
  */
-import { mondayOf, dayBucket, sameDay, fmtDateShort } from "./utils.js";
+import { mondayOf, dayBucket, fmtDateShort } from "./utils.js";
 import { computeDayStats } from "./data.js";
 import { CONFIG } from "./config.js";
 
@@ -41,7 +40,6 @@ function recalcAndPatchDetail() {
   const monday = mondayOf(today);
   const todayStart = startOfDay(today);
 
-  // Oldest → newest (i=3 is three weeks ago, i=0 is this week)
   const weeks = [];
   for (let i = 3; i >= 0; i--) {
     const wStart = new Date(monday);
@@ -64,7 +62,7 @@ function recalcAndPatchDetail() {
 
     let actual = 0;
     let fullTarget = 0;
-    let completedTarget = 0;
+    let soFarTarget = 0;
     let holidayCredit = 0;
 
     for (let d = new Date(week.start); d <= week.end; d.setDate(d.getDate() + 1)) {
@@ -75,9 +73,9 @@ function recalcAndPatchDetail() {
       actual += stats.actual;
       holidayCredit += stats.credit;
 
-      // Completed days = strictly before today (same rule as KPI dials)
-      if (startOfDay(dCopy) < todayStart) {
-        completedTarget += stats.target;
+      // Mon through today (inclusive) — Monday is never skipped
+      if (startOfDay(dCopy) <= todayStart) {
+        soFarTarget += stats.target;
       }
     }
 
@@ -87,9 +85,7 @@ function recalcAndPatchDetail() {
     });
     weekErrors.forEach(function (e) { weekErrorPoints += e.points; });
 
-    // Finished weeks: actual vs full week target
-    // Current week: actual vs expected so far (completed days only)
-    const compareTarget = isCurrent ? completedTarget : fullTarget;
+    const compareTarget = isCurrent ? soFarTarget : fullTarget;
     const stairsOver = actual - compareTarget;
     const netPoints = stairsOver + weekErrorPoints;
 
@@ -134,8 +130,6 @@ function recalcAndPatchDetail() {
     });
   });
 
-  // Headline totals: stairs/target still show all 4 weeks for context,
-  // but Net Points only sum finished weeks so mid-week cannot tank the score.
   const totalNetPoints = completedWeeksNet;
   const diffClass = totalNetPoints > 0 ? "positive" : (totalNetPoints < 0 ? "negative" : "neutral");
   const diffDisplay = totalNetPoints > 0 ? "+" + totalNetPoints : String(totalNetPoints);
@@ -157,7 +151,7 @@ function recalcAndPatchDetail() {
         '<div class="detail-stat-card"><div class="label">Target (4 wks)</div><div class="value">' + totalFullTarget + '</div></div>' +
         '<div class="detail-stat-card"><div class="label">Holiday Credit</div><div class="value">+' + totalHolidayCredit + '</div></div>' +
         '<div class="detail-stat-card"><div class="label">Total Error Points</div><div class="value negative">' + totalErrorPoints + '</div></div>' +
-        '<div class="detail-stat-card" title="Sum of net points from finished weeks only — current week is shown separately so mid-week progress cannot drag this down">' +
+        '<div class="detail-stat-card" title="Sum of net points from finished weeks only">' +
           '<div class="label">Net Points (' + completedWeeksCount + ' wks)</div>' +
           '<div class="value ' + diffClass + '">' + diffDisplay + '</div></div>' +
         (currentNote
