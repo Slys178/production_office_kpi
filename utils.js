@@ -1,11 +1,28 @@
 /**
  * Shared utility helpers — dates, formatting, toasts, loading overlay.
- * These are the real functions actually used by main.js (moved here, not rewritten).
  */
 
+/**
+ * Parse sheet dates. Accepts:
+ *   12/10/2026, 12-10-26  (UK day/month/year)
+ *   Date(2026,9,12)       (GViz raw value, month is 0-based)
+ */
 export function parseUKDate(str){
   if(!str) return null;
-  const parts = str.trim().split(/[\/\-]/);
+  const s = String(str).trim();
+  if(!s) return null;
+
+  // GViz: Date(2026,9,12) — month is 0-based
+  const gviz = /^Date\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(s);
+  if (gviz) {
+    const y = parseInt(gviz[1], 10);
+    const m = parseInt(gviz[2], 10); // 0-based
+    const d = parseInt(gviz[3], 10);
+    if (!y || d < 1) return null;
+    return new Date(y, m, d);
+  }
+
+  const parts = s.split(/[\/\-\.]/);
   if(parts.length !== 3) return null;
   let [d,m,y] = parts.map(p=>parseInt(p,10));
   if(y < 100) y += 2000;
@@ -40,10 +57,6 @@ export function fmtDateShort(d){
   return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 }
 
-/**
- * Simple toast notification system (available for future use — not yet
- * called anywhere in main.js, kept here so it's ready when needed).
- */
 export function showToast(message, type = "info", duration = 4000) {
   let container = document.getElementById("toast-container");
   if (!container) {
