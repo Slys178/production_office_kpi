@@ -1,10 +1,10 @@
 /**
- * KPI privacy + Monday status fix
- * - SA / ADMIN: full view (individual dials + pace leaderboard)
- * - Everyone else: whole-office team dial only — no personal targets or rankings
- * - When there are no completed days yet (e.g. Monday), do not show "Off today"
- *   unless the person is actually marked absent on the holiday sheet.
+ * KPI privacy + Monday status fix + temporary helpers
+ * - SA / ADMIN: individual dials (except hideIndividualKpi e.g. DK)
+ * - Everyone else: whole-office team dial only
+ * - Temporary helpers still count in team totals & capacity
  */
+import { CONFIG } from "./config.js";
 
 function isManagerViewer() {
   let userName = "";
@@ -31,14 +31,51 @@ function isManagerViewer() {
   return false;
 }
 
-/**
- * Pace is measured vs completed days only. On Monday that total is 0, so the
- * core app labels everyone "Off today". Rewrite those badges unless the role
- * line shows a real absence code for today.
- */
+function hideList() {
+  const list = CONFIG.hideIndividualKpi;
+  if (!list) return [];
+  return Array.isArray(list) ? list : [list];
+}
+
+function cardMatchesHidden(card, hidden) {
+  if (!hidden.length) return false;
+  const bits = [];
+  card.querySelectorAll(".role, .name, h3, .card-title, .lb-name").forEach(function (el) {
+    bits.push(el.textContent || "");
+  });
+  const text = bits.join(" ").toUpperCase();
+  return hidden.some(function (init) {
+    const u = String(init).toUpperCase();
+    if (text.indexOf(u) !== -1) return true;
+    // also match full name from config
+    const person = CONFIG.people.find(function (p) { return p.initials === init; });
+    if (person && text.indexOf(person.name.toUpperCase()) !== -1) return true;
+    return false;
+  });
+}
+
+/** Hide dials / leaderboard rows for temporary helpers (e.g. DK). */
+function hideTemporaryIndividualCards() {
+  const hidden = hideList();
+  if (!hidden.length) return;
+
+  document.querySelectorAll("#dialGrid .card").forEach(function (card) {
+    if (cardMatchesHidden(card, hidden)) {
+      card.style.display = "none";
+      card.setAttribute("data-temp-helper-hidden", "1");
+    }
+  });
+
+  document.querySelectorAll("#kpiPage .leaderboard-card li, #kpiPage .lb-row, #kpiPage .leaderboard li").forEach(function (row) {
+    if (cardMatchesHidden(row, hidden)) {
+      row.style.display = "none";
+    }
+  });
+}
+
 function fixFalseOffBadges() {
   const today = window._today ? new Date(window._today) : new Date();
-  const dow = today.getDay(); // 0 Sun … 1 Mon … 6 Sat
+  const dow = today.getDay();
   const earlyWeek = dow === 0 || dow === 1 || dow === 6;
 
   document.querySelectorAll("#dialGrid .card, #teamSummary .team-dial-card").forEach(function (card) {
@@ -48,51 +85,41 @@ function fixFalseOffBadges() {
     const text = (badge.textContent || "").trim();
     if (text !== "Off today" && text !== "Off") return;
 
-    // Person dials put absence on the role line: "SF · Full day off"
     const role = (card.querySelector(".role") || {}).textContent || "";
     const actuallyOff = role.indexOf(" · ") !== -1;
-
     if (actuallyOff) return;
 
     badge.textContent = earlyWeek ? "Week just started" : "No pace data yet";
     badge.className = "badge off";
-    badge.title = "Pace is measured against finished days only — nothing to compare until tomorrow.";
+    badge.title = "Pace includes Mon through today.";
   });
 
-  // Team summary badge (no .role line)
   document.querySelectorAll("#teamSummary .badge").forEach(function (badge) {
     const text = (badge.textContent || "").trim();
     if (text !== "Off today" && text !== "Off") return;
     badge.textContent = earlyWeek ? "Week just started" : "No pace data yet";
     badge.className = "badge off";
-    badge.title = "Pace is measured against finished days only — nothing to compare until tomorrow.";
   });
 }
 
-/**
- * After the KPI page is rendered, strip individual figures for non-managers
- * and correct Monday "Off today" false positives.
- */
 export function applyKpiPrivacy() {
   const manager = isManagerViewer();
   const kpiPage = document.getElementById("kpiPage");
   if (!kpiPage) return;
 
   fixFalseOffBadges();
+  hideTemporaryIndividualCards();
 
-  // Individual person dials
   const dialGrid = document.getElementById("dialGrid");
   if (dialGrid) {
     dialGrid.style.display = manager ? "" : "none";
     dialGrid.setAttribute("aria-hidden", manager ? "false" : "true");
   }
 
-  // Pace leaderboard (names + personal %)
   kpiPage.querySelectorAll(".leaderboard-card").forEach(function (el) {
     el.style.display = manager ? "" : "none";
   });
 
-  // Optional note under the team dial for staff
   let note = document.getElementById("kpiTeamOnlyNote");
   if (!manager) {
     if (!note) {
@@ -113,7 +140,6 @@ export function applyKpiPrivacy() {
     note.style.display = "none";
   }
 
-  // Soften tile subtitle for everyone (targets are team-focused for staff)
   const tileSub = document.querySelector("#tileKpi .tile-sub");
   if (tileSub) {
     tileSub.textContent = manager
