@@ -20,11 +20,13 @@
     line-height:1.4;
   }
 </style>
-<!-- Remap CDN config to local so hours/people edits in config.js apply everywhere -->
+<!-- Remap CDN modules to local so config + date parsing fixes apply -->
 <script type="importmap">
 {
   "imports": {
-    "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/config.js": "./config.js"
+    "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/config.js": "./config.js",
+    "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/utils.js": "./utils.js",
+    "https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@aab94dcec7ba58bd953c9514f58748408e2d26bd/data.js": "./data.js"
   }
 }
 </script>
