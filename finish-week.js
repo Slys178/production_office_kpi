@@ -2,8 +2,8 @@
  * This-week finish day prediction module.
  * Uses actual pace (stairs per hour) when available; falls back to capacity targets.
  * Privacy: team members only see their own person card;
- * SA (manager) and ADMIN role see all four. SF is a normal user.
- * Team-level predicted finish day is always visible.
+ * SA (manager) and ADMIN role see permanent staff. Temporary helpers (hideIndividualKpi)
+ * count in team totals but have no personal card.
  */
 import { mondayOf, dayBucket, sameDay } from "./utils.js";
 import { getCodeForPerson, targetFor, isAbsenceCode, statusLabel, hoursLostForCode } from "./data.js";
@@ -46,7 +46,7 @@ function formatTimeEstimate(hoursFromNow) {
   return finish.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-/** Manager SA (not in production PEOPLE list) + ADMIN role get full view. */
+/** Manager SA + ADMIN role get full view. */
 function isManagerViewer(userName, userEmail, userRole) {
   if ((userRole || "").toUpperCase() === "ADMIN") return true;
   const n = (userName || "").trim().toUpperCase();
@@ -310,9 +310,14 @@ export function renderCurrentWeekFinish(stairEntries, holidayIndex, today) {
 
   const anyoneUsingPace = personStats.some(p => p.paceSource === "actual" || p.paceSource === "blended");
 
-  const visibleStats = viewer.canSeeAll
+  // Temporary helpers (e.g. DK) stay in team totals but have no personal card
+  const hideInd = Array.isArray(CONFIG.hideIndividualKpi)
+    ? CONFIG.hideIndividualKpi
+    : (CONFIG.hideIndividualKpi ? [CONFIG.hideIndividualKpi] : []);
+  const visibleStats = (viewer.canSeeAll
     ? personStats
-    : personStats.filter(ps => viewer.initials && ps.person.initials === viewer.initials);
+    : personStats.filter(ps => viewer.initials && ps.person.initials === viewer.initials)
+  ).filter(ps => hideInd.indexOf(ps.person.initials) === -1);
 
   let html = `
     <div class="finish-summary">
