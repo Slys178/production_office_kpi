@@ -1,12 +1,23 @@
 /**
  * Data fetching & parsing layer (Google Sheets via GViz).
- * Real, working logic — moved here from main.js (not rewritten).
  */
 
 import { CONFIG } from "./config.js";
 import { parseUKDate, sameDay, dayBucket } from "./utils.js";
 
 let jsonpCounter = 0;
+
+function cellToString(cell) {
+  if (!cell) return "";
+  // Prefer GViz Date(y,m,d) raw value — avoids locale format issues on f
+  if (cell.v !== undefined && cell.v !== null) {
+    const vs = String(cell.v);
+    if (/^Date\(/i.test(vs)) return vs;
+  }
+  if (cell.f !== undefined && cell.f !== null) return String(cell.f);
+  if (cell.v !== undefined && cell.v !== null) return String(cell.v);
+  return "";
+}
 
 export function fetchGvizRows(sheetId, gid){
   return new Promise((resolve, reject)=>{
@@ -35,10 +46,7 @@ export function fetchGvizRows(sheetId, gid){
         const dataRows = table.rows.map(r =>
           table.cols.map((c,i)=>{
             const cell = r.c ? r.c[i] : null;
-            if(!cell) return '';
-            if(cell.f !== undefined && cell.f !== null) return String(cell.f);
-            if(cell.v !== undefined && cell.v !== null) return String(cell.v);
-            return '';
+            return cellToString(cell);
           })
         );
         const labelRow = table.cols.map(c => c.label || '');
@@ -67,7 +75,7 @@ export function fetchGvizRows(sheetId, gid){
 export function buildHolidayIndex(rows){
   let dateRowIdx = -1;
   for(let i=0;i<rows.length;i++){
-    const matches = rows[i].filter(c=>/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(c.trim())).length;
+    const matches = rows[i].filter(c=>/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(c.trim())).length;
     if(matches > 20){ dateRowIdx = i; break; }
   }
   if(dateRowIdx === -1) throw new Error("Could not find date header row in HOLIDAYS sheet");
@@ -201,16 +209,6 @@ export function parseStairRows(rows){
       const loadNo = loadNoCol > -1 ? (r[loadNoCol]||'').toString().trim().replace(/^#+/, '') : '';
       
       if(deliveryDate && !isNaN(stairs) && stairs > 0) {
-        const entry = {
-          date: date || null,
-          initials: initials || null,
-          stairs: stairs,
-          parts: parts,
-          deliveryDate: deliveryDate,
-          isCompleted: isCompleted,
-          loadNo: loadNo
-        };
-        
         if(isCompleted && date && initials && CONFIG.people.some(p => p.initials === initials)) {
           completed.push({date, initials, stairs, parts, deliveryDate, loadNo});
         } else {
@@ -282,7 +280,6 @@ export function parseErrorRows(rows){
     if(!person) continue;
     const basePoints = pointsCol >= 0 ? (parseInt(r[pointsCol], 10) || 0) : 0;
     const additional = additionalPointsCol >= 0 ? (parseInt(r[additionalPointsCol], 10) || 0) : 0;
-    // Combined total used everywhere on dials / badges / trends
     const points = basePoints + additional;
     out.push({
       initials: person.initials,
@@ -335,16 +332,11 @@ export function parseReplacementPartsRows(rows){
     const date = parseUKDate(dateStr);
     if(!date) continue;
     const section = (r[sectionCol]||'').trim().toUpperCase();
-    if(section !== 'OFFICE') continue; // only office-caused mistakes for this view
+    if(section !== 'OFFICE') continue;
 
     const costStr = (r[costCol]||'').replace(/[£,\s]/g, '');
     const cost = parseFloat(costStr) || 0;
 
-    // Operator names are stored like "SIMON FAULKS (OFFICE)" — strip the
-    // suffix and match against our tracked people list by full name so this cost
-    // can be tied to that person's own page. Names that don't match anyone
-    // we track (blank, other staff, inconsistent entries) are left unmatched
-    // and simply won't appear on any person's page.
     const cleanOperator = (r[operatorCol]||'').replace(/\(office\)/i, '').trim().toUpperCase();
     const matchedPerson = CONFIG.people.find(p => p.name.toUpperCase() === cleanOperator);
 
