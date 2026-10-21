@@ -33,8 +33,7 @@ export const CONFIG = {
 
   // Team members
   // SA = calendar-only (0 hours)
-  // DK = temporary helper (~2 weeks): same hours as SF; counts in team totals & capacity;
-  //      no personal dial (see hideIndividualKpi). Remove when he leaves.
+  // DK = temporary helper: same hours as SF; last week on capacity is W/C 19 Oct 2026
   people: [
     { initials: "SF", name: "Simon Faulks",        holidayName: "Simon Faulks",        color: "#4a90e2" },
     { initials: "LA", name: "Liam Aiello",          holidayName: "Liam Aiello",          color: "#2ecc71" },
@@ -45,10 +44,6 @@ export const CONFIG = {
   ],
 
   // Working hours per person
-  // Standard week (SF/LA/DK): Mon–Thu 9h + Fri 6.5h = 42.5h
-  // Adam (AS) night shift: same 42.5h compressed into Mon–Thu only (Fri off)
-  // DF: part-time hours
-  // SA: zero hours — holidays show on the calendar only
   hours: {
     SF: { MonThu: 9, Fri: 6.5 },
     LA: { MonThu: 9, Fri: 6.5 },
@@ -71,12 +66,16 @@ export const CONFIG = {
   loadsPageSize: 12,
 
   // Fully excluded from KPI display AND team capacity (calendar only)
-  // CDN compares with === so this stays a single string
   excludeFromKpiDisplay: "SA",
 
-  // Temporary helpers: in team totals & capacity, but no personal dial / finish card
-  // Remove from this list and from people/hours when they leave
+  // Temporary helpers: no personal dial / finish card
   hideIndividualKpi: ["DK"],
+
+  // Last Monday (W/C) each temporary helper still counts in forecast capacity.
+  // After this week they are excluded. Format: YYYY-MM-DD (that week's Monday).
+  temporaryHelperLastWeek: {
+    DK: "2026-10-19",
+  },
 };
 
 /** @typedef {typeof CONFIG.people[number]} Person */
