@@ -6,15 +6,35 @@
  *   - Who is off, and by how much does that cut capacity?
  *   - Optional guide: compare to defaultWeeklyStairs (usual weekly load)
  *
- * No delivery-date lag, no load totals, no mid-week trimming.
+ * Temporary helpers (e.g. DK) only count up to their last W/C in
+ * CONFIG.temporaryHelperLastWeek.
  */
 import { CONFIG } from "./config.js";
 import { mondayOf, dayBucket, fmtDateShort } from "./utils.js";
 import { getCodeForPerson, isAbsenceCode, targetFor, statusLabel } from "./data.js";
 
-const PEOPLE = CONFIG.people.filter(function (p) {
-  return p.initials !== CONFIG.excludeFromKpiDisplay;
-});
+function parseYMD(str) {
+  if (!str) return null;
+  const m = String(str).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+}
+
+/** People who still count in capacity for this week-start Monday. */
+function peopleForWeek(weekStart) {
+  const lastMap = CONFIG.temporaryHelperLastWeek || {};
+  const weekMs = weekStart.getTime();
+
+  return CONFIG.people.filter(function (p) {
+    if (p.initials === CONFIG.excludeFromKpiDisplay) return false;
+    const lastStr = lastMap[p.initials];
+    if (!lastStr) return true;
+    const last = parseYMD(lastStr);
+    if (!last) return true;
+    // Include only while weekStart <= last Monday they work
+    return weekMs <= last.getTime();
+  });
+}
 
 function escapeHtml(s) {
   const d = document.createElement("div");
@@ -35,7 +55,6 @@ function weekCapacityForPerson(person, weekStart, holidayIndex) {
     const dCopy = new Date(d);
     if (!dayBucket(dCopy)) continue;
 
-    // Target with no absence code = what they can do if in
     const fullDay = targetFor(person.initials, dCopy, "");
     fullCapacity += fullDay;
 
@@ -47,7 +66,6 @@ function weekCapacityForPerson(person, weekStart, holidayIndex) {
         label: statusLabel(code) || code,
         lost: fullDay,
       });
-      // half-days still keep partial target via targetFor
       capacity += targetFor(person.initials, dCopy, code);
     } else {
       capacity += targetFor(person.initials, dCopy, code);
@@ -84,7 +102,9 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     const wStart = new Date(startMonday);
     wStart.setDate(wStart.getDate() + 7 * i);
     const wEnd = new Date(wStart);
-    wEnd.setDate(wStart.getDate() + 4); // Fri
+    wEnd.setDate(wStart.getDate() + 4);
+
+    const PEOPLE = peopleForWeek(wStart);
 
     let totalCapacity = 0;
     let totalFull = 0;
@@ -135,6 +155,23 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
         '<div style="margin-top:10px;font-size:0.8rem;color:var(--muted);">Everyone in — full capacity</div>';
     }
 
+    // Note if a temp helper dropped off this week vs previous
+    let tempNote = "";
+    const lastMap = CONFIG.temporaryHelperLastWeek || {};
+    Object.keys(lastMap).forEach(function (init) {
+      const last = parseYMD(lastMap[init]);
+      if (!last) return;
+      // First week after their last week
+      const after = new Date(last);
+      after.setDate(after.getDate() + 7);
+      if (wStart.getTime() === after.getTime()) {
+        tempNote =
+          '<div style="margin-top:8px;font-size:0.75rem;color:var(--muted);">' +
+          escapeHtml(init) + " finished — no longer in capacity" +
+          "</div>";
+      }
+    });
+
     let guideLine = "";
     if (guide > 0) {
       const gap = totalCapacity - guide;
@@ -168,6 +205,7 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
         "</div>" +
         guideLine +
         absenceHtml +
+        tempNote +
       "</div>"
     );
   }
@@ -177,8 +215,9 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
       "<strong>Simple view:</strong> each week shows what the team can produce " +
       "(from daily rates) after holidays. " +
       (guide
-        ? "Usual weekly load is set at <strong>" + guide + "</strong> stairs — change defaultWeeklyStairs in config if needed."
+        ? "Usual weekly load is set at <strong>" + guide + "</strong> stairs."
         : "") +
+      " Temporary helpers only count through their last week." +
     "</div>";
 
   container.innerHTML = note + '<div class="forecast-week-grid-inner">' + cards.join("") + "</div>";
@@ -201,9 +240,10 @@ function updateLookaheadBanner(startMonday, holidayIndex, guide) {
   const container = document.getElementById("lookaheadBanner");
   if (!container) return;
 
-  // Next calendar week (not this week)
   const nextStart = new Date(startMonday);
   nextStart.setDate(nextStart.getDate() + 7);
+
+  const PEOPLE = peopleForWeek(nextStart);
 
   let capacity = 0;
   let full = 0;
