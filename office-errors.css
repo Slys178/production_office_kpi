@@ -1,0 +1,176 @@
+.office-error-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.office-error-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 16px 14px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.office-error-card:hover {
+  border-color: var(--teal, #00A99D);
+  box-shadow: var(--shadow, 0 4px 16px rgba(0,0,0,0.12));
+}
+
+.office-error-card.selected {
+  border-color: var(--teal, #00A99D);
+  box-shadow: 0 0 0 2px rgba(0, 169, 157, 0.25);
+}
+
+.oe-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.oe-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.oe-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.oe-points {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.oe-points.negative { color: var(--red, #e74c3c); }
+.oe-points.positive { color: var(--green, #2ecc71); }
+.oe-points.neutral { color: var(--muted); }
+
+.oe-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.oe-meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.oe-open { color: var(--amber, #f5a623); font-weight: 600; }
+.oe-done { color: var(--green, #2ecc71); font-weight: 600; }
+
+.office-error-detail {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.oe-detail-header h3 {
+  margin: 10px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+}
+
+.oe-detail-total {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.oe-detail-total .negative { color: var(--red, #e74c3c); }
+
+.oe-error-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.oe-error-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "main points"
+    "oto oto"
+    "note note";
+  gap: 6px 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--section-bg, rgba(137,147,171,0.08));
+  border: 1px solid transparent;
+}
+
+.oe-error-row.oe-row-done {
+  opacity: 0.72;
+  border-color: rgba(46, 204, 113, 0.35);
+}
+
+.oe-error-main { grid-area: main; }
+.oe-error-points {
+  grid-area: points;
+  font-weight: 700;
+  color: var(--red, #e74c3c);
+  white-space: nowrap;
+}
+.oe-error-date {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.oe-error-issue { font-size: 0.88rem; font-weight: 600; }
+.oe-section { font-weight: 400; color: var(--muted); }
+.oe-error-impact {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.oe-oto {
+  grid-area: oto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.oe-oto input { width: 16px; height: 16px; accent-color: var(--teal, #00A99D); }
+
+.oe-oto-note {
+  grid-area: note;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
+@media (min-width: 640px) {
+  .oe-error-row {
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      "main points oto"
+      "note note note";
+    align-items: center;
+  }
+}
