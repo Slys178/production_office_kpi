@@ -33,6 +33,16 @@ function callKpiPrivacy() {
   }
 }
 
+function callOfficeErrors() {
+  try {
+    if (typeof window.renderOfficeErrors === "function") {
+      window.renderOfficeErrors();
+    }
+  } catch (e) {
+    console.warn("office errors error", e);
+  }
+}
+
 function callForecastEnhance() {
   try {
     if (typeof window.renderEnhancedForecast === "function") {
@@ -58,11 +68,16 @@ import("./forecast-enhance.js")
   .then(function () { callForecastEnhance(); })
   .catch(function (e) { console.warn("forecast-enhance module failed", e); });
 
+import("./office-errors.js")
+  .then(function () { callOfficeErrors(); })
+  .catch(function (e) { console.warn("office-errors module failed", e); });
+
 export async function initAndLoad() {
   const result = await _initAndLoad();
   callFinishIfReady();
   callKpiPrivacy();
   callForecastEnhance();
+  callOfficeErrors();
   return result;
 }
 
@@ -71,6 +86,7 @@ export async function loadAndRender() {
   callFinishIfReady();
   callKpiPrivacy();
   callForecastEnhance();
+  callOfficeErrors();
   return result;
 }
 
@@ -86,6 +102,12 @@ document.addEventListener("DOMContentLoaded", function () {
   if (tileKpi) {
     tileKpi.addEventListener("click", function () {
       setTimeout(callKpiPrivacy, 150);
+    });
+  }
+  const tileErrors = document.getElementById("tileErrors");
+  if (tileErrors) {
+    tileErrors.addEventListener("click", function () {
+      setTimeout(callOfficeErrors, 150);
     });
   }
 });
