@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="presence.css">
 <link rel="stylesheet" href="finish.css">
+<link rel="stylesheet" href="office-errors.css">
 <link rel="manifest" href="manifest.json">
 <style>
   @keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -100,8 +101,8 @@
     </div>
     <div class="nav-tile" id="tileErrors">
       <div class="tile-icon">⚠️</div>
-      <div class="tile-label">ERROR LOG</div>
-      <div class="tile-sub">Trends, patterns & points over time</div>
+      <div class="tile-label">OFFICE ERRORS</div>
+      <div class="tile-sub">By person · breakdown · 1:1 follow-ups</div>
     </div>
     <div class="nav-tile" id="tileReplacementParts">
       <div class="tile-icon">🔧</div>
@@ -250,44 +251,50 @@
   <div class="forecast-week-grid" id="forecastWeeks"></div>
 </div>
 
-<!-- ============ ERROR LOG TRENDS PAGE ============ -->
+<!-- ============ OFFICE ERRORS PAGE ============ -->
 <div id="errorsPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromErrors">← Production Office</button>
-    <h2>⚠️ Error Log — Trends</h2>
+    <h2>⚠️ Office Errors</h2>
   </div>
-  <div class="detail-section">
-    <h3>🎯 Quality vs Speed</h3>
-    <div class="parts-note">Each dot is one person over the last 4 weeks. Further right = more stairs completed. Higher up = fewer/lighter errors. Bottom-right is the "fast but sloppy" corner worth a closer look.</div>
-    <div id="qualitySpeedChart"></div>
+  <div class="parts-note" style="margin-bottom:12px;">
+    Click a person for their full error list. Tick <strong>1:1 done</strong> when you have followed up — saved on this device for you.
   </div>
-  <div class="detail-section">
-    <h3>📈 Error Points — Last 6 Months</h3>
-    <div class="parts-note">Monthly total of error points logged. More negative = worse month.</div>
-    <div id="errorPointsTrend"></div>
-  </div>
-  <div class="detail-section">
-    <h3>📅 Error Count — Last 6 Months</h3>
-    <div class="leaderboard" id="errorCountTrend"></div>
-  </div>
-  <div class="detail-section">
-    <h3>⚠️ Repeated Errors & Patterns</h3>
-    <div class="parts-note">Errors that occur 3+ times, or people with 3+ errors. Flagged for attention.</div>
-    <div id="repeatedErrors"></div>
-  </div>
-  <div class="detail-section">
-    <h3>📍 Top Sections</h3>
-    <div class="leaderboard" id="topSections"></div>
-  </div>
-  <div class="detail-section">
-    <h3>🔥 Top Errors</h3>
-    <div class="parts-note">Most common error types.</div>
-    <div class="leaderboard" id="topErrors"></div>
-  </div>
-  <div class="detail-section">
-    <h3>👤 By Person</h3>
-    <div class="leaderboard" id="errorsByPerson"></div>
-  </div>
+  <div id="officeErrorCards" class="office-error-grid"></div>
+  <div id="officeErrorDetail" class="office-error-detail" style="display:none;"></div>
+
+  <details class="detail-section" style="margin-top:24px;">
+    <summary style="cursor:pointer;font-weight:700;font-size:1rem;margin-bottom:12px;">📊 Trends & patterns (optional)</summary>
+    <div class="detail-section">
+      <h3>🎯 Quality vs Speed</h3>
+      <div class="parts-note">Each dot is one person over the last 4 weeks.</div>
+      <div id="qualitySpeedChart"></div>
+    </div>
+    <div class="detail-section">
+      <h3>📈 Error Points — Last 6 Months</h3>
+      <div id="errorPointsTrend"></div>
+    </div>
+    <div class="detail-section">
+      <h3>📅 Error Count — Last 6 Months</h3>
+      <div class="leaderboard" id="errorCountTrend"></div>
+    </div>
+    <div class="detail-section">
+      <h3>⚠️ Repeated Errors & Patterns</h3>
+      <div id="repeatedErrors"></div>
+    </div>
+    <div class="detail-section">
+      <h3>📍 Top Sections</h3>
+      <div class="leaderboard" id="topSections"></div>
+    </div>
+    <div class="detail-section">
+      <h3>🔥 Top Errors</h3>
+      <div class="leaderboard" id="topErrors"></div>
+    </div>
+    <div class="detail-section">
+      <h3>👤 By Person (list)</h3>
+      <div class="leaderboard" id="errorsByPerson"></div>
+    </div>
+  </details>
 </div>
 
 <!-- ============ REPLACEMENT PARTS PAGE ============ -->
