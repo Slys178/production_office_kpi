@@ -161,7 +161,7 @@
   color: var(--text, #eee);
   border: 1px solid var(--card-border, #333);
   border-radius: 14px;
-  max-width: 640px;
+  max-width: 920px;
   width: 100%;
   max-height: 85vh;
   overflow: auto;
@@ -221,6 +221,23 @@
   vertical-align: top;
 }
 
+.lbp-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 8px 0;
+}
+
+.lbp-plot-table {
+  font-size: 0.75rem;
+  min-width: 640px;
+}
+
+.lbp-plot-table th {
+  white-space: nowrap;
+  font-size: 0.68rem;
+  color: var(--muted, #8993ab);
+}
+
 .lbp-plot-table th:last-child,
 .lbp-plot-table td:last-child {
   text-align: center;
@@ -245,26 +262,12 @@
   font-weight: 700;
 }
 
-.lbp-cell-diff .lbp-ms {
-  text-decoration: line-through;
-  opacity: 0.85;
-}
-
-.lbp-cell-diff .lbp-snip {
-  color: #e74c3c;
-}
-
 .lbp-cell-partial {
   color: #f39c12;
 }
 
 .lbp-cell-miss {
   color: var(--muted, #8993ab);
-}
-
-.lbp-vs {
-  opacity: 0.7;
-  font-weight: 400;
 }
 
 .lbp-result-ok {
