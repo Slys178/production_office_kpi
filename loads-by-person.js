@@ -1,8 +1,5 @@
 /**
- * Loads — person-first layout
- * 1) Boxes for each production person
- * 2) Click person → their loads in date order (Drive button kept)
- * 3) Check load — MS TOP vs SNIP (handing / FFL / house type)
+ * Loads — person-first layout + sticky load-check results modal
  */
 import { CONFIG } from "./config.js";
 import {
@@ -36,6 +33,142 @@ function escapeHtml(s) {
   const el = document.createElement("div");
   el.textContent = String(s == null ? "" : s);
   return el.innerHTML;
+}
+
+function ensureCheckModal() {
+  let overlay = document.getElementById("lbpCheckModal");
+  if (overlay) return overlay;
+  overlay = document.createElement("div");
+  overlay.id = "lbpCheckModal";
+  overlay.className = "lbp-modal-overlay";
+  overlay.style.display = "none";
+  overlay.innerHTML =
+    '<div class="lbp-modal" role="dialog" aria-modal="true">' +
+    '<div class="lbp-modal-title" id="lbpModalTitle"></div>' +
+    '<div class="lbp-modal-body" id="lbpModalBody"></div>' +
+    '<div class="lbp-modal-actions" id="lbpModalActions"></div>' +
+    "</div>";
+  document.body.appendChild(overlay);
+  // Do NOT close on outside click
+  overlay.addEventListener("click", function (e) {
+    e.stopPropagation();
+  });
+  return overlay;
+}
+
+function showCheckModal(opts) {
+  const overlay = ensureCheckModal();
+  const titleEl = document.getElementById("lbpModalTitle");
+  const bodyEl = document.getElementById("lbpModalBody");
+  const actionsEl = document.getElementById("lbpModalActions");
+  titleEl.textContent = opts.title || "Load check";
+  if (opts.html) {
+    bodyEl.innerHTML = opts.html;
+  } else {
+    bodyEl.textContent = opts.message || "";
+  }
+  actionsEl.innerHTML = "";
+  const buttons = opts.buttons || [{ id: "ok", label: "OK", primary: true }];
+
+  return new Promise(function (resolve) {
+    buttons.forEach(function (b) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lbp-modal-btn" + (b.primary ? " primary" : "");
+      btn.textContent = b.label;
+      btn.addEventListener("click", function () {
+        overlay.style.display = "none";
+        resolve(b.id);
+      });
+      actionsEl.appendChild(btn);
+    });
+    overlay.style.display = "flex";
+  });
+}
+
+function formatCheckResultHtml(loadNum, result) {
+  let html = '<div class="lbp-result-summary">';
+  if (result.ok) {
+    html += '<p class="lbp-result-ok">✅ Match — fields agree</p>';
+  } else if (result.mismatches && result.mismatches.length) {
+    html += '<p class="lbp-result-bad">⚠️ Possible differences (OCR can misread digits)</p>';
+  } else {
+    html += '<p class="lbp-result-warn">⚠️ Could not complete auto-check</p>';
+  }
+  html += "<p><strong>Load #" + escapeHtml(loadNum) + "</strong>";
+  if (result.details && result.details.folderName) {
+    html += " · folder: " + escapeHtml(result.details.folderName);
+  }
+  html += "</p>";
+
+  const comps = result.comparisons || [];
+  if (comps.length) {
+    html +=
+      '<table class="lbp-result-table"><thead><tr>' +
+      "<th>Field</th><th>MS TOP</th><th>SNIP</th><th></th></tr></thead><tbody>";
+    comps.forEach(function (c) {
+      let status = "—";
+      let rowClass = "";
+      if (c.key === "plot" && (c.ms == null || c.snip == null)) {
+        status = "optional";
+      } else if (c.ms == null && c.snip == null) {
+        status = "not found";
+        rowClass = "muted";
+      } else if (c.ms == null || c.snip == null) {
+        status = "partial";
+        rowClass = "warn";
+      } else if (String(c.ms) === String(c.snip)) {
+        status = "✅";
+        rowClass = "ok";
+      } else {
+        status = "❌";
+        rowClass = "bad";
+      }
+      html +=
+        '<tr class="' +
+        rowClass +
+        '">' +
+        "<td>" +
+        escapeHtml(c.label) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(c.ms != null ? c.ms : "—") +
+        "</td>" +
+        "<td>" +
+        escapeHtml(c.snip != null ? c.snip : "—") +
+        "</td>" +
+        "<td>" +
+        status +
+        "</td></tr>";
+      if (rowClass === "bad" && (c.msHint || c.snipHint)) {
+        html +=
+          '<tr class="hint"><td colspan="4"><small>OCR context — MS: ' +
+          escapeHtml(c.msHint || "—") +
+          " · SNIP: " +
+          escapeHtml(c.snipHint || "—") +
+          "</small></td></tr>";
+      }
+    });
+    html += "</tbody></table>";
+  } else if (result.message) {
+    html += '<pre class="lbp-result-pre">' + escapeHtml(result.message) + "</pre>";
+  }
+
+  if (result.details) {
+    if (result.details.msFile) {
+      html += "<p><small>MS TOP file: " + escapeHtml(result.details.msFile) + "</small></p>";
+    }
+    if (result.details.snipFiles && result.details.snipFiles.length) {
+      html +=
+        "<p><small>SNIP file(s): " +
+        escapeHtml(result.details.snipFiles.join(", ")) +
+        "</small></p>";
+    }
+  }
+  html +=
+    '<p class="lbp-result-note">OCR sometimes confuses similar digits (1/7, 5/6, 51/52). Check the files in Drive if a mismatch looks wrong.</p>';
+  html += "</div>";
+  return html;
 }
 
 function productionPeople() {
@@ -353,7 +486,15 @@ function showPersonDetail() {
       const map = loadCheckedMap();
 
       if (map[loadNum]) {
-        if (!window.confirm("Clear checked status for #" + loadNum + "?")) return;
+        const clear = await showCheckModal({
+          title: "Clear check?",
+          message: "Clear checked status for load #" + loadNum + "?",
+          buttons: [
+            { id: "no", label: "Keep checked", primary: true },
+            { id: "yes", label: "Clear", primary: false },
+          ],
+        });
+        if (clear !== "yes") return;
         delete map[loadNum];
         saveCheckedMap(map);
         showPersonDetail();
@@ -369,7 +510,11 @@ function showPersonDetail() {
         const result = await runLoadCheck(loadNum);
 
         if (result.needSignIn) {
-          window.alert(result.message);
+          await showCheckModal({
+            title: "Drive sign-in needed",
+            message: result.message,
+            buttons: [{ id: "ok", label: "OK", primary: true }],
+          });
           btn.textContent = originalLabel;
           btn.disabled = false;
           return;
@@ -383,29 +528,41 @@ function showPersonDetail() {
             fields: result.details && result.details.msFields,
           };
           saveCheckedMap(map);
-          window.alert("✅ Load #" + loadNum + " checked\n\n" + result.message);
+          await showCheckModal({
+            title: "Load #" + loadNum + " — checked",
+            html: formatCheckResultHtml(loadNum, result),
+            buttons: [{ id: "ok", label: "OK", primary: true }],
+          });
           showPersonDetail();
           return;
         }
 
-        let msg = "⚠️ Load #" + loadNum + "\n\n" + result.message;
-        if (result.details && result.details.files) {
-          msg += "\n\nFiles in folder:\n• " + result.details.files.join("\n• ");
-        }
-        msg += "\n\nMark as checked manually anyway?";
-        if (window.confirm(msg)) {
+        const choice = await showCheckModal({
+          title: "Load #" + loadNum + " — review needed",
+          html: formatCheckResultHtml(loadNum, result),
+          buttons: [
+            { id: "manual", label: "Mark checked anyway", primary: false },
+            { id: "cancel", label: "Leave unchecked", primary: true },
+          ],
+        });
+        if (choice === "manual") {
           map[loadNum] = {
             checkedAt: new Date().toISOString(),
             by: localStorage.getItem("userName") || "SA",
             auto: false,
             note: "manual after failed auto-check",
+            fields: result.details && result.details.msFields,
           };
           saveCheckedMap(map);
         }
         showPersonDetail();
       } catch (e) {
         console.error(e);
-        window.alert("Check failed: " + (e && e.message ? e.message : String(e)));
+        await showCheckModal({
+          title: "Check failed",
+          message: e && e.message ? e.message : String(e),
+          buttons: [{ id: "ok", label: "OK", primary: true }],
+        });
         btn.textContent = originalLabel;
         btn.disabled = false;
       }
