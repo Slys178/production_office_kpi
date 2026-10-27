@@ -11,6 +11,7 @@ import {
   listFolderFiles,
   downloadDriveFile,
   showDriveSignIn,
+  ensureDriveReady,
 } from "./drive.js";
 
 let pdfjsLib = null;
@@ -160,7 +161,8 @@ function fieldsEqual(a, b) {
 }
 
 export async function runLoadCheck(loadNumber) {
-  if (!gapiSignedIn) {
+  const ready = await ensureDriveReady(true);
+  if (!ready || !gapiSignedIn) {
     return {
       ok: false,
       needSignIn: true,
