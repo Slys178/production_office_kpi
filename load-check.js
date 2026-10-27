@@ -56,17 +56,50 @@ async function extractTextFromPdf(arrayBuffer) {
   return parts.join("\n");
 }
 
+let tesseractReady = null;
+
+function loadTesseractScript() {
+  if (window.Tesseract) {
+    return Promise.resolve(window.Tesseract);
+  }
+  if (tesseractReady) return tesseractReady;
+  tesseractReady = new Promise(function (resolve, reject) {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.async = true;
+    s.onload = function () {
+      if (window.Tesseract) resolve(window.Tesseract);
+      else reject(new Error("Tesseract script loaded but global missing"));
+    };
+    s.onerror = function () {
+      reject(new Error("Failed to load Tesseract.js"));
+    };
+    document.head.appendChild(s);
+  });
+  return tesseractReady;
+}
+
 async function extractTextFromImage(arrayBuffer, mimeType) {
-  const Tesseract = await import(
-    "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js"
-  );
+  const Tesseract = await loadTesseractScript();
   const blob = new Blob([arrayBuffer], {
     type: mimeType || "image/png",
   });
-  const result = await Tesseract.recognize(blob, "eng", {
-    logger: function () {},
-  });
-  return (result && result.data && result.data.text) || "";
+  if (typeof Tesseract.createWorker === "function") {
+    const worker = await Tesseract.createWorker("eng");
+    try {
+      const result = await worker.recognize(blob);
+      return (result && result.data && result.data.text) || "";
+    } finally {
+      try {
+        await worker.terminate();
+      } catch (_) {}
+    }
+  }
+  if (typeof Tesseract.recognize === "function") {
+    const result = await Tesseract.recognize(blob, "eng");
+    return (result && result.data && result.data.text) || "";
+  }
+  throw new Error("Tesseract API not available (no createWorker/recognize)");
 }
 
 function isImageFile(name, mimeType) {
