@@ -1,6 +1,7 @@
 /**
  * Load check — MS TOP (Google Doc) vs SNIP.xml (Compass)
- * Results are per-plot: Plot | House type | Handing | FFL | tick/cross
+ * MS rules: FFL = digits before mm; house type before Site dwelling;
+ * handing = LHWS|RHWS|BW|LHLL|RHLL|T SHAPE
  */
 import {
   gapiSignedIn,
@@ -50,7 +51,6 @@ function classifyFileName(name) {
   const n = String(name || "")
     .toUpperCase()
     .replace(/\.(PDF|PNG|JPG|JPEG|DOC|DOCX|XML|TXT|CSV|HTML|HTM)$/i, "");
-  // MS TOP variants: "MS TOP", "MS TOP SHEET", "M/S TOP", "MSTOP"
   if (/M\s*[\/]?\s*S[\s_\-]*TOP/.test(n) || /\bMSTOP\b/.test(n)) return "ms_top";
   if (/\bMANUFACTURING\b/.test(n) && /\bTOP\b/.test(n)) return "ms_top";
   if (/SNIP[\s_\-]*0*2\b/.test(n) || /SNIP[\s_\-]*0*2$/.test(n)) return "snip_2";
@@ -246,90 +246,119 @@ async function fileToText(file) {
 function norm(s) {
   return String(s || "").toUpperCase().replace(/\s+/g, " ").trim();
 }
-function normalizeHanding(raw) {
-  if (!raw) return null;
-  const u = norm(raw);
-  if (/\bRH\b/.test(u) || /RIGHT\s*HAND/.test(u) || /^RIGHT$/.test(u)) return "RH";
-  if (/\bLH\b/.test(u) || /LEFT\s*HAND/.test(u) || /^LEFT$/.test(u)) return "LH";
-  return u;
-}
-function normalizeFfl(raw) {
-  if (!raw) return null;
-  const m = String(raw).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
-  return m ? m[0] : norm(raw);
-}
 function normalizeHouse(raw) {
   if (!raw) return null;
   return norm(raw).replace(/^TYPE\s+/, "");
 }
 
-const JUNK_HOUSE = /^(STRING|INT|INTEGER|BOOL|BOOLEAN|FLOAT|DOUBLE|NUMBER|NULL|TRUE|FALSE|VALUE|TEXT|DATA|TYPE|HANDING|FFL|PLOT|LOAD|STAIR|THE|AND|FOR|WS|LHWS|RHWS)$/i;
+const JUNK_HOUSE = /^(STRING|INT|INTEGER|BOOL|BOOLEAN|FLOAT|DOUBLE|NUMBER|NULL|TRUE|FALSE|VALUE|TEXT|DATA|TYPE|HANDING|FFL|PLOT|LOAD|STAIR|THE|AND|FOR|WS|LHWS|RHWS|LHLL|RHLL|BW)$/i;
+const HANDING_RE = /\b(LHWS|RHWS|LHLL|RHLL|BW|T[\s\-]?SHAPE)\b/i;
 
-export function extractPlots(text) {
+function normalizeHandingCode(raw) {
+  if (!raw) return null;
+  const u = String(raw).toUpperCase().replace(/\s+/g, " ").trim();
+  if (/^T[\s\-]?SHAPE$/.test(u)) return "T SHAPE";
+  if (/^(LHWS|RHWS|LHLL|RHLL|BW)$/.test(u)) return u;
+  if (u === "LH" || u === "LEFT") return "LH";
+  if (u === "RH" || u === "RIGHT") return "RH";
+  return u;
+}
+
+function extractPlotsFromMs(text) {
   const t = String(text || "");
-  const upper = t.toUpperCase();
   const rows = [];
   t.split(/\n+/).forEach(function (line) {
-    const u = line.toUpperCase();
-    if (!/\d/.test(u)) return;
-    if (/^[\s|]*PLOT[\s|]*HOUSE/.test(u) && !/\d{2,}/.test(u)) return;
+    const raw = line.trim();
+    if (!raw) return;
+    const u = raw.toUpperCase();
+    const hasHand = HANDING_RE.test(u);
+    const hasFfl = /\b\d{3,4}\s*MM\b/.test(u);
+    const hasDwelling = /SITE\s*DWELLING/.test(u);
+    const hasPlotLabel = /\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*\d{1,6}\b/.test(u);
+    if (!hasHand && !hasFfl && !hasDwelling && !hasPlotLabel) return;
+    if (/\bPLOTS\b/.test(u) && !hasHand && !hasFfl && !hasDwelling) return;
+
     let plot = null, houseType = null, handing = null, ffl = null;
     let m = u.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/);
     if (m) plot = m[1];
-    m = u.match(/\b(?:HOUSE\s*)?TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})\b/);
-    if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1].replace(/[^A-Z0-9\-\/].*$/, "").trim();
-    m = u.match(/\bHANDING\s*[:\|\-]?\s*(LH|RH)\b/) || u.match(/\b(LH|RH)\s*W(?:S|C)?\b/) ||
-        u.match(/(?:^|[^A-Z0-9])(LH|RH)(?=[^A-Z0-9]|$)/);
+
+    m = u.match(/([A-Z0-9][A-Z0-9\-\/]{0,12})\s+SITE\s*DWELLING/);
+    if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1];
+
+    m = u.match(HANDING_RE);
     if (m) handing = m[1];
-    m = u.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
-    if (m) ffl = m[1];
-    if (!plot && u.indexOf("|") !== -1) {
+
+    m = u.match(/\b(\d{4})\s*MM\b/);
+    if (m) ffl = String(Number(m[1]));
+    if (!ffl) {
+      m = u.match(/\b(\d{3})\s*MM\b/);
+      if (m) ffl = String(Number(m[1]));
+    }
+
+    if (!plot && (hasHand || hasFfl || hasDwelling) && u.indexOf("|") !== -1) {
       u.split("|").map(function (c) { return c.trim(); }).filter(Boolean).forEach(function (c) {
-        if (!plot && /^\d{1,6}$/.test(c)) plot = c;
-        else if (!handing && /^(LH|RH)$/.test(c)) handing = c;
-        else if (!ffl && /^[+-]?\d+(\.\d+)?$/.test(c) && Number(c) < 5000) {
-          if (!houseType && /^\d{1,3}$/.test(c)) houseType = c;
-          else ffl = c;
-        } else if (!houseType && /^[A-Z0-9\-\/]{2,12}$/.test(c) && !JUNK_HOUSE.test(c) && !/^(WK|REG)$/.test(c))
-          houseType = c;
+        if (!plot && /^\d{1,4}$/.test(c) && Number(c) < 5000) {
+          if (!(houseType && c === houseType) && !(ffl && c === ffl)) plot = c;
+        }
       });
     }
-    if (plot || handing || houseType || ffl) {
-      if (plot && !houseType) {
-        const near = upper.match(new RegExp("PLOT\\s*" + plot + "\\s+([A-Z]\\d{3,5})\\b"));
-        if (near) houseType = near[1];
-      }
+
+    if (plot || houseType || handing || ffl) {
       rows.push({
         plot: plot,
-        houseType: normalizeHouse(houseType),
-        handing: normalizeHanding(handing),
-        ffl: normalizeFfl(ffl),
+        houseType: houseType ? normalizeHouse(houseType) : null,
+        handing: normalizeHandingCode(handing),
+        ffl: ffl,
+        source: "ms",
       });
     }
   });
-  if (!rows.length) {
-    const plotM = upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/);
-    let houseType = null, handing = null, ffl = null;
-    let m = upper.match(/\bTYPE\s*[:\|\-#]\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
-    if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1];
-    if (!houseType && plotM) {
-      const near = upper.match(new RegExp("PLOT\\s*" + plotM[1] + "\\s+([A-Z]\\d{3,5})\\b"));
-      if (near) houseType = near[1];
-    }
-    m = upper.match(/\b(LH|RH)\s*W(?:S|C)?\b/) || upper.match(/HANDING\s*[:\|\-]?\s*(LH|RH)\b/) ||
-        upper.match(/(?:^|[^A-Z0-9])(LH|RH)(?=[^A-Z0-9]|$)/);
+  return dedupePlots(rows);
+}
+
+function extractPlotsFromSnip(text) {
+  const t = String(text || "");
+  const upper = t.toUpperCase();
+  const rows = [];
+  const parts = upper.split(/(?=\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*\d+)/);
+  const chunks = parts.length > 1 ? parts : [upper];
+  chunks.forEach(function (chunk) {
+    if (!chunk || !/\d/.test(chunk)) return;
+    let plot = null, houseType = null, handing = null, ffl = null;
+    let m = chunk.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/);
+    if (m) plot = m[1];
+    m = chunk.match(HANDING_RE);
     if (m) handing = m[1];
-    m = upper.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
+    m = chunk.match(/\b(?:HOUSE\s*)?TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})\b/);
+    if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1];
+    if (!houseType && plot) {
+      const near = chunk.match(new RegExp("PLOT\\s*" + plot + "\\s+([A-Z0-9][A-Z0-9\\-]{1,10})\\b"));
+      if (near && !JUNK_HOUSE.test(near[1]) && !HANDING_RE.test(near[1])) houseType = near[1];
+    }
+    if (!houseType) {
+      m = chunk.match(/([A-Z0-9][A-Z0-9\-\/]{0,12})\s+SITE\s*DWELLING/);
+      if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1];
+    }
+    m = chunk.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
     if (m) ffl = m[1];
-    if (plotM || handing || houseType || ffl) {
+    if (!ffl) {
+      m = chunk.match(/\b(\d{4})\s*MM\b/);
+      if (m) ffl = String(Number(m[1]));
+    }
+    if (plot || houseType || handing || ffl) {
       rows.push({
-        plot: plotM ? plotM[1] : null,
-        houseType: normalizeHouse(houseType),
-        handing: normalizeHanding(handing),
-        ffl: normalizeFfl(ffl),
+        plot: plot,
+        houseType: houseType ? normalizeHouse(houseType) : null,
+        handing: normalizeHandingCode(handing),
+        ffl: ffl,
+        source: "snip",
       });
     }
-  }
+  });
+  return dedupePlots(rows);
+}
+
+function dedupePlots(rows) {
   const byPlot = {};
   const noPlot = [];
   rows.forEach(function (r) {
@@ -347,9 +376,17 @@ export function extractPlots(text) {
     .concat(noPlot);
 }
 
-export function extractFields(text) {
-  const plots = extractPlots(text);
-  if (plots.length === 1) {
+export function extractPlots(text, sourceHint) {
+  if (sourceHint === "ms") return extractPlotsFromMs(text);
+  if (sourceHint === "snip") return extractPlotsFromSnip(text);
+  const u = String(text || "").toUpperCase();
+  if (/SITE\s*DWELLING/.test(u) || /\b\d{3,4}\s*MM\b/.test(u)) return extractPlotsFromMs(text);
+  return extractPlotsFromSnip(text);
+}
+
+export function extractFields(text, sourceHint) {
+  const plots = extractPlots(text, sourceHint);
+  if (plots.length >= 1) {
     const p = plots[0];
     return {
       handing: p.handing,
@@ -357,75 +394,82 @@ export function extractFields(text) {
       houseType: p.houseType,
       plot: p.plot,
       hints: {},
-      rawSample: String(text || "").slice(0, 600).replace(/\s+/g, " "),
+      rawSample: String(text || "").slice(0, 800).replace(/\s+/g, " "),
       plots: plots,
     };
   }
-  const upper = String(text || "").toUpperCase();
-  let handing = null, ffl = null, houseType = null, plot = null;
-  let m = upper.match(/HANDING\s*[:\|\-]?\s*(LH|RH|LEFT\s*HAND(?:ED)?|RIGHT\s*HAND(?:ED)?|LEFT|RIGHT)\b/);
-  if (!m) m = upper.match(/\b(LH|RH)\s*W(?:S|C)?\b/);
-  if (!m) m = upper.match(/(?:^|[^A-Z0-9])(LH|RH)(?=[^A-Z0-9]|$)/);
-  if (m) handing = m[1];
-  m = upper.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
-  if (m) ffl = m[1];
-  m = upper.match(/HOUSE\s*TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
-      upper.match(/\bTYPE\s*[:\|\-#]\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
-  if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1].trim().replace(/[^A-Z0-9\-\/].*$/, "").trim();
-  m = upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/);
-  if (m) plot = m[1];
   return {
-    handing: normalizeHanding(handing),
-    ffl: normalizeFfl(ffl),
-    houseType: normalizeHouse(houseType),
-    plot: plot ? String(plot) : null,
+    handing: null,
+    ffl: null,
+    houseType: null,
+    plot: null,
     hints: {},
-    rawSample: String(text || "").slice(0, 600).replace(/\s+/g, " "),
-    plots: plots,
+    rawSample: String(text || "").slice(0, 800).replace(/\s+/g, " "),
+    plots: [],
   };
 }
 
 export function buildPlotComparison(msText, snipText) {
-  const msPlots = extractPlots(msText);
-  const snipPlots = extractPlots(snipText);
+  const msPlots = extractPlots(msText, "ms");
+  const snipPlots = extractPlots(snipText, "snip");
   const msBy = {}, snipBy = {}, allPlots = {};
-  msPlots.forEach(function (p) { if (p.plot) { msBy[p.plot] = p; allPlots[p.plot] = true; } });
-  snipPlots.forEach(function (p) { if (p.plot) { snipBy[p.plot] = p; allPlots[p.plot] = true; } });
+  msPlots.forEach(function (p) {
+    if (p.plot) { msBy[p.plot] = p; allPlots[p.plot] = true; }
+  });
+  snipPlots.forEach(function (p) {
+    if (p.plot) { snipBy[p.plot] = p; allPlots[p.plot] = true; }
+  });
   let keys = Object.keys(allPlots).sort(function (a, b) { return Number(a) - Number(b); });
-  if (!keys.length) {
-    const ms = extractFields(msText);
-    const sn = extractFields(snipText);
-    keys = ["—"];
-    msBy["—"] = { plot: null, houseType: ms.houseType, handing: ms.handing, ffl: ms.ffl };
-    snipBy["—"] = { plot: null, houseType: sn.houseType, handing: sn.handing, ffl: sn.ffl };
-  }
-  function cell(msVal, snipVal) {
+  const msOrphans = msPlots.filter(function (p) { return !p.plot; });
+  const snipOrphans = snipPlots.filter(function (p) { return !p.plot; });
+
+  function fieldPair(msVal, snipVal) {
     const a = msVal != null && msVal !== "" ? String(msVal) : null;
     const b = snipVal != null && snipVal !== "" ? String(snipVal) : null;
-    if (a == null && b == null) return { ms: null, snip: null, status: "missing" };
-    if (a == null || b == null) return { ms: a, snip: b, status: "partial" };
-    if (a === b) return { ms: a, snip: b, status: "ok" };
-    return { ms: a, snip: b, status: "diff" };
+    let status = "missing";
+    if (a != null && b != null) status = a === b ? "ok" : "diff";
+    else if (a != null || b != null) status = "partial";
+    return { ms: a, snip: b, status: status };
   }
+
   const plotRows = keys.map(function (k) {
     const ms = msBy[k] || {};
     const sn = snipBy[k] || {};
-    const house = cell(ms.houseType, sn.houseType);
-    const hand = cell(ms.handing, sn.handing);
-    const ffl = cell(ms.ffl, sn.ffl);
+    const house = fieldPair(ms.houseType, sn.houseType);
+    const hand = fieldPair(ms.handing, sn.handing);
+    const ffl = fieldPair(ms.ffl, sn.ffl);
+    const plot = fieldPair(msBy[k] ? k : null, snipBy[k] ? k : null);
+
     const fields = [house, hand, ffl];
     let rowStatus = "ok";
     if (fields.some(function (f) { return f.status === "diff"; })) rowStatus = "diff";
-    else if (fields.every(function (f) { return f.status === "missing"; })) rowStatus = "missing";
-    else if (fields.some(function (f) { return f.status === "partial" || f.status === "missing"; })) rowStatus = "partial";
-    return {
-      plot: k === "—" ? null : k,
-      houseType: house,
-      handing: hand,
-      ffl: ffl,
-      status: rowStatus,
-    };
+    else if (!msBy[k] || !snipBy[k]) rowStatus = "partial";
+    else if (fields.some(function (f) { return f.status === "partial"; })) rowStatus = "partial";
+
+    return { plot: plot, houseType: house, handing: hand, ffl: ffl, status: rowStatus };
   });
+
+  msOrphans.forEach(function (ms, i) {
+    const sn = snipOrphans[i] || {};
+    plotRows.push({
+      plot: fieldPair(null, null),
+      houseType: fieldPair(ms.houseType, sn.houseType),
+      handing: fieldPair(ms.handing, sn.handing),
+      ffl: fieldPair(ms.ffl, sn.ffl),
+      status: "partial",
+    });
+  });
+  for (let i = msOrphans.length; i < snipOrphans.length; i++) {
+    const sn = snipOrphans[i];
+    plotRows.push({
+      plot: fieldPair(null, null),
+      houseType: fieldPair(null, sn.houseType),
+      handing: fieldPair(null, sn.handing),
+      ffl: fieldPair(null, sn.ffl),
+      status: "partial",
+    });
+  }
+
   return { plotRows: plotRows, msPlots: msPlots, snipPlots: snipPlots };
 }
 
@@ -457,8 +501,7 @@ export async function runLoadCheck(loadNumber) {
       ok: false,
       message:
         "No MS TOP file found in this folder.\n" +
-        "Rename your Google Doc so the name includes “MS TOP”\n" +
-        "e.g. “#119573 MS TOP” or “MS TOP SHEET”.\n\n" +
+        "Rename Google Doc to include “MS TOP” e.g. “MS TOP SHEET”.\n\n" +
         "Files in folder:\n• " +
         (names.length ? names.join("\n• ") : "(none)"),
       details: { folderName: folder.name, files: names },
@@ -469,9 +512,7 @@ export async function runLoadCheck(loadNumber) {
     return {
       ok: false,
       message:
-        "No SNIP file found.\n" +
-        "Add Compass export named with “SNIP” e.g. “SNIP.xml”.\n\n" +
-        "Files in folder:\n• " +
+        "No SNIP file found.\nAdd SNIP.xml from Compass.\n\nFiles in folder:\n• " +
         (names.length ? names.join("\n• ") : "(none)"),
       details: { folderName: folder.name, files: names },
     };
@@ -501,8 +542,8 @@ export async function runLoadCheck(loadNumber) {
     return { ok: false, message: snipErrors.join("\n"), details: { folderName: folder.name } };
   }
 
-  const msFields = extractFields(msResult.text);
-  const snipFields = extractFields(combinedSnipText);
+  const msFields = extractFields(msResult.text, "ms");
+  const snipFields = extractFields(combinedSnipText, "snip");
   const plotCompare = buildPlotComparison(msResult.text, combinedSnipText);
 
   const details = {
@@ -522,19 +563,11 @@ export async function runLoadCheck(loadNumber) {
     plotCompare.plotRows.every(function (r) { return r.status === "ok"; });
 
   if (allOk) {
-    return {
-      ok: true,
-      message: "All plots match.",
-      details: details,
-      plotRows: plotCompare.plotRows,
-    };
+    return { ok: true, message: "All plots match.", details: details, plotRows: plotCompare.plotRows };
   }
-
   return {
     ok: false,
-    message: hasDiff
-      ? "Differences on one or more plots."
-      : "Some fields missing — check MS TOP table labels.",
+    message: hasDiff ? "Differences on one or more plots." : "Some fields only on one side — check labels.",
     details: details,
     plotRows: plotCompare.plotRows,
     partial: !hasDiff,
