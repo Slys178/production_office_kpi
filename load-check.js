@@ -1,12 +1,14 @@
 /**
  * Load check — compare MS TOP vs SNIP(s) for handing, FFL, house type, plot.
  * File names (case-insensitive):
- *   #12345 MS TOP
- *   #12345 SNIP
- *   #12345 SNIP 1 / #12345 SNIP 2
+ *   #12345 MS TOP   (Google Doc table preferred)
+ *   #12345 SNIP.xml (Compass export — one long line is fine)
+ *   #12345 SNIP 1 / SNIP 2
  *
- * Supports PDF (text) and PNG/JPG (OCR via Tesseract.js).
- * Scanned PDFs: render pages then OCR.
+ * Preferred sources (most reliable first):
+ *   MS TOP  — Google Doc (table) or .txt
+ *   SNIP    — Compass .xml
+ * Fallback: PDF text, then PNG/JPG OCR.
  */
 import {
   gapiSignedIn,
@@ -55,13 +57,96 @@ async function ensurePdfJs() {
 function classifyFileName(name) {
   const n = String(name || "")
     .toUpperCase()
-    .replace(/\.(PDF|PNG|JPG|JPEG|DOC|DOCX)$/i, "");
+    .replace(/\.(PDF|PNG|JPG|JPEG|DOC|DOCX|XML|TXT|CSV|HTML|HTM)$/i, "");
 
   if (/MS[\s_\-]*TOP/.test(n)) return "ms_top";
   if (/SNIP[\s_\-]*0*2\b/.test(n) || /SNIP[\s_\-]*0*2$/.test(n)) return "snip_2";
   if (/SNIP[\s_\-]*0*1\b/.test(n) || /SNIP[\s_\-]*0*1$/.test(n)) return "snip_1";
   if (/\bSNIP\b/.test(n)) return "snip";
   return null;
+}
+
+function pickPreferredFile(files) {
+  if (!files || !files.length) return null;
+  const score = function (f) {
+    const mt = (f.mimeType || "").toLowerCase();
+    const n = (f.name || "").toLowerCase();
+    if (mt === "application/vnd.google-apps.document") return 100;
+    if (n.endsWith(".xml") || mt.indexOf("xml") !== -1) return 90;
+    if (n.endsWith(".txt") || n.endsWith(".csv") || mt.indexOf("text/") === 0) return 80;
+    if (n.endsWith(".pdf") || mt.indexOf("pdf") !== -1) return 40;
+    if (mt.indexOf("image/") === 0 || /\.(png|jpe?g)$/.test(n)) return 10;
+    return 20;
+  };
+  return files.slice().sort(function (a, b) {
+    return score(b) - score(a);
+  })[0];
+}
+
+function htmlTableToText(html) {
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const parts = [];
+    const tables = doc.querySelectorAll("table");
+    if (tables.length) {
+      tables.forEach(function (table) {
+        table.querySelectorAll("tr").forEach(function (tr) {
+          const cells = [];
+          tr.querySelectorAll("th,td").forEach(function (td) {
+            cells.push((td.textContent || "").replace(/\s+/g, " ").trim());
+          });
+          if (cells.some(Boolean)) parts.push(cells.join(" | "));
+        });
+        parts.push("");
+      });
+    }
+    const body = doc.body ? doc.body.innerText : "";
+    if (body) parts.push(body);
+    return parts.join("\n");
+  } catch (_) {
+    return String(html || "").replace(/<[^>]+>/g, " ");
+  }
+}
+
+function xmlToSearchableText(xml) {
+  const raw = String(xml || "");
+  let s = raw
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/&/g, "&")
+    .replace(/"/g, '"')
+    .replace(/&#(\d+);/g, function (_, n) {
+      return String.fromCharCode(Number(n));
+    });
+
+  const labelled = [];
+  const tagRe = /<([A-Za-z][A-Za-z0-9_\-]*)\b([^>]*)>([^<]*)</g;
+  let m;
+  while ((m = tagRe.exec(s))) {
+    const tag = m[1];
+    const attrs = m[2] || "";
+    const val = (m[3] || "").trim();
+    if (val) labelled.push(tag + ": " + val);
+    const attrRe = /([A-Za-z][A-Za-z0-9_\-]*)\s*=\s*["']([^"']+)["']/g;
+    let a;
+    while ((a = attrRe.exec(attrs))) {
+      labelled.push(a[1] + ": " + a[2]);
+    }
+  }
+  const selfRe = /<([A-Za-z][A-Za-z0-9_\-]*)\b([^>]*?)\/>/g;
+  while ((m = selfRe.exec(s))) {
+    const tag = m[1];
+    const attrs = m[2] || "";
+    const attrRe = /([A-Za-z][A-Za-z0-9_\-]*)\s*=\s*["']([^"']+)["']/g;
+    let a;
+    while ((a = attrRe.exec(attrs))) {
+      labelled.push(tag + " " + a[1] + ": " + a[2]);
+      labelled.push(a[1] + ": " + a[2]);
+    }
+  }
+
+  const stripped = s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return labelled.join("\n") + "\n" + stripped;
 }
 
 let tesseractReady = null;
@@ -155,11 +240,27 @@ function isImageFile(name, mimeType) {
 }
 
 async function fileToText(file) {
-  const downloaded = await downloadDriveFile(file.id, file.mimeType);
+  const downloaded = await downloadDriveFile(file.id, file.mimeType, file.name);
   if (!downloaded) return { text: "", error: "Could not download " + file.name };
 
   if (downloaded.type === "text") {
-    return { text: downloaded.text || "", error: null };
+    let text = downloaded.text || "";
+    const name = (file.name || "").toLowerCase();
+    const via = downloaded.via || "";
+
+    if (via === "gdoc-html" || /<html|<table|<body/i.test(text)) {
+      text = htmlTableToText(text);
+      return { text: text, error: null, via: "gdoc" };
+    }
+    if (
+      name.endsWith(".xml") ||
+      (downloaded.mimeType || "").indexOf("xml") !== -1 ||
+      /^\s*</.test(text)
+    ) {
+      text = xmlToSearchableText(text);
+      return { text: text, error: null, via: "xml" };
+    }
+    return { text: text, error: null, via: "text" };
   }
 
   const mt = (downloaded.mimeType || file.mimeType || "").toLowerCase();
@@ -199,7 +300,9 @@ async function fileToText(file) {
 
   return {
     text: "",
-    error: name + " type not supported. Use PNG, JPG, or PDF named with MS TOP / SNIP.",
+    error:
+      name +
+      " type not supported. Prefer Google Doc (MS TOP) or SNIP.xml from Compass.",
   };
 }
 
@@ -244,7 +347,7 @@ export function extractFields(text) {
   const hints = {};
 
   let m = upper.match(
-    /HANDING\s*[:\-]?\s*(LH|RH|LEFT\s*HAND(?:ED)?|RIGHT\s*HAND(?:ED)?|LEFT|RIGHT)\b/
+    /HANDING\s*[:\|\-]?\s*(LH|RH|LEFT\s*HAND(?:ED)?|RIGHT\s*HAND(?:ED)?|LEFT|RIGHT)\b/
   );
   if (m) {
     handing = m[1];
@@ -258,26 +361,25 @@ export function extractFields(text) {
   }
 
   m =
-    upper.match(/FFL\s*[:\-]?\s*([+-]?\d+(?:\.\d+)?)/) ||
+    upper.match(/FFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/) ||
     upper.match(/FINISHED\s*FLOOR\s*LEVEL\s*[:\-]?\s*([+-]?\d+(?:\.\d+)?)/);
   if (m) {
     ffl = m[1];
     hints.ffl = contextAround(upper, m.index, 15, 30);
   }
 
-  // House type — ONLY labelled forms (loose TYPE was picking random OCR digits)
   m =
-    upper.match(/HOUSE\s*TYPE\s*[:\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
-    upper.match(/\bH\s*[\/\-]?\s*TYPE\s*[:\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
-    upper.match(/\bHTYPE\s*[:\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
+    upper.match(/HOUSE\s*TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
+    upper.match(/\bH\s*[\/\-]?\s*TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
+    upper.match(/\bHTYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
   if (m) {
     houseType = m[1].trim().replace(/[^A-Z0-9\-\/].*$/, "").trim();
     hints.houseType = contextAround(upper, m.index, 15, 40);
   }
 
   m =
-    upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\-]?\s*([A-Z0-9\-]{1,12})\b/) ||
-    upper.match(/\bPLT\s*[:\-#]?\s*([A-Z0-9\-]{1,12})\b/);
+    upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*([A-Z0-9\-]{1,12})\b/) ||
+    upper.match(/\bPLT\s*[:\|\-#]?\s*([A-Z0-9\-]{1,12})\b/);
   if (m) {
     plot = m[1].trim();
     hints.plot = contextAround(upper, m.index, 15, 30);
@@ -344,32 +446,55 @@ export async function runLoadCheck(loadNumber) {
   if (!classified.ms_top.length) {
     return {
       ok: false,
-      message: "No file matching “MS TOP” found in the folder.\nName it e.g. #" + loadNumber + " MS TOP.png",
+      message:
+        "No file matching “MS TOP” found.\nUse a Google Doc named e.g. #" +
+        loadNumber +
+        " MS TOP",
       details: {
         folderName: folder.name,
-        files: files.map(function (f) { return f.name; }),
+        files: files.map(function (f) {
+          return f.name;
+        }),
       },
     };
   }
   if (!snipFiles.length) {
     return {
       ok: false,
-      message: "No file matching “SNIP” found.\nUse #" + loadNumber + " SNIP.png or SNIP 1 / SNIP 2.",
+      message:
+        "No file matching “SNIP” found.\nUse #" +
+        loadNumber +
+        " SNIP.xml from Compass.",
       details: {
         folderName: folder.name,
-        files: files.map(function (f) { return f.name; }),
+        files: files.map(function (f) {
+          return f.name;
+        }),
       },
     };
   }
 
-  const msFile = classified.ms_top[0];
+  const msFile = pickPreferredFile(classified.ms_top);
+  const structuredSnips = snipFiles.filter(function (f) {
+    const n = (f.name || "").toLowerCase();
+    const mt = (f.mimeType || "").toLowerCase();
+    return (
+      n.endsWith(".xml") ||
+      n.endsWith(".txt") ||
+      mt.indexOf("xml") !== -1 ||
+      mt.indexOf("text/") === 0
+    );
+  });
+  if (structuredSnips.length) snipFiles = structuredSnips;
+  else snipFiles = [pickPreferredFile(snipFiles)].filter(Boolean);
+
   const msResult = await fileToText(msFile);
   const snipTexts = [];
   const snipErrors = [];
   for (let i = 0; i < snipFiles.length; i++) {
     const r = await fileToText(snipFiles[i]);
     if (r.error) snipErrors.push(r.error);
-    snipTexts.push({ name: snipFiles[i].name, text: r.text });
+    snipTexts.push({ name: snipFiles[i].name, text: r.text, via: r.via });
   }
 
   if (msResult.error && !msResult.text) {
@@ -380,7 +505,11 @@ export async function runLoadCheck(loadNumber) {
     };
   }
 
-  const combinedSnipText = snipTexts.map(function (s) { return s.text; }).join("\n");
+  const combinedSnipText = snipTexts
+    .map(function (s) {
+      return s.text;
+    })
+    .join("\n");
 
   if (!combinedSnipText.trim() && snipErrors.length) {
     return {
@@ -423,11 +552,17 @@ export async function runLoadCheck(loadNumber) {
   const details = {
     folderName: folder.name,
     msFile: msFile.name,
-    snipFiles: snipFiles.map(function (f) { return f.name; }),
+    snipFiles: snipFiles.map(function (f) {
+      return f.name;
+    }),
     msFields: msFields,
     snipFields: snipFields,
     comparisons: comparisons,
     warnings: [].concat(msResult.error ? [msResult.error] : [], snipErrors),
+    msVia: msResult.via,
+    snipVia: snipTexts.map(function (s) {
+      return s.via;
+    }),
   };
 
   comparisons.forEach(function (c) {
@@ -435,7 +570,9 @@ export async function runLoadCheck(loadNumber) {
     c.snipHint = (snipFields.hints && snipFields.hints[c.key]) || "";
   });
   mismatches.forEach(function (m) {
-    const full = comparisons.find(function (c) { return c.label === m.label; });
+    const full = comparisons.find(function (c) {
+      return c.label === m.label;
+    });
     if (full) {
       m.msHint = full.msHint;
       m.snipHint = full.snipHint;
@@ -463,8 +600,8 @@ export async function runLoadCheck(loadNumber) {
     return {
       ok: false,
       message:
-        "Could not read handing / FFL / house type from the files.\n" +
-        "Check the labels are clear on MS TOP and SNIP.",
+        "Could not read handing / FFL / house type.\n" +
+        "MS TOP Google Doc table and SNIP.xml should include those labels.",
       details: details,
       missing: missing,
       comparisons: comparisons,
@@ -489,9 +626,12 @@ export async function runLoadCheck(loadNumber) {
     ok: true,
     message:
       "Match — fields agree.\n\n" +
-      "Handing: " + msFields.handing +
-      "\nFFL: " + msFields.ffl +
-      "\nHouse type: " + msFields.houseType +
+      "Handing: " +
+      msFields.handing +
+      "\nFFL: " +
+      msFields.ffl +
+      "\nHouse type: " +
+      msFields.houseType +
       (msFields.plot ? "\nPlot: " + msFields.plot : ""),
     details: details,
     comparisons: comparisons,
