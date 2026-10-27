@@ -143,3 +143,129 @@
 .lbp-check-btn:hover {
   border-color: var(--teal, #00A99D);
 }
+
+/* Load check result modal — stays until OK / Cancel */
+.lbp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.lbp-modal {
+  background: var(--card, #1a1d27);
+  color: var(--text, #eee);
+  border: 1px solid var(--card-border, #333);
+  border-radius: 14px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: auto;
+  padding: 18px 18px 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.lbp-modal-title {
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-bottom: 10px;
+}
+
+.lbp-modal-body {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+
+.lbp-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.lbp-modal-btn {
+  border: 1px solid var(--card-border, #444);
+  background: var(--section-bg, rgba(137, 147, 171, 0.12));
+  color: var(--text, #eee);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lbp-modal-btn.primary {
+  background: var(--teal, #00a99d);
+  border-color: var(--teal, #00a99d);
+  color: #fff;
+}
+
+.lbp-result-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 0.82rem;
+}
+
+.lbp-result-table th,
+.lbp-result-table td {
+  border-bottom: 1px solid var(--card-border, #333);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.lbp-result-table tr.ok td {
+  color: var(--green, #2ecc71);
+}
+
+.lbp-result-table tr.bad td {
+  color: #e74c3c;
+  font-weight: 700;
+}
+
+.lbp-result-table tr.warn td {
+  color: #f39c12;
+}
+
+.lbp-result-table tr.hint td {
+  color: var(--muted, #8993ab);
+  font-weight: 400;
+  border-bottom: none;
+  padding-top: 0;
+}
+
+.lbp-result-ok {
+  color: var(--green, #2ecc71);
+  font-weight: 700;
+}
+
+.lbp-result-bad {
+  color: #e74c3c;
+  font-weight: 700;
+}
+
+.lbp-result-warn {
+  color: #f39c12;
+  font-weight: 700;
+}
+
+.lbp-result-note {
+  font-size: 0.75rem;
+  color: var(--muted, #8993ab);
+  margin-top: 10px;
+}
+
+.lbp-result-pre {
+  white-space: pre-wrap;
+  font-size: 0.8rem;
+  background: var(--section-bg, rgba(137, 147, 171, 0.08));
+  padding: 8px;
+  border-radius: 8px;
+}
