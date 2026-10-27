@@ -1,257 +1,196 @@
 /**
- * Google Drive integration — folder search for loads + file list/download for checks.
+ * Google Drive integration — auth, search, download
  */
-
-import { CONFIG } from "./config.js";
-
+export let gapiClient = null;
+export let tokenClient = null;
 export let gapiInitialized = false;
 export let gapiSignedIn = false;
 export let driveAccessToken = null;
-let tokenClient = null;
+
 export let driveSearchCache = {};
-/** loadNumber -> folder id */
+/** loadNumber -> folder meta { id, name, webViewLink } */
 export let driveFolderIdCache = {};
 
-const driveStatusDot = document.getElementById("driveStatusDot");
-const driveStatusText = document.getElementById("driveStatusText");
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+const TOKEN_STORAGE_KEY = "driveAccessToken";
 
 export function updateDriveStatus(status, text) {
-  if (driveStatusDot) driveStatusDot.className = "status-dot " + status;
-  if (driveStatusText) driveStatusText.textContent = "Drive: " + text;
+  const el = document.getElementById("driveStatus");
+  if (!el) return;
+  el.className = "drive-status " + (status || "");
+  el.textContent = text || "";
 }
 
 export function loadGoogleIdentityServices() {
-  return new Promise((resolve, reject) => {
+  return new Promise(function (resolve, reject) {
     if (typeof google !== "undefined" && google.accounts && google.accounts.oauth2) {
       resolve();
       return;
     }
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Identity Services"));
+    script.onload = function () { resolve(); };
+    script.onerror = function () { reject(new Error("Failed to load GIS")); };
     document.head.appendChild(script);
   });
 }
 
 export async function initGapiClient() {
+  if (gapiInitialized) return true;
   try {
-    const savedToken = sessionStorage.getItem("driveToken");
-    const savedTime = sessionStorage.getItem("driveTokenTime");
-    let restored = false;
-    if (savedToken && savedTime) {
-      const ageMinutes = (Date.now() - parseInt(savedTime, 10)) / (1000 * 60);
-      if (ageMinutes < 55) {
-        driveAccessToken = savedToken;
-        gapiSignedIn = true;
-        restored = true;
-        updateDriveStatus("connected", "Connected");
-      }
-    }
-
     await loadGoogleIdentityServices();
+    // Restore token from session if present
+    try {
+      const saved = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+      if (saved) {
+        driveAccessToken = saved;
+        gapiSignedIn = true;
+      }
+    } catch (_) {}
 
     tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CONFIG.drive.clientId,
-      scope: CONFIG.drive.scopes,
-      callback: (tokenResponse) => {
-        if (tokenResponse && tokenResponse.access_token) {
-          driveAccessToken = tokenResponse.access_token;
-          sessionStorage.setItem("driveToken", tokenResponse.access_token);
-          sessionStorage.setItem("driveTokenTime", Date.now().toString());
+      client_id: window.DRIVE_CLIENT_ID || "",
+      scope: DRIVE_SCOPE,
+      callback: function (resp) {
+        if (resp && resp.access_token) {
+          driveAccessToken = resp.access_token;
           gapiSignedIn = true;
-          updateDriveStatus("connected", "Connected");
+          try {
+            sessionStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+          } catch (_) {}
+          updateDriveStatus("ready", "Drive: connected");
         }
-      },
-      error_callback: (err) => {
-        console.error("Drive sign-in error:", err);
-        gapiSignedIn = false;
-        updateDriveStatus("disconnected", (err && err.type) ? err.type : "Sign in failed");
       },
     });
 
     gapiInitialized = true;
-    if (!restored) {
-      updateDriveStatus("disconnected", "Not signed in");
+    if (gapiSignedIn) {
+      updateDriveStatus("ready", "Drive: connected");
     } else {
-      updateDriveStatus("connected", "Connected");
+      updateDriveStatus("", "Drive: not signed in");
     }
     return true;
-  } catch (error) {
-    console.error("Failed to init Google Identity Services:", error);
-    updateDriveStatus("disconnected", "Error: " + (error && error.message ? error.message : "unknown"));
+  } catch (e) {
+    console.error("initGapiClient", e);
+    updateDriveStatus("error", "Drive: init failed");
     return false;
   }
 }
 
 export function requestDriveToken(interactive) {
-  return new Promise((resolve) => {
+  return new Promise(function (resolve) {
     if (!tokenClient) {
       resolve(false);
       return;
     }
-    tokenClient.callback = (tokenResponse) => {
-      if (tokenResponse && tokenResponse.access_token) {
-        driveAccessToken = tokenResponse.access_token;
-        sessionStorage.setItem("driveToken", tokenResponse.access_token);
-        sessionStorage.setItem("driveTokenTime", Date.now().toString());
+    const prev = tokenClient.callback;
+    tokenClient.callback = function (resp) {
+      tokenClient.callback = prev;
+      if (resp && resp.access_token) {
+        driveAccessToken = resp.access_token;
         gapiSignedIn = true;
-        updateDriveStatus("connected", "Connected");
+        try {
+          sessionStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+        } catch (_) {}
+        updateDriveStatus("ready", "Drive: connected");
         resolve(true);
       } else {
         resolve(false);
       }
     };
-    tokenClient.requestAccessToken({ prompt: interactive ? "consent" : "" });
+    try {
+      tokenClient.requestAccessToken({ prompt: interactive ? "consent" : "" });
+    } catch (e) {
+      console.error(e);
+      resolve(false);
+    }
   });
 }
 
-/**
- * Make sure the local Drive module is initialized and (if possible) signed in.
- * CDN main.js initializes a *different* copy of drive.js — our modules use this one.
- */
 export async function ensureDriveReady(interactiveSignIn) {
-  try {
-    if (!gapiInitialized) {
-      await initGapiClient();
-    }
-    if (gapiSignedIn && driveAccessToken) {
-      updateDriveStatus("connected", "Connected");
-      return true;
-    }
-    if (gapiInitialized) {
-      const silent = await requestDriveToken(false);
-      if (silent) return true;
-      if (interactiveSignIn) {
-        const ok = await requestDriveToken(true);
-        return !!ok;
-      }
-    }
-    updateDriveStatus("disconnected", "Sign in needed");
-    return false;
-  } catch (e) {
-    console.warn("ensureDriveReady failed", e);
-    updateDriveStatus("disconnected", "Error");
-    return false;
+  if (!gapiInitialized) await initGapiClient();
+  if (gapiSignedIn && driveAccessToken) return true;
+  if (interactiveSignIn) {
+    return await requestDriveToken(true);
   }
+  return false;
 }
 
 async function driveFetch(url) {
-  const resp = await fetch(url, {
+  if (!driveAccessToken) return null;
+  return fetch(url, {
     headers: { Authorization: "Bearer " + driveAccessToken },
   });
-  if (resp.status === 401) {
-    driveAccessToken = null;
-    gapiSignedIn = false;
-    const gotToken = await requestDriveToken(false);
-    if (!gotToken) {
-      updateDriveStatus("disconnected", "Sign in needed");
-      return null;
-    }
-    return fetch(url, {
-      headers: { Authorization: "Bearer " + driveAccessToken },
-    });
-  }
-  return resp;
 }
 
 export async function searchDriveForLoad(loadNumber) {
   const folder = await searchDriveFolder(loadNumber);
-  return folder ? folder.webViewLink : null;
+  return folder && folder.webViewLink ? folder.webViewLink : null;
 }
 
 export async function searchDriveFolder(loadNumber) {
-  if (!gapiInitialized || !gapiSignedIn || !driveAccessToken) {
-    const ready = await ensureDriveReady(false);
-    if (!ready || !driveAccessToken) {
-      updateDriveStatus("disconnected", gapiInitialized ? "Sign in needed" : "Not ready yet");
-      return null;
-    }
-  }
-
-  if (driveFolderIdCache[loadNumber]) {
-    return {
-      id: driveFolderIdCache[loadNumber],
-      name: String(loadNumber),
-      webViewLink: driveSearchCache[loadNumber] || null,
-    };
-  }
+  if (!loadNumber || !driveAccessToken) return null;
+  if (driveFolderIdCache[loadNumber]) return driveFolderIdCache[loadNumber];
 
   try {
-    updateDriveStatus("searching", "Searching...");
-
-    const query =
+    const q =
       "name contains '" +
       String(loadNumber).replace(/'/g, "\\'") +
       "' and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
     const url =
       "https://www.googleapis.com/drive/v3/files?q=" +
-      encodeURIComponent(query) +
+      encodeURIComponent(q) +
       "&fields=" +
-      encodeURIComponent("files(id, name, webViewLink)") +
-      "&pageSize=10&key=" +
-      CONFIG.drive.apiKey +
-      "&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives";
-
+      encodeURIComponent("files(id,name,webViewLink)") +
+      "&pageSize=5";
     const resp = await driveFetch(url);
-    if (!resp) return null;
-    if (!resp.ok) throw new Error("Drive API returned " + resp.status);
-
+    if (!resp || !resp.ok) return null;
     const data = await resp.json();
-    const folders = data.files || [];
-
-    if (folders.length > 0) {
-      const folder = folders[0];
-      driveSearchCache[loadNumber] = folder.webViewLink;
-      driveFolderIdCache[loadNumber] = folder.id;
-      try {
-        const ids = JSON.parse(localStorage.getItem("driveFolderIds") || "{}");
-        ids[loadNumber] = folder.id;
-        localStorage.setItem("driveFolderIds", JSON.stringify(ids));
-      } catch (_) {}
-      updateDriveStatus("connected", "Connected");
-      return folder;
-    }
-
-    updateDriveStatus("connected", "Connected");
-    return null;
-  } catch (error) {
-    console.error("Drive search error:", error);
-    updateDriveStatus("connected", "Connected");
+    const files = (data && data.files) || [];
+    if (!files.length) return null;
+    // Prefer exact-ish name match
+    let best = files[0];
+    const num = String(loadNumber);
+    const exact = files.find(function (f) {
+      return (f.name || "").indexOf(num) !== -1;
+    });
+    if (exact) best = exact;
+    driveFolderIdCache[loadNumber] = best;
+    return best;
+  } catch (e) {
+    console.error("searchDriveFolder", e);
     return null;
   }
 }
 
 export async function listFolderFiles(folderId) {
   if (!folderId || !driveAccessToken) return [];
-
-  const query = "'" + folderId + "' in parents and trashed = false";
   const url =
     "https://www.googleapis.com/drive/v3/files?q=" +
-    encodeURIComponent(query) +
+    encodeURIComponent("'" + folderId + "' in parents and trashed = false") +
     "&fields=" +
     encodeURIComponent("files(id,name,mimeType,webViewLink)") +
-    "&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true";
-
+    "&pageSize=100";
   const resp = await driveFetch(url);
-  if (!resp || !resp.ok) {
-    console.error("listFolderFiles failed", resp && resp.status);
-    return [];
-  }
+  if (!resp || !resp.ok) return [];
   const data = await resp.json();
-  return data.files || [];
+  return (data && data.files) || [];
 }
 
-export async function downloadDriveFile(fileId, mimeType) {
+export async function downloadDriveFile(fileId, mimeType, fileName) {
   if (!fileId || !driveAccessToken) return null;
 
+  const mt = (mimeType || "").toLowerCase();
+  const name = (fileName || "").toLowerCase();
+  const isGoogleDoc = mt === "application/vnd.google-apps.document";
+  // Prefer HTML export so tables keep cell boundaries
   let url;
-  if (mimeType === "application/vnd.google-apps.document") {
+  if (isGoogleDoc) {
     url =
       "https://www.googleapis.com/drive/v3/files/" +
       fileId +
       "/export?mimeType=" +
-      encodeURIComponent("text/plain");
+      encodeURIComponent("text/html");
   } else {
     url =
       "https://www.googleapis.com/drive/v3/files/" +
@@ -261,60 +200,73 @@ export async function downloadDriveFile(fileId, mimeType) {
 
   const resp = await driveFetch(url);
   if (!resp || !resp.ok) {
+    // Fallback: plain text export for Docs if HTML fails
+    if (isGoogleDoc) {
+      const plainUrl =
+        "https://www.googleapis.com/drive/v3/files/" +
+        fileId +
+        "/export?mimeType=" +
+        encodeURIComponent("text/plain");
+      const r2 = await driveFetch(plainUrl);
+      if (r2 && r2.ok) {
+        return { type: "text", text: await r2.text(), via: "gdoc-plain" };
+      }
+    }
     console.error("downloadDriveFile failed", resp && resp.status);
     return null;
   }
 
-  if (mimeType === "application/vnd.google-apps.document") {
-    return { type: "text", text: await resp.text() };
+  if (isGoogleDoc) {
+    return { type: "text", text: await resp.text(), via: "gdoc-html" };
   }
+
+  const isTextLike =
+    mt.indexOf("text/") === 0 ||
+    mt.indexOf("xml") !== -1 ||
+    mt === "application/json" ||
+    /\.(xml|txt|csv|json|html?)$/.test(name);
+
+  if (isTextLike) {
+    return { type: "text", text: await resp.text(), mimeType: mt };
+  }
+
   return { type: "binary", buffer: await resp.arrayBuffer(), mimeType: mimeType };
 }
 
 export function getSavedDriveLinks() {
   try {
-    return JSON.parse(localStorage.getItem("driveLinks") || "{}");
-  } catch {
+    return JSON.parse(localStorage.getItem("driveLinks") || "{}") || {};
+  } catch (_) {
     return {};
   }
 }
 
 export function saveDriveLink(loadNumber, link) {
-  const links = getSavedDriveLinks();
-  links[loadNumber] = link;
-  localStorage.setItem("driveLinks", JSON.stringify(links));
+  const map = getSavedDriveLinks();
+  map[loadNumber] = link;
+  try {
+    localStorage.setItem("driveLinks", JSON.stringify(map));
+  } catch (_) {}
 }
 
 export async function getDriveLink(loadNumber) {
-  if (driveSearchCache[loadNumber]) {
-    return driveSearchCache[loadNumber];
-  }
-  const savedLinks = getSavedDriveLinks();
-  if (savedLinks[loadNumber]) {
-    driveSearchCache[loadNumber] = savedLinks[loadNumber];
-    return savedLinks[loadNumber];
-  }
-  try {
-    const ids = JSON.parse(localStorage.getItem("driveFolderIds") || "{}");
-    if (ids[loadNumber]) driveFolderIdCache[loadNumber] = ids[loadNumber];
-  } catch (_) {}
+  const saved = getSavedDriveLinks()[loadNumber];
+  if (saved) return saved;
+  if (driveSearchCache[loadNumber]) return driveSearchCache[loadNumber];
   const link = await searchDriveForLoad(loadNumber);
   if (link) {
+    driveSearchCache[loadNumber] = link;
     saveDriveLink(loadNumber, link);
   }
   return link;
 }
 
 export function showDriveSignIn(onSuccess) {
-  ensureDriveReady(true).then(function (ok) {
-    if (ok && onSuccess) onSuccess();
-    else if (!ok) updateDriveStatus("disconnected", "Sign in cancelled");
+  updateDriveStatus("", "Drive: sign in…");
+  requestDriveToken(true).then(function (ok) {
+    if (ok && typeof onSuccess === "function") onSuccess();
   });
 }
 
-try {
-  const ids = JSON.parse(localStorage.getItem("driveFolderIds") || "{}");
-  Object.keys(ids).forEach(function (k) {
-    driveFolderIdCache[k] = ids[k];
-  });
-} catch (_) {}
+window.ensureDriveReady = ensureDriveReady;
+window.searchDriveForLoad = searchDriveForLoad;
