@@ -1,5 +1,5 @@
 /**
- * Loads — person-first layout + sticky load-check results modal
+ * Loads — person-first layout + per-plot check results
  */
 import { CONFIG } from "./config.js";
 import {
@@ -49,7 +49,6 @@ function ensureCheckModal() {
     '<div class="lbp-modal-actions" id="lbpModalActions"></div>' +
     "</div>";
   document.body.appendChild(overlay);
-  // Do NOT close on outside click
   overlay.addEventListener("click", function (e) {
     e.stopPropagation();
   });
@@ -58,18 +57,13 @@ function ensureCheckModal() {
 
 function showCheckModal(opts) {
   const overlay = ensureCheckModal();
-  const titleEl = document.getElementById("lbpModalTitle");
+  document.getElementById("lbpModalTitle").textContent = opts.title || "Load check";
   const bodyEl = document.getElementById("lbpModalBody");
+  if (opts.html) bodyEl.innerHTML = opts.html;
+  else bodyEl.textContent = opts.message || "";
   const actionsEl = document.getElementById("lbpModalActions");
-  titleEl.textContent = opts.title || "Load check";
-  if (opts.html) {
-    bodyEl.innerHTML = opts.html;
-  } else {
-    bodyEl.textContent = opts.message || "";
-  }
   actionsEl.innerHTML = "";
   const buttons = opts.buttons || [{ id: "ok", label: "OK", primary: true }];
-
   return new Promise(function (resolve) {
     buttons.forEach(function (b) {
       const btn = document.createElement("button");
@@ -86,12 +80,50 @@ function showCheckModal(opts) {
   });
 }
 
+function formatCellPair(cell) {
+  if (!cell) return "—";
+  if (cell.status === "ok") {
+    return '<span class="lbp-cell-ok">' + escapeHtml(cell.ms) + "</span>";
+  }
+  if (cell.status === "diff") {
+    return (
+      '<span class="lbp-cell-diff">' +
+      '<span class="lbp-ms">' +
+      escapeHtml(cell.ms) +
+      "</span>" +
+      ' <span class="lbp-vs">→</span> ' +
+      '<span class="lbp-snip">' +
+      escapeHtml(cell.snip) +
+      "</span></span>"
+    );
+  }
+  if (cell.status === "partial") {
+    const v = cell.ms != null ? cell.ms : cell.snip;
+    const side = cell.ms != null ? "MS only" : "SNIP only";
+    return (
+      '<span class="lbp-cell-partial">' +
+      escapeHtml(v) +
+      " <small>(" +
+      side +
+      ")</small></span>"
+    );
+  }
+  return '<span class="lbp-cell-miss">—</span>';
+}
+
 function formatCheckResultHtml(loadNum, result) {
   let html = '<div class="lbp-result-summary">';
+  const plotRows =
+    result.plotRows || (result.details && result.details.plotRows) || [];
+
   if (result.ok) {
-    html += '<p class="lbp-result-ok">✅ Match — fields agree</p>';
-  } else if (result.mismatches && result.mismatches.length) {
-    html += '<p class="lbp-result-bad">⚠️ Possible differences (OCR can misread digits)</p>';
+    html += '<p class="lbp-result-ok">✅ Match</p>';
+  } else if (
+    plotRows.some(function (r) {
+      return r.status === "diff";
+    })
+  ) {
+    html += '<p class="lbp-result-bad">⚠️ Differences found (shown in red)</p>';
   } else {
     html += '<p class="lbp-result-warn">⚠️ Could not complete auto-check</p>';
   }
@@ -101,72 +133,65 @@ function formatCheckResultHtml(loadNum, result) {
   }
   html += "</p>";
 
-  const comps = result.comparisons || [];
-  if (comps.length) {
+  if (plotRows.length) {
     html +=
-      '<table class="lbp-result-table"><thead><tr>' +
-      "<th>Field</th><th>MS TOP</th><th>SNIP</th><th></th></tr></thead><tbody>";
-    comps.forEach(function (c) {
-      let status = "—";
-      let rowClass = "";
-      if (c.key === "plot" && (c.ms == null || c.snip == null)) {
-        status = "optional";
-      } else if (c.ms == null && c.snip == null) {
-        status = "not found";
-        rowClass = "muted";
-      } else if (c.ms == null || c.snip == null) {
-        status = "partial";
-        rowClass = "warn";
-      } else if (String(c.ms) === String(c.snip)) {
-        status = "✅";
-        rowClass = "ok";
-      } else {
-        status = "❌";
+      '<table class="lbp-result-table lbp-plot-table"><thead><tr>' +
+      "<th>Plot</th><th>House type</th><th>Handing</th><th>FFL</th><th></th>" +
+      "</tr></thead><tbody>";
+    plotRows.forEach(function (row) {
+      let mark = "✅";
+      let rowClass = "ok";
+      if (row.status === "diff") {
+        mark = "❌";
         rowClass = "bad";
+      } else if (row.status === "partial") {
+        mark = "⚠️";
+        rowClass = "warn";
+      } else if (row.status === "missing") {
+        mark = "—";
+        rowClass = "muted";
       }
       html +=
         '<tr class="' +
         rowClass +
         '">' +
+        "<td><strong>" +
+        escapeHtml(row.plot != null ? row.plot : "—") +
+        "</strong></td>" +
         "<td>" +
-        escapeHtml(c.label) +
+        formatCellPair(row.houseType) +
         "</td>" +
         "<td>" +
-        escapeHtml(c.ms != null ? c.ms : "—") +
+        formatCellPair(row.handing) +
         "</td>" +
         "<td>" +
-        escapeHtml(c.snip != null ? c.snip : "—") +
+        formatCellPair(row.ffl) +
         "</td>" +
         "<td>" +
-        status +
+        mark +
         "</td></tr>";
-      if (rowClass === "bad" && (c.msHint || c.snipHint)) {
-        html +=
-          '<tr class="hint"><td colspan="4"><small>OCR context — MS: ' +
-          escapeHtml(c.msHint || "—") +
-          " · SNIP: " +
-          escapeHtml(c.snipHint || "—") +
-          "</small></td></tr>";
-      }
     });
     html += "</tbody></table>";
+    html +=
+      '<p class="lbp-result-note">Green = match. Red = MS TOP → SNIP differ. Amber = only on one side.</p>';
   } else if (result.message) {
     html += '<pre class="lbp-result-pre">' + escapeHtml(result.message) + "</pre>";
   }
 
   if (result.details) {
     if (result.details.msFile) {
-      html += "<p><small>MS TOP file: " + escapeHtml(result.details.msFile) + "</small></p>";
+      html +=
+        "<p><small>MS TOP: " +
+        escapeHtml(result.details.msFile) +
+        "</small></p>";
     }
     if (result.details.snipFiles && result.details.snipFiles.length) {
       html +=
-        "<p><small>SNIP file(s): " +
+        "<p><small>SNIP: " +
         escapeHtml(result.details.snipFiles.join(", ")) +
         "</small></p>";
     }
   }
-  html +=
-    '<p class="lbp-result-note">OCR sometimes confuses similar digits (1/7, 5/6, 51/52). Check the files in Drive if a mismatch looks wrong.</p>';
   html += "</div>";
   return html;
 }
@@ -181,7 +206,6 @@ function parseLoads(stairEntries, forecastEntries) {
   const all = [].concat(stairEntries || [], forecastEntries || []);
   const loadMap = {};
   const people = CONFIG.people;
-
   all.forEach(function (entry) {
     const dueDate = entry.deliveryDate
       ? entry.deliveryDate.toISOString().split("T")[0]
@@ -191,14 +215,12 @@ function parseLoads(stairEntries, forecastEntries) {
         ? String(entry.loadNo).trim()
         : "#" + entry.stairs + "_" + (dueDate || "");
     const key = loadNumber + "_" + (dueDate || "");
-
     let status = "pending";
     if (entry.initials) {
       const isCompleted =
         entry.isCompleted !== undefined ? entry.isCompleted : true;
       status = isCompleted ? "completed" : "in-progress";
     }
-
     if (!loadMap[key]) {
       const person = people.find(function (p) {
         return p.initials === entry.initials;
@@ -215,7 +237,6 @@ function parseLoads(stairEntries, forecastEntries) {
       };
     }
   });
-
   return Object.values(loadMap);
 }
 
@@ -231,7 +252,6 @@ async function handleDriveClick(loadNum, button) {
     });
     return;
   }
-
   const saved = getSavedDriveLinks()[loadNum];
   if (saved) {
     window.open(saved, "_blank");
@@ -241,11 +261,9 @@ async function handleDriveClick(loadNum, button) {
     window.open(driveSearchCache[loadNum], "_blank");
     return;
   }
-
   button.textContent = "🔍 Searching…";
   button.classList.add("searching");
   button.disabled = true;
-
   try {
     const link = await searchDriveForLoad(loadNum);
     button.classList.remove("searching");
@@ -258,8 +276,7 @@ async function handleDriveClick(loadNum, button) {
     } else {
       button.textContent = "🔍 Find in Drive";
       window.open(
-        "https://drive.google.com/drive/search?q=" +
-          encodeURIComponent(loadNum),
+        "https://drive.google.com/drive/search?q=" + encodeURIComponent(loadNum),
         "_blank"
       );
     }
@@ -277,10 +294,8 @@ async function handleDriveClick(loadNum, button) {
 function renderPersonCards(loads) {
   const root = document.getElementById("loadsPersonView");
   if (!root) return;
-
   const people = productionPeople();
   const checked = loadCheckedMap();
-
   const cards = people
     .map(function (p) {
       const mine = loads.filter(function (l) {
@@ -292,7 +307,6 @@ function renderPersonCards(loads) {
       const checkedCount = mine.filter(function (l) {
         return checked[l.loadNumber];
       }).length;
-
       return (
         '<button type="button" class="lbp-person-card" data-initials="' +
         escapeHtml(p.initials) +
@@ -300,50 +314,25 @@ function renderPersonCards(loads) {
         '<div class="lbp-top">' +
         '<span class="lbp-dot" style="background:' +
         p.color +
-        ';"></span>' +
-        "<strong>" +
+        ';"></span><strong>' +
         escapeHtml(p.initials) +
-        "</strong>" +
-        '<span class="lbp-name">' +
+        '</strong><span class="lbp-name">' +
         escapeHtml(p.name.split(" ")[0]) +
-        "</span>" +
-        "</div>" +
+        "</span></div>" +
         '<div class="lbp-count">' +
         mine.length +
-        "</div>" +
-        '<div class="lbp-sub">loads</div>' +
-        '<div class="lbp-meta">' +
+        '</div><div class="lbp-sub">loads</div><div class="lbp-meta">' +
         (open ? open + " open" : "all complete") +
-        (mine.length
-          ? " · " + checkedCount + "/" + mine.length + " checked"
-          : "") +
-        "</div>" +
-        "</button>"
+        (mine.length ? " · " + checkedCount + "/" + mine.length + " checked" : "") +
+        "</div></button>"
       );
     })
     .join("");
-
-  const unassigned = loads.filter(function (l) {
-    return !l.person;
-  });
-  let extra = "";
-  if (unassigned.length) {
-    extra =
-      '<button type="button" class="lbp-person-card lbp-unassigned" data-initials="">' +
-      '<div class="lbp-top"><strong>?</strong><span class="lbp-name">Unassigned</span></div>' +
-      '<div class="lbp-count">' +
-      unassigned.length +
-      "</div>" +
-      '<div class="lbp-sub">loads</div></button>';
-  }
-
   root.innerHTML =
-    '<div class="parts-note" style="margin-bottom:12px;">Choose a person to see their loads in date order.</div>' +
+    '<div class="parts-note" style="margin-bottom:12px;">Choose a person to see their loads.</div>' +
     '<div class="lbp-grid">' +
     cards +
-    extra +
     "</div>";
-
   root.querySelectorAll(".lbp-person-card").forEach(function (btn) {
     btn.addEventListener("click", function () {
       selectedPerson = btn.getAttribute("data-initials");
@@ -356,92 +345,64 @@ function showPersonDetail() {
   const view = document.getElementById("loadsPersonView");
   const detail = document.getElementById("loadsPersonDetail");
   if (!detail) return;
-
   if (view) view.style.display = "none";
   detail.style.display = "";
-
   const people = productionPeople();
   const person =
     selectedPerson === ""
       ? { initials: "", name: "Unassigned", color: "#8993ab" }
       : people.find(function (p) {
           return p.initials === selectedPerson;
-        }) || {
-          initials: selectedPerson,
-          name: selectedPerson,
-          color: "#8993ab",
-        };
+        }) || { initials: selectedPerson, name: selectedPerson, color: "#8993ab" };
 
   let mine = cachedLoads.filter(function (l) {
     return selectedPerson === "" ? !l.person : l.person === selectedPerson;
   });
-
   mine = mine.slice().sort(function (a, b) {
     const da = a.sortDate ? new Date(a.sortDate).getTime() : 0;
     const db = b.sortDate ? new Date(b.sortDate).getTime() : 0;
-    if (db !== da) return db - da;
-    const dda = a.dueDate ? new Date(a.dueDate).getTime() : 0;
-    const ddb = b.dueDate ? new Date(b.dueDate).getTime() : 0;
-    return ddb - dda;
+    return db - da;
   });
-
   const checked = loadCheckedMap();
   const statusLabels = {
     completed: "✅ Done",
     "in-progress": "🔄 In progress",
     pending: "⏳ Pending",
   };
-
   const rows = mine
     .map(function (load) {
       const loadNum = load.loadNumber;
       const isChecked = !!checked[loadNum];
-      const hasLink =
-        driveSearchCache[loadNum] || getSavedDriveLinks()[loadNum];
-      const due = load.dueDate
-        ? new Date(load.dueDate).toLocaleDateString("en-GB")
-        : "—";
-      const work = load.date
-        ? new Date(load.date).toLocaleDateString("en-GB")
-        : "—";
-
+      const hasLink = driveSearchCache[loadNum] || getSavedDriveLinks()[loadNum];
+      const due = load.dueDate ? new Date(load.dueDate).toLocaleDateString("en-GB") : "—";
+      const work = load.date ? new Date(load.date).toLocaleDateString("en-GB") : "—";
       return (
         '<div class="lbp-load-card' +
         (isChecked ? " lbp-checked" : "") +
         '" data-load="' +
         escapeHtml(loadNum) +
-        '">' +
-        '<div class="lbp-load-header">' +
-        '<span class="lbp-load-num">#' +
+        '"><div class="lbp-load-header"><span class="lbp-load-num">#' +
         escapeHtml(loadNum) +
-        "</span>" +
-        '<span class="load-status status-' +
+        '</span><span class="load-status status-' +
         escapeHtml(load.status) +
         '">' +
         (statusLabels[load.status] || load.status) +
-        "</span>" +
-        "</div>" +
-        '<div class="lbp-load-meta">' +
-        "📅 Worked: " +
+        '</span></div><div class="lbp-load-meta">📅 Worked: ' +
         work +
         (load.dueDate ? " · Due: " + due : "") +
         (load.stairs ? " · 📊 " + load.stairs + " stairs" : "") +
-        "</div>" +
-        '<div class="lbp-load-actions">' +
+        '</div><div class="lbp-load-actions">' +
         '<button type="button" class="drive-btn lbp-drive-btn" data-load="' +
         escapeHtml(loadNum) +
         '">' +
         (hasLink ? "📁 Open folder" : "🔍 Find in Drive") +
-        "</button>" +
-        '<button type="button" class="lbp-check-btn' +
+        '</button><button type="button" class="lbp-check-btn' +
         (isChecked ? " is-checked" : "") +
         '" data-load="' +
         escapeHtml(loadNum) +
         '">' +
         (isChecked ? "✅ Load checked" : "☑️ Check load") +
-        "</button>" +
-        "</div>" +
-        "</div>"
+        "</button></div></div>"
       );
     })
     .join("");
@@ -455,13 +416,11 @@ function showPersonDetail() {
     escapeHtml(person.initials || "?") +
     " · " +
     escapeHtml(person.name) +
-    "</h3>" +
-    '<div class="lbp-detail-sub">' +
+    '</h3><div class="lbp-detail-sub">' +
     mine.length +
     " load" +
     (mine.length === 1 ? "" : "s") +
-    " · newest first</div>" +
-    "</div>" +
+    " · newest first</div></div>" +
     (mine.length
       ? '<div class="lbp-load-list">' + rows + "</div>"
       : '<div class="parts-note">No loads for this person.</div>');
@@ -473,18 +432,15 @@ function showPersonDetail() {
     if (view) view.style.display = "";
     renderPersonCards(cachedLoads);
   });
-
   detail.querySelectorAll(".lbp-drive-btn").forEach(function (btn) {
     btn.addEventListener("click", function () {
       handleDriveClick(btn.getAttribute("data-load"), btn);
     });
   });
-
   detail.querySelectorAll(".lbp-check-btn").forEach(function (btn) {
     btn.addEventListener("click", async function () {
       const loadNum = btn.getAttribute("data-load");
       const map = loadCheckedMap();
-
       if (map[loadNum]) {
         const clear = await showCheckModal({
           title: "Clear check?",
@@ -500,15 +456,12 @@ function showPersonDetail() {
         showPersonDetail();
         return;
       }
-
       const originalLabel = btn.textContent;
       btn.disabled = true;
       btn.textContent = "⏳ Checking…";
-
       try {
         await ensureDriveReady(true);
         const result = await runLoadCheck(loadNum);
-
         if (result.needSignIn) {
           await showCheckModal({
             title: "Drive sign-in needed",
@@ -519,7 +472,6 @@ function showPersonDetail() {
           btn.disabled = false;
           return;
         }
-
         if (result.ok) {
           map[loadNum] = {
             checkedAt: new Date().toISOString(),
@@ -536,7 +488,6 @@ function showPersonDetail() {
           showPersonDetail();
           return;
         }
-
         const choice = await showCheckModal({
           title: "Load #" + loadNum + " — review needed",
           html: formatCheckResultHtml(loadNum, result),
@@ -574,10 +525,8 @@ export function renderLoadsByPerson() {
   const stair = window._stairEntries || [];
   const forecast = window._forecastEntries || [];
   cachedLoads = parseLoads(stair, forecast);
-
   const totalEl = document.getElementById("loadsTotal");
   if (totalEl) totalEl.textContent = String(cachedLoads.length);
-
   const detail = document.getElementById("loadsPersonDetail");
   const view = document.getElementById("loadsPersonView");
   if (selectedPerson != null && detail && detail.style.display !== "none") {
