@@ -100,15 +100,16 @@ function htmlTableToText(html) {
 function xmlToSearchableText(xml) {
   const raw = String(xml || "");
   let s = raw
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/&/g, "&")
-    .replace(/"/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
     .replace(/&#(\d+);/g, function (_, n) {
       return String.fromCharCode(Number(n));
-    });
+    })
+    .replace(/&amp;/g, "&");
   const labelled = [];
-  const tagRe = /<([A-Za-z][A-Za-z0-9_\-]*)\b([^>]*)>([^<]*)</g;
+  const tagRe = /<([A-Za-z][A-Za-z0-9_\-]*)\b([^>]*)>([^<]*)(?=<)/g;
   let m;
   while ((m = tagRe.exec(s))) {
     const tag = m[1];
@@ -288,8 +289,8 @@ function extractPlotsFromMs(text) {
     m = u.match(HANDING_RE);
     if (m) handing = m[1];
 
-    m = u.match(/\b(\d{4})\s*MM\b/);
-    if (m) ffl = String(Number(m[1]));
+    m = u.match(/\b(\d{1,2}[,.]?\d{3})\s*MM\b/);
+    if (m) ffl = String(Number(m[1].replace(/[,.]/g, "")));
     if (!ffl) {
       m = u.match(/\b(\d{3})\s*MM\b/);
       if (m) ffl = String(Number(m[1]));
@@ -340,7 +341,7 @@ function extractPlotsFromSnip(text) {
       if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1];
     }
     m = chunk.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
-    if (m) ffl = m[1];
+    if (m) ffl = String(Number(m[1]));
     if (!ffl) {
       m = chunk.match(/\b(\d{4})\s*MM\b/);
       if (m) ffl = String(Number(m[1]));
