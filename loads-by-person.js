@@ -2,7 +2,7 @@
  * Loads — person-first layout
  * 1) Boxes for each production person
  * 2) Click person → their loads in date order (Drive button kept)
- * 3) Check load button (stub for now — comparison of snip vs top page later)
+ * 3) Check load — MS TOP vs SNIP (handing / FFL / house type)
  */
 import { CONFIG } from "./config.js";
 import {
@@ -13,6 +13,7 @@ import {
   saveDriveLink,
   showDriveSignIn,
 } from "./drive.js";
+import { runLoadCheck } from "./load-check.js";
 
 const CHECKED_KEY = "loadCheckedStatus";
 
@@ -345,31 +346,75 @@ function showPersonDetail() {
   });
 
   detail.querySelectorAll(".lbp-check-btn").forEach(function (btn) {
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", async function () {
       const loadNum = btn.getAttribute("data-load");
       const map = loadCheckedMap();
+
       if (map[loadNum]) {
+        if (!window.confirm("Clear checked status for #" + loadNum + "?")) return;
         delete map[loadNum];
         saveCheckedMap(map);
         showPersonDetail();
         return;
       }
-      const proceed = window.confirm(
-        "Load check (coming next):\n\n" +
-          "Will compare the SNIP and TOP PAGE for:\n" +
-          "• Handing\n• FFL\n• House type\n\n" +
-          "For now, mark #" +
-          loadNum +
-          " as checked?"
-      );
-      if (!proceed) return;
-      map[loadNum] = {
-        checkedAt: new Date().toISOString(),
-        by: localStorage.getItem("userName") || "SA",
-        auto: false,
-      };
-      saveCheckedMap(map);
-      showPersonDetail();
+
+      const originalLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "⏳ Checking…";
+
+      try {
+        if (!gapiSignedIn) {
+          await new Promise(function (resolve) {
+            showDriveSignIn(function () {
+              resolve();
+            });
+            setTimeout(resolve, 8000);
+          });
+        }
+
+        const result = await runLoadCheck(loadNum);
+
+        if (result.needSignIn) {
+          window.alert(result.message);
+          btn.textContent = originalLabel;
+          btn.disabled = false;
+          return;
+        }
+
+        if (result.ok) {
+          map[loadNum] = {
+            checkedAt: new Date().toISOString(),
+            by: localStorage.getItem("userName") || "SA",
+            auto: true,
+            fields: result.details && result.details.msFields,
+          };
+          saveCheckedMap(map);
+          window.alert("✅ Load #" + loadNum + " checked\n\n" + result.message);
+          showPersonDetail();
+          return;
+        }
+
+        let msg = "⚠️ Load #" + loadNum + "\n\n" + result.message;
+        if (result.details && result.details.files) {
+          msg += "\n\nFiles in folder:\n• " + result.details.files.join("\n• ");
+        }
+        msg += "\n\nMark as checked manually anyway?";
+        if (window.confirm(msg)) {
+          map[loadNum] = {
+            checkedAt: new Date().toISOString(),
+            by: localStorage.getItem("userName") || "SA",
+            auto: false,
+            note: "manual after failed auto-check",
+          };
+          saveCheckedMap(map);
+        }
+        showPersonDetail();
+      } catch (e) {
+        console.error(e);
+        window.alert("Check failed: " + (e && e.message ? e.message : String(e)));
+        btn.textContent = originalLabel;
+        btn.disabled = false;
+      }
     });
   });
 }
