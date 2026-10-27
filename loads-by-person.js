@@ -1,5 +1,5 @@
 /**
- * Loads — person-first layout + per-plot check results
+ * Loads — person-first layout + side-by-side MS/SNIP check results
  */
 import { CONFIG } from "./config.js";
 import {
@@ -80,35 +80,15 @@ function showCheckModal(opts) {
   });
 }
 
-function formatCellPair(cell) {
-  if (!cell) return "—";
-  if (cell.status === "ok") {
-    return '<span class="lbp-cell-ok">' + escapeHtml(cell.ms) + "</span>";
+function formatSide(val, status) {
+  if (val == null || val === "") {
+    return '<span class="lbp-cell-miss">—</span>';
   }
-  if (cell.status === "diff") {
-    return (
-      '<span class="lbp-cell-diff">' +
-      '<span class="lbp-ms">' +
-      escapeHtml(cell.ms) +
-      "</span>" +
-      ' <span class="lbp-vs">→</span> ' +
-      '<span class="lbp-snip">' +
-      escapeHtml(cell.snip) +
-      "</span></span>"
-    );
-  }
-  if (cell.status === "partial") {
-    const v = cell.ms != null ? cell.ms : cell.snip;
-    const side = cell.ms != null ? "MS only" : "SNIP only";
-    return (
-      '<span class="lbp-cell-partial">' +
-      escapeHtml(v) +
-      " <small>(" +
-      side +
-      ")</small></span>"
-    );
-  }
-  return '<span class="lbp-cell-miss">—</span>';
+  let cls = "lbp-cell-ok";
+  if (status === "diff") cls = "lbp-cell-diff";
+  else if (status === "partial") cls = "lbp-cell-partial";
+  else if (status === "missing") cls = "lbp-cell-miss";
+  return '<span class="' + cls + '">' + escapeHtml(val) + "</span>";
 }
 
 function formatCheckResultHtml(loadNum, result) {
@@ -123,9 +103,10 @@ function formatCheckResultHtml(loadNum, result) {
       return r.status === "diff";
     })
   ) {
-    html += '<p class="lbp-result-bad">⚠️ Differences found (shown in red)</p>';
+    html += '<p class="lbp-result-bad">⚠️ Differences found (red)</p>';
   } else {
-    html += '<p class="lbp-result-warn">⚠️ Could not complete auto-check</p>';
+    html +=
+      '<p class="lbp-result-warn">⚠️ Incomplete — some fields only on one side</p>';
   }
   html += "<p><strong>Load #" + escapeHtml(loadNum) + "</strong>";
   if (result.details && result.details.folderName) {
@@ -135,9 +116,14 @@ function formatCheckResultHtml(loadNum, result) {
 
   if (plotRows.length) {
     html +=
-      '<table class="lbp-result-table lbp-plot-table"><thead><tr>' +
-      "<th>Plot</th><th>House type</th><th>Handing</th><th>FFL</th><th></th>" +
-      "</tr></thead><tbody>";
+      '<div class="lbp-table-scroll"><table class="lbp-result-table lbp-plot-table">' +
+      "<thead><tr>" +
+      "<th>Plot (MS)</th><th>Plot (SNIP)</th>" +
+      "<th>House (MS)</th><th>House (SNIP)</th>" +
+      "<th>Handing (MS)</th><th>Handing (SNIP)</th>" +
+      "<th>FFL (MS)</th><th>FFL (SNIP)</th>" +
+      "<th></th></tr></thead><tbody>";
+
     plotRows.forEach(function (row) {
       let mark = "✅";
       let rowClass = "ok";
@@ -151,29 +137,39 @@ function formatCheckResultHtml(loadNum, result) {
         mark = "—";
         rowClass = "muted";
       }
+
+      const p = row.plot || {};
+      const h = row.houseType || {};
+      const d = row.handing || {};
+      const f = row.ffl || {};
+
       html +=
         '<tr class="' +
         rowClass +
         '">' +
-        "<td><strong>" +
-        escapeHtml(row.plot != null ? row.plot : "—") +
-        "</strong></td>" +
         "<td>" +
-        formatCellPair(row.houseType) +
-        "</td>" +
-        "<td>" +
-        formatCellPair(row.handing) +
-        "</td>" +
-        "<td>" +
-        formatCellPair(row.ffl) +
-        "</td>" +
-        "<td>" +
+        formatSide(p.ms, p.status) +
+        "</td><td>" +
+        formatSide(p.snip, p.status) +
+        "</td><td>" +
+        formatSide(h.ms, h.status) +
+        "</td><td>" +
+        formatSide(h.snip, h.status) +
+        "</td><td>" +
+        formatSide(d.ms, d.status) +
+        "</td><td>" +
+        formatSide(d.snip, d.status) +
+        "</td><td>" +
+        formatSide(f.ms, f.status) +
+        "</td><td>" +
+        formatSide(f.snip, f.status) +
+        "</td><td>" +
         mark +
         "</td></tr>";
     });
-    html += "</tbody></table>";
+    html += "</tbody></table></div>";
     html +=
-      '<p class="lbp-result-note">Green = match. Red = MS TOP → SNIP differ. Amber = only on one side.</p>';
+      '<p class="lbp-result-note">Green = match · Red = differ · Amber = only on one side. FFL (MS) = 4 digits before “mm”. House (MS) = value before “Site dwelling”. Handing = LHWS / RHWS / BW / LHLL / RHLL / T SHAPE.</p>';
   } else if (result.message) {
     html += '<pre class="lbp-result-pre">' + escapeHtml(result.message) + "</pre>";
   }
@@ -181,9 +177,7 @@ function formatCheckResultHtml(loadNum, result) {
   if (result.details) {
     if (result.details.msFile) {
       html +=
-        "<p><small>MS TOP: " +
-        escapeHtml(result.details.msFile) +
-        "</small></p>";
+        "<p><small>MS TOP: " + escapeHtml(result.details.msFile) + "</small></p>";
     }
     if (result.details.snipFiles && result.details.snipFiles.length) {
       html +=
