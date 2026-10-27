@@ -1,0 +1,145 @@
+.loads-controls-compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.lbp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.lbp-person-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 16px 14px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.lbp-person-card:hover {
+  border-color: var(--teal, #00A99D);
+  box-shadow: var(--shadow, 0 4px 16px rgba(0,0,0,0.12));
+}
+
+.lbp-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lbp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.lbp-name {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.lbp-count {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.lbp-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.lbp-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.lbp-detail-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+.lbp-detail-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.lbp-load-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lbp-load-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.lbp-load-card.lbp-checked {
+  border-color: rgba(46, 204, 113, 0.45);
+  background: rgba(46, 204, 113, 0.06);
+}
+
+.lbp-load-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.lbp-load-num {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.lbp-load-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.lbp-load-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lbp-check-btn {
+  border: 1px solid var(--card-border);
+  background: var(--section-bg, rgba(137,147,171,0.1));
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lbp-check-btn.is-checked {
+  background: rgba(46, 204, 113, 0.15);
+  border-color: rgba(46, 204, 113, 0.5);
+  color: var(--green, #2ecc71);
+}
+
+.lbp-check-btn:hover {
+  border-color: var(--teal, #00A99D);
+}
