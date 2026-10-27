@@ -4,6 +4,8 @@
  *   #12345 MS TOP
  *   #12345 SNIP
  *   #12345 SNIP 1 / #12345 SNIP 2
+ *
+ * Supports PDF (text) and PNG/JPG (OCR via Tesseract.js).
  */
 import {
   gapiSignedIn,
@@ -54,6 +56,26 @@ async function extractTextFromPdf(arrayBuffer) {
   return parts.join("\n");
 }
 
+async function extractTextFromImage(arrayBuffer, mimeType) {
+  const Tesseract = await import(
+    "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js"
+  );
+  const blob = new Blob([arrayBuffer], {
+    type: mimeType || "image/png",
+  });
+  const result = await Tesseract.recognize(blob, "eng", {
+    logger: function () {},
+  });
+  return (result && result.data && result.data.text) || "";
+}
+
+function isImageFile(name, mimeType) {
+  const mt = (mimeType || "").toLowerCase();
+  const n = (name || "").toLowerCase();
+  if (mt.indexOf("image/") === 0) return true;
+  return /\.(png|jpe?g|webp|gif|bmp)$/.test(n);
+}
+
 async function fileToText(file) {
   const downloaded = await downloadDriveFile(file.id, file.mimeType);
   if (!downloaded) return { text: "", error: "Could not download " + file.name };
@@ -63,29 +85,52 @@ async function fileToText(file) {
   }
 
   const mt = (downloaded.mimeType || file.mimeType || "").toLowerCase();
-  if (mt.indexOf("pdf") !== -1 || file.name.toLowerCase().endsWith(".pdf")) {
+  const name = file.name || "";
+
+  if (isImageFile(name, mt)) {
     try {
-      const text = await extractTextFromPdf(downloaded.buffer);
+      const text = await extractTextFromImage(downloaded.buffer, mt || "image/png");
       if (!text || !text.trim()) {
         return {
           text: "",
           error:
-            file.name +
-            " has little/no selectable text (likely a scan). OCR not available yet — check manually.",
+            name +
+            " — OCR found no readable text. Try a clearer image or check manually.",
         };
       }
-      return { text: text, error: null };
+      return { text: text, error: null, via: "ocr" };
     } catch (e) {
       console.error(e);
-      return { text: "", error: "PDF read failed for " + file.name + ": " + (e.message || e) };
+      return {
+        text: "",
+        error: "OCR failed for " + name + ": " + (e.message || e),
+      };
+    }
+  }
+
+  if (mt.indexOf("pdf") !== -1 || name.toLowerCase().endsWith(".pdf")) {
+    try {
+      const text = await extractTextFromPdf(downloaded.buffer);
+      if (text && text.trim()) {
+        return { text: text, error: null, via: "pdf" };
+      }
+      return {
+        text: "",
+        error:
+          name +
+          " is a PDF with no selectable text. Export/save as PNG, or use a text PDF.",
+      };
+    } catch (e) {
+      console.error(e);
+      return { text: "", error: "PDF read failed for " + name + ": " + (e.message || e) };
     }
   }
 
   return {
     text: "",
     error:
-      file.name +
-      " is not a PDF/Google Doc — only those can be auto-checked for now.",
+      name +
+      " type not supported. Use PNG, JPG, or PDF named with MS TOP / SNIP.",
   };
 }
 
@@ -212,7 +257,7 @@ export async function runLoadCheck(loadNumber) {
       message:
         "No file matching “MS TOP” found in the folder.\nName it e.g. #" +
         loadNumber +
-        " MS TOP.pdf",
+        " MS TOP.png",
       details: {
         folderName: folder.name,
         files: files.map(function (f) {
@@ -227,7 +272,7 @@ export async function runLoadCheck(loadNumber) {
       message:
         "No file matching “SNIP” found.\nUse #" +
         loadNumber +
-        " SNIP.pdf or SNIP 1 / SNIP 2.",
+        " SNIP.png or SNIP 1 / SNIP 2.",
       details: {
         folderName: folder.name,
         files: files.map(function (f) {
@@ -321,8 +366,8 @@ export async function runLoadCheck(loadNumber) {
     return {
       ok: false,
       message:
-        "Could not read handing / FFL / house type from the PDFs.\n" +
-        "Check the files are text PDFs (not scans) and contain those labels.",
+        "Could not read handing / FFL / house type from the images.\n" +
+        "OCR may have struggled — check the snips are clear and include those labels.",
       details: details,
       missing: missing,
     };
