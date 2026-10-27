@@ -50,7 +50,9 @@ function classifyFileName(name) {
   const n = String(name || "")
     .toUpperCase()
     .replace(/\.(PDF|PNG|JPG|JPEG|DOC|DOCX|XML|TXT|CSV|HTML|HTM)$/i, "");
-  if (/MS[\s_\-]*TOP/.test(n)) return "ms_top";
+  // MS TOP variants: "MS TOP", "MS TOP SHEET", "M/S TOP", "MSTOP"
+  if (/M\s*[\/]?\s*S[\s_\-]*TOP/.test(n) || /\bMSTOP\b/.test(n)) return "ms_top";
+  if (/\bMANUFACTURING\b/.test(n) && /\bTOP\b/.test(n)) return "ms_top";
   if (/SNIP[\s_\-]*0*2\b/.test(n) || /SNIP[\s_\-]*0*2$/.test(n)) return "snip_2";
   if (/SNIP[\s_\-]*0*1\b/.test(n) || /SNIP[\s_\-]*0*1$/.test(n)) return "snip_1";
   if (/\bSNIP\b/.test(n)) return "snip";
@@ -260,10 +262,6 @@ function normalizeHouse(raw) {
   if (!raw) return null;
   return norm(raw).replace(/^TYPE\s+/, "");
 }
-function contextAround(upper, index, before, after) {
-  if (index < 0) return "";
-  return upper.slice(Math.max(0, index - before), Math.min(upper.length, index + after)).replace(/\s+/g, " ").trim();
-}
 
 const JUNK_HOUSE = /^(STRING|INT|INTEGER|BOOL|BOOLEAN|FLOAT|DOUBLE|NUMBER|NULL|TRUE|FALSE|VALUE|TEXT|DATA|TYPE|HANDING|FFL|PLOT|LOAD|STAIR|THE|AND|FOR|WS|LHWS|RHWS)$/i;
 
@@ -431,11 +429,6 @@ export function buildPlotComparison(msText, snipText) {
   return { plotRows: plotRows, msPlots: msPlots, snipPlots: snipPlots };
 }
 
-function fieldsEqual(a, b) {
-  if (a == null || b == null) return false;
-  return String(a) === String(b);
-}
-
 export async function runLoadCheck(loadNumber) {
   const ready = await ensureDriveReady(true);
   if (!ready || !gapiSignedIn) {
@@ -459,17 +452,28 @@ export async function runLoadCheck(loadNumber) {
     ? classified.snip_1.concat(classified.snip_2)
     : classified.snip.slice();
   if (!classified.ms_top.length) {
+    const names = files.map(function (f) { return f.name; });
     return {
       ok: false,
-      message: "No MS TOP file (Google Doc preferred).",
-      details: { folderName: folder.name, files: files.map(function (f) { return f.name; }) },
+      message:
+        "No MS TOP file found in this folder.\n" +
+        "Rename your Google Doc so the name includes “MS TOP”\n" +
+        "e.g. “#119573 MS TOP” or “MS TOP SHEET”.\n\n" +
+        "Files in folder:\n• " +
+        (names.length ? names.join("\n• ") : "(none)"),
+      details: { folderName: folder.name, files: names },
     };
   }
   if (!snipFiles.length) {
+    const names = files.map(function (f) { return f.name; });
     return {
       ok: false,
-      message: "No SNIP file (SNIP.xml preferred).",
-      details: { folderName: folder.name, files: files.map(function (f) { return f.name; }) },
+      message:
+        "No SNIP file found.\n" +
+        "Add Compass export named with “SNIP” e.g. “SNIP.xml”.\n\n" +
+        "Files in folder:\n• " +
+        (names.length ? names.join("\n• ") : "(none)"),
+      details: { folderName: folder.name, files: names },
     };
   }
   const msFile = pickPreferredFile(classified.ms_top);
@@ -513,7 +517,8 @@ export async function runLoadCheck(loadNumber) {
   };
 
   const hasDiff = plotCompare.plotRows.some(function (r) { return r.status === "diff"; });
-  const allOk = plotCompare.plotRows.length > 0 &&
+  const allOk =
+    plotCompare.plotRows.length > 0 &&
     plotCompare.plotRows.every(function (r) { return r.status === "ok"; });
 
   if (allOk) {
@@ -527,7 +532,9 @@ export async function runLoadCheck(loadNumber) {
 
   return {
     ok: false,
-    message: hasDiff ? "Differences on one or more plots." : "Some fields missing — check MS TOP table labels.",
+    message: hasDiff
+      ? "Differences on one or more plots."
+      : "Some fields missing — check MS TOP table labels.",
     details: details,
     plotRows: plotCompare.plotRows,
     partial: !hasDiff,
