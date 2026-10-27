@@ -107,10 +107,6 @@ export function requestDriveToken(interactive) {
   });
 }
 
-/**
- * Make sure the local Drive module is initialized and (if possible) signed in.
- * CDN main.js initializes a *different* copy of drive.js — our modules use this one.
- */
 export async function ensureDriveReady(interactiveSignIn) {
   try {
     if (!gapiInitialized) {
@@ -143,32 +139,78 @@ export async function searchDriveForLoad(loadNumber) {
   return folder && folder.webViewLink ? folder.webViewLink : null;
 }
 
+/**
+ * Load folders are named like "#119592 AS" (not "LOAD #119592").
+ * Search by digits only, then rank by full name match.
+ */
+function parseLoadId(loadNumber) {
+  const raw = String(loadNumber || "").trim();
+  const digits = (raw.match(/\d{4,}/) || [])[0] || "";
+  const initialsMatch = raw.match(/\b([A-Z]{1,3})\s*$/i);
+  const initials = initialsMatch ? initialsMatch[1].toUpperCase() : "";
+  return { raw: raw, digits: digits, initials: initials };
+}
+
+async function driveListFoldersContaining(text) {
+  if (!text) return [];
+  const safe = String(text).replace(/'/g, "\\'");
+  const q =
+    "name contains '" +
+    safe +
+    "' and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+  const url =
+    "https://www.googleapis.com/drive/v3/files?q=" +
+    encodeURIComponent(q) +
+    "&fields=" +
+    encodeURIComponent("files(id,name,webViewLink)") +
+    "&pageSize=25" +
+    "&supportsAllDrives=true" +
+    "&includeItemsFromAllDrives=true" +
+    "&corpora=allDrives";
+  const resp = await driveFetch(url);
+  if (!resp || !resp.ok) {
+    const url2 =
+      "https://www.googleapis.com/drive/v3/files?q=" +
+      encodeURIComponent(q) +
+      "&fields=" +
+      encodeURIComponent("files(id,name,webViewLink)") +
+      "&pageSize=25";
+    const r2 = await driveFetch(url2);
+    if (!r2 || !r2.ok) return [];
+    const d2 = await r2.json();
+    return (d2 && d2.files) || [];
+  }
+  const data = await resp.json();
+  return (data && data.files) || [];
+}
+
 export async function searchDriveFolder(loadNumber) {
   if (!loadNumber || !driveAccessToken) return null;
   if (driveFolderIdCache[loadNumber]) return driveFolderIdCache[loadNumber];
 
   try {
-    const q =
-      "name contains '" +
-      String(loadNumber).replace(/'/g, "\\'") +
-      "' and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
-    const url =
-      "https://www.googleapis.com/drive/v3/files?q=" +
-      encodeURIComponent(q) +
-      "&fields=" +
-      encodeURIComponent("files(id,name,webViewLink)") +
-      "&pageSize=10";
-    const resp = await driveFetch(url);
-    if (!resp || !resp.ok) return null;
-    const data = await resp.json();
-    const files = (data && data.files) || [];
+    const parsed = parseLoadId(loadNumber);
+    let files = [];
+    if (parsed.digits) {
+      files = await driveListFoldersContaining(parsed.digits);
+    }
+    if (!files.length && parsed.raw) {
+      files = await driveListFoldersContaining(parsed.raw.replace(/^#/, ""));
+    }
     if (!files.length) return null;
-    let best = files[0];
-    const num = String(loadNumber);
-    const exact = files.find(function (f) {
-      return (f.name || "").indexOf(num) !== -1;
+
+    function score(folder) {
+      const n = (folder.name || "").toUpperCase();
+      let s = 0;
+      if (parsed.digits && n.indexOf(parsed.digits) !== -1) s += 10;
+      if (parsed.initials && n.indexOf(parsed.initials) !== -1) s += 5;
+      if (n.indexOf("#" + parsed.digits) !== -1) s += 3;
+      return s;
+    }
+    files.sort(function (a, b) {
+      return score(b) - score(a);
     });
-    if (exact) best = exact;
+    const best = files[0];
     driveFolderIdCache[loadNumber] = best;
     return best;
   } catch (e) {
@@ -179,13 +221,18 @@ export async function searchDriveFolder(loadNumber) {
 
 export async function listFolderFiles(folderId) {
   if (!folderId || !driveAccessToken) return [];
-  const url =
+  const base =
     "https://www.googleapis.com/drive/v3/files?q=" +
     encodeURIComponent("'" + folderId + "' in parents and trashed = false") +
     "&fields=" +
     encodeURIComponent("files(id,name,mimeType,webViewLink)") +
     "&pageSize=100";
-  const resp = await driveFetch(url);
+  let resp = await driveFetch(
+    base + "&supportsAllDrives=true&includeItemsFromAllDrives=true"
+  );
+  if (!resp || !resp.ok) {
+    resp = await driveFetch(base);
+  }
   if (!resp || !resp.ok) return [];
   const data = await resp.json();
   return (data && data.files) || [];
@@ -197,7 +244,6 @@ export async function downloadDriveFile(fileId, mimeType, fileName) {
   const mt = (mimeType || "").toLowerCase();
   const name = (fileName || "").toLowerCase();
   const isGoogleDoc = mt === "application/vnd.google-apps.document";
-  // Prefer HTML export so tables keep cell boundaries
   let url;
   if (isGoogleDoc) {
     url =
