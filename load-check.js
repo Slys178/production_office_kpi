@@ -6,6 +6,7 @@
  *   #12345 SNIP 1 / #12345 SNIP 2
  *
  * Supports PDF (text) and PNG/JPG (OCR via Tesseract.js).
+ * Scanned PDFs: render pages then OCR.
  */
 import {
   gapiSignedIn,
@@ -17,14 +18,37 @@ import {
 } from "./drive.js";
 
 let pdfjsLib = null;
+let pdfjsReady = null;
 
 async function ensurePdfJs() {
   if (pdfjsLib) return pdfjsLib;
-  pdfjsLib = await import(
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs"
-  );
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.mjs";
+  if (window.pdfjsLib) {
+    pdfjsLib = window.pdfjsLib;
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    return pdfjsLib;
+  }
+  if (!pdfjsReady) {
+    pdfjsReady = new Promise(function (resolve, reject) {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      s.async = true;
+      s.onload = function () {
+        if (!window.pdfjsLib) {
+          reject(new Error("pdf.js loaded but pdfjsLib missing"));
+          return;
+        }
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = function () {
+        reject(new Error("Failed to load pdf.js from CDN"));
+      };
+      document.head.appendChild(s);
+    });
+  }
+  pdfjsLib = await pdfjsReady;
   return pdfjsLib;
 }
 
@@ -38,22 +62,6 @@ function classifyFileName(name) {
   if (/SNIP[\s_\-]*0*1\b/.test(n) || /SNIP[\s_\-]*0*1$/.test(n)) return "snip_1";
   if (/\bSNIP\b/.test(n)) return "snip";
   return null;
-}
-
-async function extractTextFromPdf(arrayBuffer) {
-  const pdfjs = await ensurePdfJs();
-  const doc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-  const maxPages = Math.min(doc.numPages, 6);
-  const parts = [];
-  for (let i = 1; i <= maxPages; i++) {
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    const strings = content.items.map(function (it) {
-      return it.str || "";
-    });
-    parts.push(strings.join(" "));
-  }
-  return parts.join("\n");
 }
 
 let tesseractReady = null;
@@ -100,6 +108,44 @@ async function extractTextFromImage(arrayBuffer, mimeType) {
     return (result && result.data && result.data.text) || "";
   }
   throw new Error("Tesseract API not available (no createWorker/recognize)");
+}
+
+async function extractTextFromPdf(arrayBuffer) {
+  const pdfjs = await ensurePdfJs();
+  const doc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  const maxPages = Math.min(doc.numPages, 4);
+  const parts = [];
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    const strings = content.items.map(function (it) {
+      return it.str || "";
+    });
+    parts.push(strings.join(" "));
+  }
+  let text = parts.join("\n").trim();
+  if (text) return text;
+
+  // Scanned PDF: render first 2 pages to canvas and OCR
+  const ocrParts = [];
+  const pagesToOcr = Math.min(doc.numPages, 2);
+  for (let i = 1; i <= pagesToOcr; i++) {
+    const page = await doc.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d");
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+    const blob = await new Promise(function (resolve) {
+      canvas.toBlob(resolve, "image/png");
+    });
+    if (!blob) continue;
+    const buf = await blob.arrayBuffer();
+    const pageText = await extractTextFromImage(buf, "image/png");
+    if (pageText) ocrParts.push(pageText);
+  }
+  return ocrParts.join("\n");
 }
 
 function isImageFile(name, mimeType) {
@@ -151,7 +197,7 @@ async function fileToText(file) {
         text: "",
         error:
           name +
-          " is a PDF with no selectable text. Export/save as PNG, or use a text PDF.",
+          " — could not read text from PDF (even with OCR). Try a clearer PNG instead.",
       };
     } catch (e) {
       console.error(e);
@@ -399,8 +445,8 @@ export async function runLoadCheck(loadNumber) {
     return {
       ok: false,
       message:
-        "Could not read handing / FFL / house type from the images.\n" +
-        "OCR may have struggled — check the snips are clear and include those labels.",
+        "Could not read handing / FFL / house type from the files.\n" +
+        "Check the labels are clear on MS TOP and SNIP.",
       details: details,
       missing: missing,
     };
