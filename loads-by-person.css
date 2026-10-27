@@ -144,7 +144,6 @@
   border-color: var(--teal, #00A99D);
 }
 
-/* Load check result modal — stays until OK / Cancel */
 .lbp-modal-overlay {
   position: fixed;
   inset: 0;
@@ -162,7 +161,7 @@
   color: var(--text, #eee);
   border: 1px solid var(--card-border, #333);
   border-radius: 14px;
-  max-width: 520px;
+  max-width: 640px;
   width: 100%;
   max-height: 85vh;
   overflow: auto;
@@ -219,26 +218,53 @@
   border-bottom: 1px solid var(--card-border, #333);
   padding: 6px 8px;
   text-align: left;
+  vertical-align: top;
+}
+
+.lbp-plot-table th:last-child,
+.lbp-plot-table td:last-child {
+  text-align: center;
+  width: 2.5rem;
 }
 
 .lbp-result-table tr.ok td {
-  color: var(--green, #2ecc71);
+  color: inherit;
 }
 
 .lbp-result-table tr.bad td {
+  font-weight: 600;
+}
+
+.lbp-cell-ok {
+  color: var(--green, #2ecc71);
+  font-weight: 700;
+}
+
+.lbp-cell-diff {
   color: #e74c3c;
   font-weight: 700;
 }
 
-.lbp-result-table tr.warn td {
+.lbp-cell-diff .lbp-ms {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.lbp-cell-diff .lbp-snip {
+  color: #e74c3c;
+}
+
+.lbp-cell-partial {
   color: #f39c12;
 }
 
-.lbp-result-table tr.hint td {
+.lbp-cell-miss {
   color: var(--muted, #8993ab);
+}
+
+.lbp-vs {
+  opacity: 0.7;
   font-weight: 400;
-  border-bottom: none;
-  padding-top: 0;
 }
 
 .lbp-result-ok {
