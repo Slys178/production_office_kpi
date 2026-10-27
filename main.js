@@ -86,6 +86,17 @@ import("./loads-by-person.js")
   .then(function () { callLoadsByPerson(); })
   .catch(function (e) { console.warn("loads-by-person module failed", e); });
 
+// Local Drive module must be initialized separately from the CDN copy
+import("./drive.js")
+  .then(function (mod) {
+    if (mod && typeof mod.ensureDriveReady === "function") {
+      mod.ensureDriveReady(false).catch(function () {});
+    } else if (mod && typeof mod.initGapiClient === "function") {
+      mod.initGapiClient().catch(function () {});
+    }
+  })
+  .catch(function (e) { console.warn("drive init failed", e); });
+
 export async function initAndLoad() {
   const result = await _initAndLoad();
   callFinishIfReady();
@@ -130,6 +141,17 @@ document.addEventListener("DOMContentLoaded", function () {
   if (tileLoads) {
     tileLoads.addEventListener("click", function () {
       setTimeout(callLoadsByPerson, 150);
+      setTimeout(callLoadsByPerson, 800);
+      import("./drive.js").then(function (mod) {
+        if (mod && mod.ensureDriveReady) mod.ensureDriveReady(false);
+      }).catch(function () {});
+    });
+  }
+  const refreshLoads = document.getElementById("refreshLoadsBtn");
+  if (refreshLoads) {
+    refreshLoads.addEventListener("click", function () {
+      setTimeout(callLoadsByPerson, 100);
+      setTimeout(callLoadsByPerson, 500);
     });
   }
 });

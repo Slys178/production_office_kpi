@@ -38,13 +38,14 @@ export async function initGapiClient() {
   try {
     const savedToken = sessionStorage.getItem("driveToken");
     const savedTime = sessionStorage.getItem("driveTokenTime");
+    let restored = false;
     if (savedToken && savedTime) {
       const ageMinutes = (Date.now() - parseInt(savedTime, 10)) / (1000 * 60);
       if (ageMinutes < 55) {
         driveAccessToken = savedToken;
         gapiSignedIn = true;
+        restored = true;
         updateDriveStatus("connected", "Connected");
-        return true;
       }
     }
 
@@ -70,7 +71,11 @@ export async function initGapiClient() {
     });
 
     gapiInitialized = true;
-    updateDriveStatus("disconnected", "Not signed in");
+    if (!restored) {
+      updateDriveStatus("disconnected", "Not signed in");
+    } else {
+      updateDriveStatus("connected", "Connected");
+    }
     return true;
   } catch (error) {
     console.error("Failed to init Google Identity Services:", error);
@@ -101,6 +106,36 @@ export function requestDriveToken(interactive) {
   });
 }
 
+/**
+ * Make sure the local Drive module is initialized and (if possible) signed in.
+ * CDN main.js initializes a *different* copy of drive.js — our modules use this one.
+ */
+export async function ensureDriveReady(interactiveSignIn) {
+  try {
+    if (!gapiInitialized) {
+      await initGapiClient();
+    }
+    if (gapiSignedIn && driveAccessToken) {
+      updateDriveStatus("connected", "Connected");
+      return true;
+    }
+    if (gapiInitialized) {
+      const silent = await requestDriveToken(false);
+      if (silent) return true;
+      if (interactiveSignIn) {
+        const ok = await requestDriveToken(true);
+        return !!ok;
+      }
+    }
+    updateDriveStatus("disconnected", "Sign in needed");
+    return false;
+  } catch (e) {
+    console.warn("ensureDriveReady failed", e);
+    updateDriveStatus("disconnected", "Error");
+    return false;
+  }
+}
+
 async function driveFetch(url) {
   const resp = await fetch(url, {
     headers: { Authorization: "Bearer " + driveAccessToken },
@@ -120,21 +155,18 @@ async function driveFetch(url) {
   return resp;
 }
 
-/** Returns folder webViewLink (legacy) and caches folder id. */
 export async function searchDriveForLoad(loadNumber) {
   const folder = await searchDriveFolder(loadNumber);
   return folder ? folder.webViewLink : null;
 }
 
-/** Returns { id, name, webViewLink } or null. */
 export async function searchDriveFolder(loadNumber) {
-  if (!gapiInitialized) {
-    updateDriveStatus("disconnected", "Not ready yet");
-    return null;
-  }
-  if (!gapiSignedIn || !driveAccessToken) {
-    updateDriveStatus("disconnected", "Sign in needed");
-    return null;
+  if (!gapiInitialized || !gapiSignedIn || !driveAccessToken) {
+    const ready = await ensureDriveReady(false);
+    if (!ready || !driveAccessToken) {
+      updateDriveStatus("disconnected", gapiInitialized ? "Sign in needed" : "Not ready yet");
+      return null;
+    }
   }
 
   if (driveFolderIdCache[loadNumber]) {
@@ -190,12 +222,10 @@ export async function searchDriveFolder(loadNumber) {
   }
 }
 
-/** List files directly inside a folder. */
 export async function listFolderFiles(folderId) {
   if (!folderId || !driveAccessToken) return [];
 
-  const query =
-    "'" + folderId + "' in parents and trashed = false";
+  const query = "'" + folderId + "' in parents and trashed = false";
   const url =
     "https://www.googleapis.com/drive/v3/files?q=" +
     encodeURIComponent(query) +
@@ -212,7 +242,6 @@ export async function listFolderFiles(folderId) {
   return data.files || [];
 }
 
-/** Download file bytes (PDF) or export Google Doc as text. */
 export async function downloadDriveFile(fileId, mimeType) {
   if (!fileId || !driveAccessToken) return null;
 
@@ -277,15 +306,10 @@ export async function getDriveLink(loadNumber) {
 }
 
 export function showDriveSignIn(onSuccess) {
-  if (gapiInitialized) {
-    requestDriveToken(true).then((ok) => {
-      if (ok) {
-        if (onSuccess) onSuccess();
-      } else {
-        updateDriveStatus("disconnected", "Sign in cancelled");
-      }
-    });
-  }
+  ensureDriveReady(true).then(function (ok) {
+    if (ok && onSuccess) onSuccess();
+    else if (!ok) updateDriveStatus("disconnected", "Sign in cancelled");
+  });
 }
 
 try {
