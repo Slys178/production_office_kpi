@@ -1,14 +1,5 @@
 /**
- * Load check — compare MS TOP vs SNIP(s) for handing, FFL, house type, plot.
- * File names (case-insensitive):
- *   #12345 MS TOP   (Google Doc table preferred)
- *   #12345 SNIP.xml (Compass export — one long line is fine)
- *   #12345 SNIP 1 / SNIP 2
- *
- * Preferred sources (most reliable first):
- *   MS TOP  — Google Doc (table) or .txt
- *   SNIP    — Compass .xml
- * Fallback: PDF text, then PNG/JPG OCR.
+ * Load check — MS TOP (Google Doc) vs SNIP.xml (Compass)
  */
 import {
   gapiSignedIn,
@@ -58,7 +49,6 @@ function classifyFileName(name) {
   const n = String(name || "")
     .toUpperCase()
     .replace(/\.(PDF|PNG|JPG|JPEG|DOC|DOCX|XML|TXT|CSV|HTML|HTM)$/i, "");
-
   if (/MS[\s_\-]*TOP/.test(n)) return "ms_top";
   if (/SNIP[\s_\-]*0*2\b/.test(n) || /SNIP[\s_\-]*0*2$/.test(n)) return "snip_2";
   if (/SNIP[\s_\-]*0*1\b/.test(n) || /SNIP[\s_\-]*0*1$/.test(n)) return "snip_1";
@@ -152,9 +142,7 @@ function xmlToSearchableText(xml) {
 let tesseractReady = null;
 
 function loadTesseractScript() {
-  if (window.Tesseract) {
-    return Promise.resolve(window.Tesseract);
-  }
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
   if (tesseractReady) return tesseractReady;
   tesseractReady = new Promise(function (resolve, reject) {
     const s = document.createElement("script");
@@ -174,9 +162,7 @@ function loadTesseractScript() {
 
 async function extractTextFromImage(arrayBuffer, mimeType) {
   const Tesseract = await loadTesseractScript();
-  const blob = new Blob([arrayBuffer], {
-    type: mimeType || "image/png",
-  });
+  const blob = new Blob([arrayBuffer], { type: mimeType || "image/png" });
   if (typeof Tesseract.createWorker === "function") {
     const worker = await Tesseract.createWorker("eng");
     try {
@@ -192,7 +178,7 @@ async function extractTextFromImage(arrayBuffer, mimeType) {
     const result = await Tesseract.recognize(blob, "eng");
     return (result && result.data && result.data.text) || "";
   }
-  throw new Error("Tesseract API not available (no createWorker/recognize)");
+  throw new Error("Tesseract API not available");
 }
 
 async function extractTextFromPdf(arrayBuffer) {
@@ -203,14 +189,16 @@ async function extractTextFromPdf(arrayBuffer) {
   for (let i = 1; i <= maxPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    const strings = content.items.map(function (it) {
-      return it.str || "";
-    });
-    parts.push(strings.join(" "));
+    parts.push(
+      content.items
+        .map(function (it) {
+          return it.str || "";
+        })
+        .join(" ")
+    );
   }
   let text = parts.join("\n").trim();
   if (text) return text;
-
   const ocrParts = [];
   const pagesToOcr = Math.min(doc.numPages, 2);
   for (let i = 1; i <= pagesToOcr; i++) {
@@ -247,18 +235,15 @@ async function fileToText(file) {
     let text = downloaded.text || "";
     const name = (file.name || "").toLowerCase();
     const via = downloaded.via || "";
-
     if (via === "gdoc-html" || /<html|<table|<body/i.test(text)) {
-      text = htmlTableToText(text);
-      return { text: text, error: null, via: "gdoc" };
+      return { text: htmlTableToText(text), error: null, via: "gdoc" };
     }
     if (
       name.endsWith(".xml") ||
       (downloaded.mimeType || "").indexOf("xml") !== -1 ||
       /^\s*</.test(text)
     ) {
-      text = xmlToSearchableText(text);
-      return { text: text, error: null, via: "xml" };
+      return { text: xmlToSearchableText(text), error: null, via: "xml" };
     }
     return { text: text, error: null, via: "text" };
   }
@@ -270,14 +255,10 @@ async function fileToText(file) {
     try {
       const text = await extractTextFromImage(downloaded.buffer, mt || "image/png");
       if (!text || !text.trim()) {
-        return {
-          text: "",
-          error: name + " — OCR found no readable text. Try a clearer image or check manually.",
-        };
+        return { text: "", error: name + " — no OCR text" };
       }
       return { text: text, error: null, via: "ocr" };
     } catch (e) {
-      console.error(e);
       return { text: "", error: "OCR failed for " + name + ": " + (e.message || e) };
     }
   }
@@ -285,29 +266,24 @@ async function fileToText(file) {
   if (mt.indexOf("pdf") !== -1 || name.toLowerCase().endsWith(".pdf")) {
     try {
       const text = await extractTextFromPdf(downloaded.buffer);
-      if (text && text.trim()) {
-        return { text: text, error: null, via: "pdf" };
-      }
-      return {
-        text: "",
-        error: name + " — could not read text from PDF (even with OCR). Try a clearer PNG instead.",
-      };
+      if (text && text.trim()) return { text: text, error: null, via: "pdf" };
+      return { text: "", error: name + " — no text in PDF" };
     } catch (e) {
-      console.error(e);
-      return { text: "", error: "PDF read failed for " + name + ": " + (e.message || e) };
+      return { text: "", error: "PDF failed: " + (e.message || e) };
     }
   }
 
   return {
     text: "",
-    error:
-      name +
-      " type not supported. Prefer Google Doc (MS TOP) or SNIP.xml from Compass.",
+    error: name + " — prefer Google Doc (MS TOP) or SNIP.xml",
   };
 }
 
 function norm(s) {
-  return String(s || "").toUpperCase().replace(/\s+/g, " ").trim();
+  return String(s || "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function normalizeHanding(raw) {
@@ -346,43 +322,57 @@ export function extractFields(text) {
   let plot = null;
   const hints = {};
 
+  // Handing
   let m = upper.match(
     /HANDING\s*[:\|\-]?\s*(LH|RH|LEFT\s*HAND(?:ED)?|RIGHT\s*HAND(?:ED)?|LEFT|RIGHT)\b/
   );
+  if (!m) m = upper.match(/\b(LH|RH)\s*W(?:S|C)?\b/); // LHWS / RHWS Compass
+  if (!m) m = upper.match(/\b(LEFT|RIGHT)\s*HAND(?:ED)?\b/);
+  if (!m) m = upper.match(/(?:^|[^A-Z0-9])(LH|RH)(?=[^A-Z0-9]|$)/);
   if (m) {
     handing = m[1];
-    hints.handing = contextAround(upper, m.index, 20, 40);
-  } else {
-    m = upper.match(/\b(LH|RH|LEFT\s*HAND(?:ED)?|RIGHT\s*HAND(?:ED)?)\b/);
-    if (m) {
-      handing = m[1];
-      hints.handing = contextAround(upper, m.index, 20, 40);
-    }
+    hints.handing = contextAround(upper, m.index, 25, 40);
   }
 
+  // FFL
   m =
-    upper.match(/FFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/) ||
-    upper.match(/FINISHED\s*FLOOR\s*LEVEL\s*[:\-]?\s*([+-]?\d+(?:\.\d+)?)/);
+    upper.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/) ||
+    upper.match(/FINISHED\s*FLOOR\s*LEVEL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/) ||
+    upper.match(/\bFLOOR\s*LEVEL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
   if (m) {
     ffl = m[1];
     hints.ffl = contextAround(upper, m.index, 15, 30);
   }
 
+  // House type
   m =
     upper.match(/HOUSE\s*TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
     upper.match(/\bH\s*[\/\-]?\s*TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
-    upper.match(/\bHTYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
+    upper.match(/\bHTYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
+    upper.match(/\bTYPE\s*[:\|\-#]\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
   if (m) {
     houseType = m[1].trim().replace(/[^A-Z0-9\-\/].*$/, "").trim();
-    hints.houseType = contextAround(upper, m.index, 15, 40);
+    if (/^(HANDING|FFL|PLOT|LOAD|STAIR|THE|AND|FOR)$/i.test(houseType)) {
+      houseType = null;
+    } else {
+      hints.houseType = contextAround(upper, m.index, 15, 45);
+    }
+  }
+  if (!houseType) {
+    m = upper.match(/\bPLOT\s*\d+\s+([A-Z]\d{3,5})\b/); // PLOT 593 S4023
+    if (m) {
+      houseType = m[1];
+      hints.houseType = contextAround(upper, m.index, 10, 40);
+    }
   }
 
+  // Plot — never match "PLOTS" (plural). Require a number.
   m =
-    upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*([A-Z0-9\-]{1,12})\b/) ||
-    upper.match(/\bPLT\s*[:\|\-#]?\s*([A-Z0-9\-]{1,12})\b/);
+    upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/) ||
+    upper.match(/\bPLT\s*[:\|\-#]?\s*(\d{1,6})\b/);
   if (m) {
     plot = m[1].trim();
-    hints.plot = contextAround(upper, m.index, 15, 30);
+    hints.plot = contextAround(upper, m.index, 15, 35);
   }
 
   return {
@@ -391,7 +381,7 @@ export function extractFields(text) {
     houseType: normalizeHouse(houseType),
     plot: plot ? String(plot).toUpperCase() : null,
     hints: hints,
-    rawSample: t.slice(0, 400).replace(/\s+/g, " "),
+    rawSample: t.slice(0, 600).replace(/\s+/g, " "),
   };
 }
 
@@ -446,10 +436,7 @@ export async function runLoadCheck(loadNumber) {
   if (!classified.ms_top.length) {
     return {
       ok: false,
-      message:
-        "No file matching “MS TOP” found.\nUse a Google Doc named e.g. #" +
-        loadNumber +
-        " MS TOP",
+      message: "No “MS TOP” file. Name the Google Doc e.g. #" + loadNumber + " MS TOP",
       details: {
         folderName: folder.name,
         files: files.map(function (f) {
@@ -461,10 +448,7 @@ export async function runLoadCheck(loadNumber) {
   if (!snipFiles.length) {
     return {
       ok: false,
-      message:
-        "No file matching “SNIP” found.\nUse #" +
-        loadNumber +
-        " SNIP.xml from Compass.",
+      message: "No “SNIP” file. Use SNIP.xml from Compass.",
       details: {
         folderName: folder.name,
         files: files.map(function (f) {
@@ -498,11 +482,7 @@ export async function runLoadCheck(loadNumber) {
   }
 
   if (msResult.error && !msResult.text) {
-    return {
-      ok: false,
-      message: msResult.error,
-      details: { folderName: folder.name },
-    };
+    return { ok: false, message: msResult.error, details: { folderName: folder.name } };
   }
 
   const combinedSnipText = snipTexts
@@ -538,15 +518,11 @@ export async function runLoadCheck(loadNumber) {
       }
       return;
     }
-    if (c.ms == null && c.snip == null) {
-      missing.push(c.label + " (not found on either file)");
-    } else if (c.ms == null) {
-      missing.push(c.label + " (not found on MS TOP)");
-    } else if (c.snip == null) {
-      missing.push(c.label + " (not found on SNIP)");
-    } else if (!fieldsEqual(c.ms, c.snip)) {
+    if (c.ms == null && c.snip == null) missing.push(c.label + " (not found on either file)");
+    else if (c.ms == null) missing.push(c.label + " (not found on MS TOP)");
+    else if (c.snip == null) missing.push(c.label + " (not found on SNIP)");
+    else if (!fieldsEqual(c.ms, c.snip))
       mismatches.push({ label: c.label, ms: c.ms, snip: c.snip, key: c.key });
-    }
   });
 
   const details = {
@@ -580,12 +556,15 @@ export async function runLoadCheck(loadNumber) {
   });
 
   if (mismatches.length) {
-    const lines = mismatches.map(function (m) {
-      return m.label + ": MS TOP = " + m.ms + " · SNIP = " + m.snip;
-    });
     return {
       ok: false,
-      message: "Differences found:\n\n" + lines.join("\n"),
+      message:
+        "Differences found:\n\n" +
+        mismatches
+          .map(function (m) {
+            return m.label + ": MS TOP = " + m.ms + " · SNIP = " + m.snip;
+          })
+          .join("\n"),
       details: details,
       mismatches: mismatches,
       missing: missing,
@@ -600,8 +579,8 @@ export async function runLoadCheck(loadNumber) {
     return {
       ok: false,
       message:
-        "Could not read handing / FFL / house type.\n" +
-        "MS TOP Google Doc table and SNIP.xml should include those labels.",
+        "Could not read handing / FFL / house type from the Doc or XML.\n" +
+        "Open ‘Show text read from files’ to see what was imported.",
       details: details,
       missing: missing,
       comparisons: comparisons,
@@ -611,10 +590,7 @@ export async function runLoadCheck(loadNumber) {
   if (coreMissing.length) {
     return {
       ok: false,
-      message:
-        "Some fields could not be read:\n\n• " +
-        coreMissing.join("\n• ") +
-        "\n\nMatched fields look the same; please verify the missing ones manually.",
+      message: "Some fields missing:\n• " + coreMissing.join("\n• "),
       details: details,
       missing: missing,
       comparisons: comparisons,
@@ -625,8 +601,7 @@ export async function runLoadCheck(loadNumber) {
   return {
     ok: true,
     message:
-      "Match — fields agree.\n\n" +
-      "Handing: " +
+      "Match.\nHanding: " +
       msFields.handing +
       "\nFFL: " +
       msFields.ffl +
