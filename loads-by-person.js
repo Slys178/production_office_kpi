@@ -12,6 +12,7 @@ import {
   getSavedDriveLinks,
   saveDriveLink,
   showDriveSignIn,
+  ensureDriveReady,
 } from "./drive.js";
 import { runLoadCheck } from "./load-check.js";
 
@@ -89,7 +90,8 @@ let selectedPerson = null;
 let cachedLoads = [];
 
 async function handleDriveClick(loadNum, button) {
-  if (!gapiSignedIn) {
+  const ready = await ensureDriveReady(true);
+  if (!ready) {
     button.textContent = "🔑 Sign in…";
     showDriveSignIn(function () {
       handleDriveClick(loadNum, button);
@@ -363,15 +365,7 @@ function showPersonDetail() {
       btn.textContent = "⏳ Checking…";
 
       try {
-        if (!gapiSignedIn) {
-          await new Promise(function (resolve) {
-            showDriveSignIn(function () {
-              resolve();
-            });
-            setTimeout(resolve, 8000);
-          });
-        }
-
+        await ensureDriveReady(true);
         const result = await runLoadCheck(loadNum);
 
         if (result.needSignIn) {
