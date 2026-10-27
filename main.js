@@ -33,6 +33,16 @@ function callKpiPrivacy() {
   }
 }
 
+function callLoadsByPerson() {
+  try {
+    if (typeof window.renderLoadsByPerson === "function") {
+      window.renderLoadsByPerson();
+    }
+  } catch (e) {
+    console.warn("loads-by-person error", e);
+  }
+}
+
 function callOfficeErrors() {
   try {
     if (typeof window.renderOfficeErrors === "function") {
@@ -72,12 +82,17 @@ import("./office-errors.js")
   .then(function () { callOfficeErrors(); })
   .catch(function (e) { console.warn("office-errors module failed", e); });
 
+import("./loads-by-person.js")
+  .then(function () { callLoadsByPerson(); })
+  .catch(function (e) { console.warn("loads-by-person module failed", e); });
+
 export async function initAndLoad() {
   const result = await _initAndLoad();
   callFinishIfReady();
   callKpiPrivacy();
   callForecastEnhance();
   callOfficeErrors();
+  callLoadsByPerson();
   return result;
 }
 
@@ -87,6 +102,7 @@ export async function loadAndRender() {
   callKpiPrivacy();
   callForecastEnhance();
   callOfficeErrors();
+  callLoadsByPerson();
   return result;
 }
 
@@ -108,6 +124,12 @@ document.addEventListener("DOMContentLoaded", function () {
   if (tileErrors) {
     tileErrors.addEventListener("click", function () {
       setTimeout(callOfficeErrors, 150);
+    });
+  }
+  const tileLoads = document.getElementById("tileLoads");
+  if (tileLoads) {
+    tileLoads.addEventListener("click", function () {
+      setTimeout(callLoadsByPerson, 150);
     });
   }
 });
