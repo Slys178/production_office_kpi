@@ -1,5 +1,6 @@
 /**
  * Load check — MS TOP (Google Doc) vs SNIP.xml (Compass)
+ * Results are per-plot: Plot | House type | Handing | FFL | tick/cross
  */
 import {
   gapiSignedIn,
@@ -77,21 +78,17 @@ function htmlTableToText(html) {
   try {
     const doc = new DOMParser().parseFromString(html, "text/html");
     const parts = [];
-    const tables = doc.querySelectorAll("table");
-    if (tables.length) {
-      tables.forEach(function (table) {
-        table.querySelectorAll("tr").forEach(function (tr) {
-          const cells = [];
-          tr.querySelectorAll("th,td").forEach(function (td) {
-            cells.push((td.textContent || "").replace(/\s+/g, " ").trim());
-          });
-          if (cells.some(Boolean)) parts.push(cells.join(" | "));
+    doc.querySelectorAll("table").forEach(function (table) {
+      table.querySelectorAll("tr").forEach(function (tr) {
+        const cells = [];
+        tr.querySelectorAll("th,td").forEach(function (td) {
+          cells.push((td.textContent || "").replace(/\s+/g, " ").trim());
         });
-        parts.push("");
+        if (cells.some(Boolean)) parts.push(cells.join(" | "));
       });
-    }
-    const body = doc.body ? doc.body.innerText : "";
-    if (body) parts.push(body);
+      parts.push("");
+    });
+    if (doc.body) parts.push(doc.body.innerText);
     return parts.join("\n");
   } catch (_) {
     return String(html || "").replace(/<[^>]+>/g, " ");
@@ -108,7 +105,6 @@ function xmlToSearchableText(xml) {
     .replace(/&#(\d+);/g, function (_, n) {
       return String.fromCharCode(Number(n));
     });
-
   const labelled = [];
   const tagRe = /<([A-Za-z][A-Za-z0-9_\-]*)\b([^>]*)>([^<]*)</g;
   let m;
@@ -119,28 +115,22 @@ function xmlToSearchableText(xml) {
     if (val) labelled.push(tag + ": " + val);
     const attrRe = /([A-Za-z][A-Za-z0-9_\-]*)\s*=\s*["']([^"']+)["']/g;
     let a;
-    while ((a = attrRe.exec(attrs))) {
-      labelled.push(a[1] + ": " + a[2]);
-    }
+    while ((a = attrRe.exec(attrs))) labelled.push(a[1] + ": " + a[2]);
   }
   const selfRe = /<([A-Za-z][A-Za-z0-9_\-]*)\b([^>]*?)\/>/g;
   while ((m = selfRe.exec(s))) {
-    const tag = m[1];
     const attrs = m[2] || "";
     const attrRe = /([A-Za-z][A-Za-z0-9_\-]*)\s*=\s*["']([^"']+)["']/g;
     let a;
     while ((a = attrRe.exec(attrs))) {
-      labelled.push(tag + " " + a[1] + ": " + a[2]);
+      labelled.push(m[1] + " " + a[1] + ": " + a[2]);
       labelled.push(a[1] + ": " + a[2]);
     }
   }
-
-  const stripped = s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  return labelled.join("\n") + "\n" + stripped;
+  return labelled.join("\n") + "\n" + s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 let tesseractReady = null;
-
 function loadTesseractScript() {
   if (window.Tesseract) return Promise.resolve(window.Tesseract);
   if (tesseractReady) return tesseractReady;
@@ -150,10 +140,10 @@ function loadTesseractScript() {
     s.async = true;
     s.onload = function () {
       if (window.Tesseract) resolve(window.Tesseract);
-      else reject(new Error("Tesseract script loaded but global missing"));
+      else reject(new Error("Tesseract missing"));
     };
     s.onerror = function () {
-      reject(new Error("Failed to load Tesseract.js"));
+      reject(new Error("Failed to load Tesseract"));
     };
     document.head.appendChild(s);
   });
@@ -184,37 +174,25 @@ async function extractTextFromImage(arrayBuffer, mimeType) {
 async function extractTextFromPdf(arrayBuffer) {
   const pdfjs = await ensurePdfJs();
   const doc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-  const maxPages = Math.min(doc.numPages, 4);
   const parts = [];
-  for (let i = 1; i <= maxPages; i++) {
+  for (let i = 1; i <= Math.min(doc.numPages, 4); i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    parts.push(
-      content.items
-        .map(function (it) {
-          return it.str || "";
-        })
-        .join(" ")
-    );
+    parts.push(content.items.map(function (it) { return it.str || ""; }).join(" "));
   }
   let text = parts.join("\n").trim();
   if (text) return text;
   const ocrParts = [];
-  const pagesToOcr = Math.min(doc.numPages, 2);
-  for (let i = 1; i <= pagesToOcr; i++) {
+  for (let i = 1; i <= Math.min(doc.numPages, 2); i++) {
     const page = await doc.getPage(i);
     const viewport = page.getViewport({ scale: 2 });
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    const ctx = canvas.getContext("2d");
-    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-    const blob = await new Promise(function (resolve) {
-      canvas.toBlob(resolve, "image/png");
-    });
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport: viewport }).promise;
+    const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, "image/png"); });
     if (!blob) continue;
-    const buf = await blob.arrayBuffer();
-    const pageText = await extractTextFromImage(buf, "image/png");
+    const pageText = await extractTextFromImage(await blob.arrayBuffer(), "image/png");
     if (pageText) ocrParts.push(pageText);
   }
   return ocrParts.join("\n");
@@ -230,39 +208,27 @@ function isImageFile(name, mimeType) {
 async function fileToText(file) {
   const downloaded = await downloadDriveFile(file.id, file.mimeType, file.name);
   if (!downloaded) return { text: "", error: "Could not download " + file.name };
-
   if (downloaded.type === "text") {
     let text = downloaded.text || "";
     const name = (file.name || "").toLowerCase();
     const via = downloaded.via || "";
-    if (via === "gdoc-html" || /<html|<table|<body/i.test(text)) {
+    if (via === "gdoc-html" || /<html|<table|<body/i.test(text))
       return { text: htmlTableToText(text), error: null, via: "gdoc" };
-    }
-    if (
-      name.endsWith(".xml") ||
-      (downloaded.mimeType || "").indexOf("xml") !== -1 ||
-      /^\s*</.test(text)
-    ) {
+    if (name.endsWith(".xml") || (downloaded.mimeType || "").indexOf("xml") !== -1 || /^\s*</.test(text))
       return { text: xmlToSearchableText(text), error: null, via: "xml" };
-    }
     return { text: text, error: null, via: "text" };
   }
-
   const mt = (downloaded.mimeType || file.mimeType || "").toLowerCase();
   const name = file.name || "";
-
   if (isImageFile(name, mt)) {
     try {
       const text = await extractTextFromImage(downloaded.buffer, mt || "image/png");
-      if (!text || !text.trim()) {
-        return { text: "", error: name + " — no OCR text" };
-      }
+      if (!text || !text.trim()) return { text: "", error: name + " — no OCR text" };
       return { text: text, error: null, via: "ocr" };
     } catch (e) {
-      return { text: "", error: "OCR failed for " + name + ": " + (e.message || e) };
+      return { text: "", error: "OCR failed: " + (e.message || e) };
     }
   }
-
   if (mt.indexOf("pdf") !== -1 || name.toLowerCase().endsWith(".pdf")) {
     try {
       const text = await extractTextFromPdf(downloaded.buffer);
@@ -272,20 +238,12 @@ async function fileToText(file) {
       return { text: "", error: "PDF failed: " + (e.message || e) };
     }
   }
-
-  return {
-    text: "",
-    error: name + " — prefer Google Doc (MS TOP) or SNIP.xml",
-  };
+  return { text: "", error: name + " — prefer Google Doc or SNIP.xml" };
 }
 
 function norm(s) {
-  return String(s || "")
-    .toUpperCase()
-    .replace(/\s+/g, " ")
-    .trim();
+  return String(s || "").toUpperCase().replace(/\s+/g, " ").trim();
 }
-
 function normalizeHanding(raw) {
   if (!raw) return null;
   const u = norm(raw);
@@ -293,96 +251,184 @@ function normalizeHanding(raw) {
   if (/\bLH\b/.test(u) || /LEFT\s*HAND/.test(u) || /^LEFT$/.test(u)) return "LH";
   return u;
 }
-
 function normalizeFfl(raw) {
   if (!raw) return null;
   const m = String(raw).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
   return m ? m[0] : norm(raw);
 }
-
 function normalizeHouse(raw) {
   if (!raw) return null;
   return norm(raw).replace(/^TYPE\s+/, "");
 }
-
 function contextAround(upper, index, before, after) {
   if (index < 0) return "";
-  const start = Math.max(0, index - before);
-  const end = Math.min(upper.length, index + after);
-  return upper.slice(start, end).replace(/\s+/g, " ").trim();
+  return upper.slice(Math.max(0, index - before), Math.min(upper.length, index + after)).replace(/\s+/g, " ").trim();
+}
+
+const JUNK_HOUSE = /^(STRING|INT|INTEGER|BOOL|BOOLEAN|FLOAT|DOUBLE|NUMBER|NULL|TRUE|FALSE|VALUE|TEXT|DATA|TYPE|HANDING|FFL|PLOT|LOAD|STAIR|THE|AND|FOR|WS|LHWS|RHWS)$/i;
+
+export function extractPlots(text) {
+  const t = String(text || "");
+  const upper = t.toUpperCase();
+  const rows = [];
+  t.split(/\n+/).forEach(function (line) {
+    const u = line.toUpperCase();
+    if (!/\d/.test(u)) return;
+    if (/^[\s|]*PLOT[\s|]*HOUSE/.test(u) && !/\d{2,}/.test(u)) return;
+    let plot = null, houseType = null, handing = null, ffl = null;
+    let m = u.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/);
+    if (m) plot = m[1];
+    m = u.match(/\b(?:HOUSE\s*)?TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})\b/);
+    if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1].replace(/[^A-Z0-9\-\/].*$/, "").trim();
+    m = u.match(/\bHANDING\s*[:\|\-]?\s*(LH|RH)\b/) || u.match(/\b(LH|RH)\s*W(?:S|C)?\b/) ||
+        u.match(/(?:^|[^A-Z0-9])(LH|RH)(?=[^A-Z0-9]|$)/);
+    if (m) handing = m[1];
+    m = u.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
+    if (m) ffl = m[1];
+    if (!plot && u.indexOf("|") !== -1) {
+      u.split("|").map(function (c) { return c.trim(); }).filter(Boolean).forEach(function (c) {
+        if (!plot && /^\d{1,6}$/.test(c)) plot = c;
+        else if (!handing && /^(LH|RH)$/.test(c)) handing = c;
+        else if (!ffl && /^[+-]?\d+(\.\d+)?$/.test(c) && Number(c) < 5000) {
+          if (!houseType && /^\d{1,3}$/.test(c)) houseType = c;
+          else ffl = c;
+        } else if (!houseType && /^[A-Z0-9\-\/]{2,12}$/.test(c) && !JUNK_HOUSE.test(c) && !/^(WK|REG)$/.test(c))
+          houseType = c;
+      });
+    }
+    if (plot || handing || houseType || ffl) {
+      if (plot && !houseType) {
+        const near = upper.match(new RegExp("PLOT\\s*" + plot + "\\s+([A-Z]\\d{3,5})\\b"));
+        if (near) houseType = near[1];
+      }
+      rows.push({
+        plot: plot,
+        houseType: normalizeHouse(houseType),
+        handing: normalizeHanding(handing),
+        ffl: normalizeFfl(ffl),
+      });
+    }
+  });
+  if (!rows.length) {
+    const plotM = upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/);
+    let houseType = null, handing = null, ffl = null;
+    let m = upper.match(/\bTYPE\s*[:\|\-#]\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
+    if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1];
+    if (!houseType && plotM) {
+      const near = upper.match(new RegExp("PLOT\\s*" + plotM[1] + "\\s+([A-Z]\\d{3,5})\\b"));
+      if (near) houseType = near[1];
+    }
+    m = upper.match(/\b(LH|RH)\s*W(?:S|C)?\b/) || upper.match(/HANDING\s*[:\|\-]?\s*(LH|RH)\b/) ||
+        upper.match(/(?:^|[^A-Z0-9])(LH|RH)(?=[^A-Z0-9]|$)/);
+    if (m) handing = m[1];
+    m = upper.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
+    if (m) ffl = m[1];
+    if (plotM || handing || houseType || ffl) {
+      rows.push({
+        plot: plotM ? plotM[1] : null,
+        houseType: normalizeHouse(houseType),
+        handing: normalizeHanding(handing),
+        ffl: normalizeFfl(ffl),
+      });
+    }
+  }
+  const byPlot = {};
+  const noPlot = [];
+  rows.forEach(function (r) {
+    if (r.plot) {
+      const k = String(r.plot);
+      if (!byPlot[k]) byPlot[k] = r;
+      else ["houseType", "handing", "ffl"].forEach(function (f) {
+        if (!byPlot[k][f] && r[f]) byPlot[k][f] = r[f];
+      });
+    } else noPlot.push(r);
+  });
+  return Object.keys(byPlot)
+    .sort(function (a, b) { return Number(a) - Number(b); })
+    .map(function (k) { return byPlot[k]; })
+    .concat(noPlot);
 }
 
 export function extractFields(text) {
-  const t = String(text || "");
-  const upper = t.toUpperCase();
-
-  let handing = null;
-  let ffl = null;
-  let houseType = null;
-  let plot = null;
-  const hints = {};
-
-  // Handing
-  let m = upper.match(
-    /HANDING\s*[:\|\-]?\s*(LH|RH|LEFT\s*HAND(?:ED)?|RIGHT\s*HAND(?:ED)?|LEFT|RIGHT)\b/
-  );
-  if (!m) m = upper.match(/\b(LH|RH)\s*W(?:S|C)?\b/); // LHWS / RHWS Compass
-  if (!m) m = upper.match(/\b(LEFT|RIGHT)\s*HAND(?:ED)?\b/);
+  const plots = extractPlots(text);
+  if (plots.length === 1) {
+    const p = plots[0];
+    return {
+      handing: p.handing,
+      ffl: p.ffl,
+      houseType: p.houseType,
+      plot: p.plot,
+      hints: {},
+      rawSample: String(text || "").slice(0, 600).replace(/\s+/g, " "),
+      plots: plots,
+    };
+  }
+  const upper = String(text || "").toUpperCase();
+  let handing = null, ffl = null, houseType = null, plot = null;
+  let m = upper.match(/HANDING\s*[:\|\-]?\s*(LH|RH|LEFT\s*HAND(?:ED)?|RIGHT\s*HAND(?:ED)?|LEFT|RIGHT)\b/);
+  if (!m) m = upper.match(/\b(LH|RH)\s*W(?:S|C)?\b/);
   if (!m) m = upper.match(/(?:^|[^A-Z0-9])(LH|RH)(?=[^A-Z0-9]|$)/);
-  if (m) {
-    handing = m[1];
-    hints.handing = contextAround(upper, m.index, 25, 40);
-  }
-
-  // FFL
-  m =
-    upper.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/) ||
-    upper.match(/FINISHED\s*FLOOR\s*LEVEL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/) ||
-    upper.match(/\bFLOOR\s*LEVEL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
-  if (m) {
-    ffl = m[1];
-    hints.ffl = contextAround(upper, m.index, 15, 30);
-  }
-
-  // House type
-  m =
-    upper.match(/HOUSE\s*TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
-    upper.match(/\bH\s*[\/\-]?\s*TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
-    upper.match(/\bHTYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
-    upper.match(/\bTYPE\s*[:\|\-#]\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
-  if (m) {
-    houseType = m[1].trim().replace(/[^A-Z0-9\-\/].*$/, "").trim();
-    if (/^(HANDING|FFL|PLOT|LOAD|STAIR|THE|AND|FOR)$/i.test(houseType)) {
-      houseType = null;
-    } else {
-      hints.houseType = contextAround(upper, m.index, 15, 45);
-    }
-  }
-  if (!houseType) {
-    m = upper.match(/\bPLOT\s*\d+\s+([A-Z]\d{3,5})\b/); // PLOT 593 S4023
-    if (m) {
-      houseType = m[1];
-      hints.houseType = contextAround(upper, m.index, 10, 40);
-    }
-  }
-
-  // Plot — never match "PLOTS" (plural). Require a number.
-  m =
-    upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/) ||
-    upper.match(/\bPLT\s*[:\|\-#]?\s*(\d{1,6})\b/);
-  if (m) {
-    plot = m[1].trim();
-    hints.plot = contextAround(upper, m.index, 15, 35);
-  }
-
+  if (m) handing = m[1];
+  m = upper.match(/\bFFL\s*[:\|\-]?\s*([+-]?\d+(?:\.\d+)?)/);
+  if (m) ffl = m[1];
+  m = upper.match(/HOUSE\s*TYPE\s*[:\|\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/) ||
+      upper.match(/\bTYPE\s*[:\|\-#]\s*([A-Z0-9][A-Z0-9\-\/]{0,16})/);
+  if (m && !JUNK_HOUSE.test(m[1])) houseType = m[1].trim().replace(/[^A-Z0-9\-\/].*$/, "").trim();
+  m = upper.match(/\bPLOT\s*(?:NO\.?|NUMBER|#)?\s*[:\|\-]?\s*(\d{1,6})\b/);
+  if (m) plot = m[1];
   return {
     handing: normalizeHanding(handing),
     ffl: normalizeFfl(ffl),
     houseType: normalizeHouse(houseType),
-    plot: plot ? String(plot).toUpperCase() : null,
-    hints: hints,
-    rawSample: t.slice(0, 600).replace(/\s+/g, " "),
+    plot: plot ? String(plot) : null,
+    hints: {},
+    rawSample: String(text || "").slice(0, 600).replace(/\s+/g, " "),
+    plots: plots,
   };
+}
+
+export function buildPlotComparison(msText, snipText) {
+  const msPlots = extractPlots(msText);
+  const snipPlots = extractPlots(snipText);
+  const msBy = {}, snipBy = {}, allPlots = {};
+  msPlots.forEach(function (p) { if (p.plot) { msBy[p.plot] = p; allPlots[p.plot] = true; } });
+  snipPlots.forEach(function (p) { if (p.plot) { snipBy[p.plot] = p; allPlots[p.plot] = true; } });
+  let keys = Object.keys(allPlots).sort(function (a, b) { return Number(a) - Number(b); });
+  if (!keys.length) {
+    const ms = extractFields(msText);
+    const sn = extractFields(snipText);
+    keys = ["—"];
+    msBy["—"] = { plot: null, houseType: ms.houseType, handing: ms.handing, ffl: ms.ffl };
+    snipBy["—"] = { plot: null, houseType: sn.houseType, handing: sn.handing, ffl: sn.ffl };
+  }
+  function cell(msVal, snipVal) {
+    const a = msVal != null && msVal !== "" ? String(msVal) : null;
+    const b = snipVal != null && snipVal !== "" ? String(snipVal) : null;
+    if (a == null && b == null) return { ms: null, snip: null, status: "missing" };
+    if (a == null || b == null) return { ms: a, snip: b, status: "partial" };
+    if (a === b) return { ms: a, snip: b, status: "ok" };
+    return { ms: a, snip: b, status: "diff" };
+  }
+  const plotRows = keys.map(function (k) {
+    const ms = msBy[k] || {};
+    const sn = snipBy[k] || {};
+    const house = cell(ms.houseType, sn.houseType);
+    const hand = cell(ms.handing, sn.handing);
+    const ffl = cell(ms.ffl, sn.ffl);
+    const fields = [house, hand, ffl];
+    let rowStatus = "ok";
+    if (fields.some(function (f) { return f.status === "diff"; })) rowStatus = "diff";
+    else if (fields.every(function (f) { return f.status === "missing"; })) rowStatus = "missing";
+    else if (fields.some(function (f) { return f.status === "partial" || f.status === "missing"; })) rowStatus = "partial";
+    return {
+      plot: k === "—" ? null : k,
+      houseType: house,
+      handing: hand,
+      ffl: ffl,
+      status: rowStatus,
+    };
+  });
+  return { plotRows: plotRows, msPlots: msPlots, snipPlots: snipPlots };
 }
 
 function fieldsEqual(a, b) {
@@ -393,81 +439,44 @@ function fieldsEqual(a, b) {
 export async function runLoadCheck(loadNumber) {
   const ready = await ensureDriveReady(true);
   if (!ready || !gapiSignedIn) {
-    return {
-      ok: false,
-      needSignIn: true,
-      message: "Sign in to Drive first, then try Check load again.",
-      details: null,
-    };
+    return { ok: false, needSignIn: true, message: "Sign in to Drive first.", details: null };
   }
-
   const folder = await searchDriveFolder(loadNumber);
   if (!folder || !folder.id) {
-    return {
-      ok: false,
-      message: "Could not find a Drive folder whose name contains load #" + loadNumber + ".",
-      details: null,
-    };
+    return { ok: false, message: "Could not find folder for load #" + loadNumber + ".", details: null };
   }
-
   const files = await listFolderFiles(folder.id);
   if (!files.length) {
-    return {
-      ok: false,
-      message: "Folder found but it has no files.",
-      details: { folderName: folder.name },
-    };
+    return { ok: false, message: "Folder empty.", details: { folderName: folder.name } };
   }
-
   const classified = { ms_top: [], snip: [], snip_1: [], snip_2: [], other: [] };
   files.forEach(function (f) {
     const role = classifyFileName(f.name);
     if (role && classified[role]) classified[role].push(f);
     else classified.other.push(f);
   });
-
-  let snipFiles = [];
-  if (classified.snip_1.length || classified.snip_2.length) {
-    snipFiles = classified.snip_1.concat(classified.snip_2);
-  } else {
-    snipFiles = classified.snip.slice();
-  }
-
+  let snipFiles = classified.snip_1.length || classified.snip_2.length
+    ? classified.snip_1.concat(classified.snip_2)
+    : classified.snip.slice();
   if (!classified.ms_top.length) {
     return {
       ok: false,
-      message: "No “MS TOP” file. Name the Google Doc e.g. #" + loadNumber + " MS TOP",
-      details: {
-        folderName: folder.name,
-        files: files.map(function (f) {
-          return f.name;
-        }),
-      },
+      message: "No MS TOP file (Google Doc preferred).",
+      details: { folderName: folder.name, files: files.map(function (f) { return f.name; }) },
     };
   }
   if (!snipFiles.length) {
     return {
       ok: false,
-      message: "No “SNIP” file. Use SNIP.xml from Compass.",
-      details: {
-        folderName: folder.name,
-        files: files.map(function (f) {
-          return f.name;
-        }),
-      },
+      message: "No SNIP file (SNIP.xml preferred).",
+      details: { folderName: folder.name, files: files.map(function (f) { return f.name; }) },
     };
   }
-
   const msFile = pickPreferredFile(classified.ms_top);
   const structuredSnips = snipFiles.filter(function (f) {
     const n = (f.name || "").toLowerCase();
     const mt = (f.mimeType || "").toLowerCase();
-    return (
-      n.endsWith(".xml") ||
-      n.endsWith(".txt") ||
-      mt.indexOf("xml") !== -1 ||
-      mt.indexOf("text/") === 0
-    );
+    return n.endsWith(".xml") || n.endsWith(".txt") || mt.indexOf("xml") !== -1 || mt.indexOf("text/") === 0;
   });
   if (structuredSnips.length) snipFiles = structuredSnips;
   else snipFiles = [pickPreferredFile(snipFiles)].filter(Boolean);
@@ -480,136 +489,48 @@ export async function runLoadCheck(loadNumber) {
     if (r.error) snipErrors.push(r.error);
     snipTexts.push({ name: snipFiles[i].name, text: r.text, via: r.via });
   }
-
   if (msResult.error && !msResult.text) {
     return { ok: false, message: msResult.error, details: { folderName: folder.name } };
   }
-
-  const combinedSnipText = snipTexts
-    .map(function (s) {
-      return s.text;
-    })
-    .join("\n");
-
+  const combinedSnipText = snipTexts.map(function (s) { return s.text; }).join("\n");
   if (!combinedSnipText.trim() && snipErrors.length) {
-    return {
-      ok: false,
-      message: snipErrors.join("\n"),
-      details: { folderName: folder.name },
-    };
+    return { ok: false, message: snipErrors.join("\n"), details: { folderName: folder.name } };
   }
 
   const msFields = extractFields(msResult.text);
   const snipFields = extractFields(combinedSnipText);
-
-  const comparisons = [
-    { key: "handing", label: "Handing", ms: msFields.handing, snip: snipFields.handing },
-    { key: "ffl", label: "FFL", ms: msFields.ffl, snip: snipFields.ffl },
-    { key: "houseType", label: "House type", ms: msFields.houseType, snip: snipFields.houseType },
-    { key: "plot", label: "Plot", ms: msFields.plot, snip: snipFields.plot },
-  ];
-
-  const missing = [];
-  const mismatches = [];
-  comparisons.forEach(function (c) {
-    if (c.key === "plot") {
-      if (c.ms != null && c.snip != null && !fieldsEqual(c.ms, c.snip)) {
-        mismatches.push({ label: c.label, ms: c.ms, snip: c.snip, key: c.key });
-      }
-      return;
-    }
-    if (c.ms == null && c.snip == null) missing.push(c.label + " (not found on either file)");
-    else if (c.ms == null) missing.push(c.label + " (not found on MS TOP)");
-    else if (c.snip == null) missing.push(c.label + " (not found on SNIP)");
-    else if (!fieldsEqual(c.ms, c.snip))
-      mismatches.push({ label: c.label, ms: c.ms, snip: c.snip, key: c.key });
-  });
+  const plotCompare = buildPlotComparison(msResult.text, combinedSnipText);
 
   const details = {
     folderName: folder.name,
     msFile: msFile.name,
-    snipFiles: snipFiles.map(function (f) {
-      return f.name;
-    }),
+    snipFiles: snipFiles.map(function (f) { return f.name; }),
     msFields: msFields,
     snipFields: snipFields,
-    comparisons: comparisons,
-    warnings: [].concat(msResult.error ? [msResult.error] : [], snipErrors),
+    plotRows: plotCompare.plotRows,
     msVia: msResult.via,
-    snipVia: snipTexts.map(function (s) {
-      return s.via;
-    }),
+    snipVia: snipTexts.map(function (s) { return s.via; }),
   };
 
-  comparisons.forEach(function (c) {
-    c.msHint = (msFields.hints && msFields.hints[c.key]) || "";
-    c.snipHint = (snipFields.hints && snipFields.hints[c.key]) || "";
-  });
-  mismatches.forEach(function (m) {
-    const full = comparisons.find(function (c) {
-      return c.label === m.label;
-    });
-    if (full) {
-      m.msHint = full.msHint;
-      m.snipHint = full.snipHint;
-    }
-  });
+  const hasDiff = plotCompare.plotRows.some(function (r) { return r.status === "diff"; });
+  const allOk = plotCompare.plotRows.length > 0 &&
+    plotCompare.plotRows.every(function (r) { return r.status === "ok"; });
 
-  if (mismatches.length) {
+  if (allOk) {
     return {
-      ok: false,
-      message:
-        "Differences found:\n\n" +
-        mismatches
-          .map(function (m) {
-            return m.label + ": MS TOP = " + m.ms + " · SNIP = " + m.snip;
-          })
-          .join("\n"),
+      ok: true,
+      message: "All plots match.",
       details: details,
-      mismatches: mismatches,
-      missing: missing,
-      comparisons: comparisons,
-    };
-  }
-
-  const coreMissing = missing.filter(function (x) {
-    return x.indexOf("Plot") !== 0;
-  });
-  if (coreMissing.length >= 3) {
-    return {
-      ok: false,
-      message:
-        "Could not read handing / FFL / house type from the Doc or XML.\n" +
-        "Open ‘Show text read from files’ to see what was imported.",
-      details: details,
-      missing: missing,
-      comparisons: comparisons,
-    };
-  }
-
-  if (coreMissing.length) {
-    return {
-      ok: false,
-      message: "Some fields missing:\n• " + coreMissing.join("\n• "),
-      details: details,
-      missing: missing,
-      comparisons: comparisons,
-      partial: true,
+      plotRows: plotCompare.plotRows,
     };
   }
 
   return {
-    ok: true,
-    message:
-      "Match.\nHanding: " +
-      msFields.handing +
-      "\nFFL: " +
-      msFields.ffl +
-      "\nHouse type: " +
-      msFields.houseType +
-      (msFields.plot ? "\nPlot: " + msFields.plot : ""),
+    ok: false,
+    message: hasDiff ? "Differences on one or more plots." : "Some fields missing — check MS TOP table labels.",
     details: details,
-    comparisons: comparisons,
+    plotRows: plotCompare.plotRows,
+    partial: !hasDiff,
   };
 }
 
