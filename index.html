@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="presence.css">
 <link rel="stylesheet" href="finish.css">
 <link rel="stylesheet" href="office-errors.css">
+<link rel="stylesheet" href="loads-by-person.css">
 <link rel="manifest" href="manifest.json">
 <style>
   @keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -21,7 +22,6 @@
     line-height:1.4;
   }
 </style>
-<!-- Remap CDN modules to local so config + date parsing fixes apply -->
 <script type="importmap">
 {
   "imports": {
@@ -33,7 +33,6 @@
 </script>
 </head>
 <body>
-
 
 <header>
   <div class="brand">
@@ -49,7 +48,6 @@
       <span class="brand-sub">Production Office</span>
     </div>
   </div>
-  
   <div class="header-right">
     <div class="status">
         <span class="dot"></span>
@@ -67,7 +65,6 @@
 <div id="errorBanner"></div>
 <div id="loadingMsg" class="loading">Loading live figures…</div>
 
-<!-- ============ LANDING PAGE ============ -->
 <div id="landingPage" class="page-view">
   <div class="landing-title">
     <h1>📊 PRODUCTION OFFICE</h1>
@@ -85,7 +82,7 @@
     <div class="nav-tile" id="tileLoads">
       <div class="tile-icon">📦</div>
       <div class="tile-label">LOADS</div>
-      <div class="tile-sub">Track all loads with auto Drive search</div>
+      <div class="tile-sub">By person · Drive · check load</div>
       <div class="tile-badge" id="tileLoadsBadge" style="display:none;"></div>
     </div>
     <div class="nav-tile" id="tileHolidays">
@@ -112,7 +109,6 @@
   </div>
 </div>
 
-<!-- ============ OFFICE KPI PAGE ============ -->
 <div id="kpiPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromKpi">← Production Office</button>
@@ -123,44 +119,35 @@
   <div class="grid" id="dialGrid"></div>
 </div>
 
-<!-- ============ LOADS PAGE ============ -->
 <div id="loadsPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromLoads">← Production Office</button>
     <h2>📦 Loads</h2>
     <button class="back-btn" id="refreshLoadsBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
   </div>
-  
   <div id="loadsContainer">
-    <div class="loads-controls">
-      <div class="loads-search">
-        <input type="text" id="loadSearch" placeholder="🔍 Search by load number..." />
-      </div>
-      <div class="loads-filters">
-        <select id="personFilter">
-          <option value="all">👤 All People</option>
-        </select>
-        <select id="statusFilter">
-          <option value="all">📊 All Status</option>
-          <option value="in-progress">🔄 In Progress</option>
-          <option value="completed">✅ Completed</option>
-          <option value="pending">⏳ Pending</option>
-        </select>
-      </div>
-      <div class="loads-stats">
-        Showing <span class="highlight" id="loadsShowing">0</span> of <span class="highlight" id="loadsTotal">0</span> loads
-      </div>
+    <div class="loads-controls loads-controls-compact">
       <div class="drive-auth-status" id="driveAuthStatus">
         <span class="status-dot disconnected" id="driveStatusDot"></span>
         <span id="driveStatusText">Drive: Disconnected</span>
       </div>
+      <div class="loads-stats" style="margin-left:auto;">
+        <span class="highlight" id="loadsTotal">0</span> loads total
+      </div>
     </div>
-    <div class="loads-grid" id="loadsGrid"></div>
-    <div class="loads-pagination" id="loadsPagination"></div>
+    <div id="loadsPersonView"></div>
+    <div id="loadsPersonDetail" style="display:none;"></div>
+    <div style="display:none;" aria-hidden="true">
+      <input type="text" id="loadSearch" />
+      <select id="personFilter"><option value="all">All</option></select>
+      <select id="statusFilter"><option value="all">All</option></select>
+      <span id="loadsShowing">0</span>
+      <div class="loads-grid" id="loadsGrid"></div>
+      <div class="loads-pagination" id="loadsPagination"></div>
+    </div>
   </div>
 </div>
 
-<!-- ============ PERSON DETAIL PAGE ============ -->
 <div id="detailPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToKpi">← Back to KPI</button>
@@ -186,7 +173,6 @@
   </div>
 </div>
 
-<!-- ============ DAY DETAIL PAGE ============ -->
 <div id="dayDetailPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToDetail">← Back</button>
@@ -199,7 +185,6 @@
   </div>
 </div>
 
-<!-- ============ HOLIDAYS PAGE ============ -->
 <div id="holidaysPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromHolidays">← Production Office</button>
@@ -231,13 +216,11 @@
   </div>
 </div>
 
-<!-- ============ FORECAST PAGE ============ -->
 <div id="forecastPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromForecast">← Production Office</button>
     <h2>🔮 Capacity & absences</h2>
   </div>
-
   <div class="detail-section" style="margin-bottom:20px;">
     <h3>🏁 This Week — Predicted Finish Day</h3>
     <div class="forecast-note" style="margin-bottom:12px;">
@@ -246,12 +229,10 @@
     </div>
     <div id="currentWeekFinish"></div>
   </div>
-
   <div class="forecast-note">Each upcoming week: team capacity from daily rates, minus who is on holiday. Compared to your usual weekly load when set.</div>
   <div class="forecast-week-grid" id="forecastWeeks"></div>
 </div>
 
-<!-- ============ OFFICE ERRORS PAGE ============ -->
 <div id="errorsPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromErrors">← Production Office</button>
@@ -262,7 +243,6 @@
   </div>
   <div id="officeErrorCards" class="office-error-grid"></div>
   <div id="officeErrorDetail" class="office-error-detail" style="display:none;"></div>
-
   <details class="detail-section" style="margin-top:24px;">
     <summary style="cursor:pointer;font-weight:700;font-size:1rem;margin-bottom:12px;">📊 Trends & patterns (optional)</summary>
     <div class="detail-section">
@@ -297,7 +277,6 @@
   </details>
 </div>
 
-<!-- ============ REPLACEMENT PARTS PAGE ============ -->
 <div id="replacementPartsPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromReplacementParts">← Production Office</button>
@@ -326,7 +305,6 @@
     <div id="rpRecentList"></div>
   </div>
 </div>
-
 
 <footer>Live from Google Sheets · Drive auto-search enabled</footer>
 
