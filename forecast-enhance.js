@@ -1,13 +1,12 @@
 /**
- * Forecast — back to basics
+ * Forecast — capacity week vs demand week (+1)
  *
- * For each upcoming week:
- *   - What can the team produce? (each person's daily target, Mon–Fri)
- *   - Who is off, and by how much does that cut capacity?
- *   - Optional guide: compare to defaultWeeklyStairs (usual weekly load)
+ * You produce next week’s stairs during the current week:
+ *   Work week W (who is in / off)  →  capacity
+ *   Demand week W+1 (stairs due)   →  demand
  *
- * Temporary helpers (e.g. DK) only count up to their last W/C in
- * CONFIG.temporaryHelperLastWeek.
+ * Demand = sum of load stairs with delivery in demand week,
+ * or CONFIG.defaultWeeklyStairs when none entered yet.
  */
 import { CONFIG } from "./config.js";
 import { mondayOf, dayBucket, fmtDateShort } from "./utils.js";
@@ -20,7 +19,6 @@ function parseYMD(str) {
   return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
 }
 
-/** People who still count in capacity for this week-start Monday. */
 function peopleForWeek(weekStart) {
   const lastMap = CONFIG.temporaryHelperLastWeek || {};
   const weekMs = weekStart.getTime();
@@ -31,7 +29,6 @@ function peopleForWeek(weekStart) {
     if (!lastStr) return true;
     const last = parseYMD(lastStr);
     if (!last) return true;
-    // Include only while weekStart <= last Monday they work
     return weekMs <= last.getTime();
   });
 }
@@ -42,7 +39,6 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
-/** Full Mon–Fri capacity for one person in a week, with holiday days listed. */
 function weekCapacityForPerson(person, weekStart, holidayIndex) {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 4);
@@ -79,32 +75,85 @@ function weekCapacityForPerson(person, weekStart, holidayIndex) {
   };
 }
 
-function getWarningLevel(capacity, guide) {
-  if (!guide || guide <= 0) return { level: "ok", label: "✅ OK", className: "ok" };
-  const gap = capacity - guide;
-  if (gap <= -80) return { level: "danger", label: "🔴 Tight", className: "danger" };
-  if (gap <= -30) return { level: "warning", label: "🟡 Watch", className: "warning" };
-  return { level: "ok", label: "✅ OK", className: "ok" };
+function getWarningLevel(capacity, demand) {
+  if (!demand || demand <= 0) return { level: "ok", label: "OK", className: "ok" };
+  const gap = capacity - demand;
+  if (gap < 0) return { level: "danger", label: Math.abs(gap) + " short", className: "danger" };
+  if (gap < demand * 0.1) return { level: "warning", label: "Tight", className: "warning" };
+  return { level: "ok", label: "+" + gap + " spare", className: "ok" };
+}
+
+function stairsForDemandWeek(entries, demandMonday) {
+  const start = new Date(demandMonday);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+
+  let total = 0;
+  let count = 0;
+  (entries || []).forEach(function (e) {
+    const d = e.deliveryDate || e.date;
+    if (!d) return;
+    const t = d instanceof Date ? d : new Date(d);
+    if (isNaN(t.getTime())) return;
+    if (t >= start && t < end) {
+      const n = Number(e.stairs) || 0;
+      if (n > 0) {
+        total += n;
+        count += 1;
+      }
+    }
+  });
+  return { total: Math.round(total), count: count };
+}
+
+function demandForWorkWeek(forecastEntries, stairEntries, workMonday) {
+  const demandMonday = new Date(workMonday);
+  demandMonday.setDate(demandMonday.getDate() + 7);
+
+  const all = [].concat(forecastEntries || [], stairEntries || []);
+  const fromLoads = stairsForDemandWeek(all, demandMonday);
+  const fallback = Math.round(Number(CONFIG.defaultWeeklyStairs) || 0);
+
+  if (fromLoads.total > 0) {
+    return {
+      stairs: fromLoads.total,
+      source: "loads",
+      loadCount: fromLoads.count,
+      demandMonday: demandMonday,
+    };
+  }
+  return {
+    stairs: fallback,
+    source: fallback > 0 ? "default" : "none",
+    loadCount: 0,
+    demandMonday: demandMonday,
+  };
 }
 
 export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
   const container = document.getElementById("forecastWeeks");
   if (!container || !holidayIndex || !today) return;
 
-  const guide = Math.round(Number(CONFIG.defaultWeeklyStairs) || 0);
   const startMonday = mondayOf(today);
   const numWeeks = CONFIG.forecastWeeks || 8;
+  const stairEntries = window._stairEntries || [];
 
   let hasWarning = false;
-
   const cards = [];
-  for (let i = 0; i < numWeeks; i++) {
-    const wStart = new Date(startMonday);
-    wStart.setDate(wStart.getDate() + 7 * i);
-    const wEnd = new Date(wStart);
-    wEnd.setDate(wStart.getDate() + 4);
 
-    const PEOPLE = peopleForWeek(wStart);
+  for (let i = 0; i < numWeeks; i++) {
+    const workStart = new Date(startMonday);
+    workStart.setDate(workStart.getDate() + 7 * i);
+    const workEnd = new Date(workStart);
+    workEnd.setDate(workStart.getDate() + 4);
+
+    const demand = demandForWorkWeek(forecastEntries, stairEntries, workStart);
+    const demandStart = demand.demandMonday;
+    const demandEnd = new Date(demandStart);
+    demandEnd.setDate(demandStart.getDate() + 4);
+
+    const PEOPLE = peopleForWeek(workStart);
 
     let totalCapacity = 0;
     let totalFull = 0;
@@ -112,7 +161,7 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     const absences = [];
 
     PEOPLE.forEach(function (person) {
-      const cap = weekCapacityForPerson(person, wStart, holidayIndex);
+      const cap = weekCapacityForPerson(person, workStart, holidayIndex);
       totalCapacity += cap.capacity;
       totalFull += cap.fullCapacity;
       perPerson.push({
@@ -127,164 +176,211 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     });
 
     const lost = totalFull - totalCapacity;
-    const warning = getWarningLevel(totalCapacity, guide);
+    const demandStairs = demand.stairs;
+    const warning = getWarningLevel(totalCapacity, demandStairs);
     if (warning.level === "danger" || warning.level === "warning") hasWarning = true;
 
-    const headLabel = i === 0 ? "This week" : ("W/C " + fmtDateShort(wStart));
-    const whoLine = perPerson.map(function (p) { return p.initials + " " + p.capacity; }).join(" · ");
+    const headLabel =
+      i === 0 ? "This work week" : "Work W/C " + fmtDateShort(workStart);
+
+    const whoLine = perPerson
+      .map(function (p) {
+        return p.initials + " " + p.capacity;
+      })
+      .join(" · ");
 
     let absenceHtml = "";
     if (absences.length > 0) {
-      absenceHtml = '<div class="holiday-impact" style="margin-top:10px;font-size:0.8rem;">';
-      absenceHtml += "<strong>Who is off</strong><div style=\"margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;\">";
+      absenceHtml =
+        '<div class="holiday-impact" style="margin-top:10px;font-size:0.8rem;">' +
+        "<strong>Who is off (work week)</strong>" +
+        '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;">';
       absences.forEach(function (a) {
-        const days = a.offDays.map(function (o) {
-          return fmtDateShort(o.date) + " (" + (o.label || o.code) + ")";
-        }).join(", ");
+        const days = a.offDays
+          .map(function (o) {
+            return fmtDateShort(o.date) + " (" + (o.label || o.code) + ")";
+          })
+          .join(", ");
         absenceHtml +=
           '<span class="chip" style="background:rgba(0,0,0,0.06);padding:4px 8px;border-radius:8px;">' +
           '<span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' +
-          a.person.color + ';margin-right:6px;"></span>' +
-          escapeHtml(a.person.initials) + ": " + escapeHtml(days) +
-          " · left with " + a.capacity +
+          a.person.color +
+          ';margin-right:6px;"></span>' +
+          escapeHtml(a.person.initials) +
+          ": " +
+          escapeHtml(days) +
+          " · left with " +
+          a.capacity +
           "</span>";
       });
       absenceHtml += "</div></div>";
-    } else {
-      absenceHtml =
-        '<div style="margin-top:10px;font-size:0.8rem;color:var(--muted);">Everyone in — full capacity</div>';
     }
 
-    // Note if a temp helper dropped off this week vs previous
     let tempNote = "";
-    const lastMap = CONFIG.temporaryHelperLastWeek || {};
-    Object.keys(lastMap).forEach(function (init) {
-      const last = parseYMD(lastMap[init]);
+    Object.keys(CONFIG.temporaryHelperLastWeek || {}).forEach(function (init) {
+      const last = parseYMD(CONFIG.temporaryHelperLastWeek[init]);
       if (!last) return;
-      // First week after their last week
       const after = new Date(last);
       after.setDate(after.getDate() + 7);
-      if (wStart.getTime() === after.getTime()) {
+      if (workStart.getTime() === after.getTime()) {
         tempNote =
           '<div style="margin-top:8px;font-size:0.75rem;color:var(--muted);">' +
-          escapeHtml(init) + " finished — no longer in capacity" +
-          "</div>";
+          escapeHtml(init) +
+          " finished — no longer in capacity</div>";
       }
     });
 
-    let guideLine = "";
-    if (guide > 0) {
-      const gap = totalCapacity - guide;
-      guideLine =
-        '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:6px 0;border-top:1px solid var(--card-border);padding-top:8px;">' +
-          "<span>Vs usual week (" + guide + ")</span>" +
-          "<span class=\"val\"><strong>" +
-          (gap >= 0 ? ("+" + gap + " spare") : (Math.abs(gap) + " short")) +
-          "</strong></span>" +
-        "</div>";
-    }
+    const gap = totalCapacity - demandStairs;
+    let demandLabel =
+      demand.source === "loads"
+        ? "Stairs due W/C " + fmtDateShort(demandStart) + " (" + demand.loadCount + " loads)"
+        : demand.source === "default"
+          ? "Stairs due W/C " + fmtDateShort(demandStart) + " (default " + demandStairs + ")"
+          : "Stairs due W/C " + fmtDateShort(demandStart);
+
+    let demandLine =
+      '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:6px 0;border-top:1px solid var(--card-border);padding-top:8px;">' +
+      "<span><strong>Demand</strong> <span style=\"color:var(--muted);font-weight:400;font-size:0.78rem\">" +
+      escapeHtml(demandLabel) +
+      "</span></span>" +
+      '<span class="val"><strong>' +
+      demandStairs +
+      "</strong> stairs</span></div>";
+
+    let resultLine =
+      '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:4px 0;">' +
+      "<span>Result</span>" +
+      '<span class="val"><strong>' +
+      totalCapacity +
+      " − " +
+      demandStairs +
+      " = " +
+      (gap >= 0 ? "+" + gap + " spare" : Math.abs(gap) + " short") +
+      "</strong></span></div>";
 
     cards.push(
-      '<div class="forecast-week-card ' + warning.className + '">' +
+      '<div class="forecast-week-card ' +
+        warning.className +
+        '">' +
         '<div class="fw-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">' +
-          '<div class="fw-title" style="font-weight:700;">' + headLabel +
-            ' <span style="font-weight:400;color:var(--muted);font-size:0.8rem;">(' +
-            fmtDateShort(wStart) + " – " + fmtDateShort(wEnd) + ")</span></div>" +
-          '<div class="fw-badge ' + warning.className + '">' + warning.label + '</div>' +
-        '</div>' +
+        '<div class="fw-title" style="font-weight:700;">' +
+        headLabel +
+        ' <span style="font-weight:400;color:var(--muted);font-size:0.8rem;">(' +
+        fmtDateShort(workStart) +
+        " – " +
+        fmtDateShort(workEnd) +
+        ")</span></div>" +
+        '<div class="fw-badge ' +
+        warning.className +
+        '">' +
+        warning.label +
+        "</div></div>" +
+        '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">' +
+        "Producing for <strong>W/C " +
+        fmtDateShort(demandStart) +
+        "</strong> (" +
+        fmtDateShort(demandStart) +
+        " – " +
+        fmtDateShort(demandEnd) +
+        ")</div>" +
         '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:4px 0;">' +
-          "<span><strong>Team capacity</strong></span>" +
-          "<span class=\"val\"><strong>" + totalCapacity + "</strong> stairs" +
-          (lost > 0
-            ? " <span style=\"color:var(--muted);font-weight:400\">(−" + lost + " from absences)</span>"
-            : "") +
-          "</span>" +
-        "</div>" +
+        "<span><strong>Team capacity</strong> <span style=\"color:var(--muted);font-weight:400;font-size:0.78rem\">(work week)</span></span>" +
+        '<span class="val"><strong>' +
+        totalCapacity +
+        "</strong> stairs" +
+        (lost > 0
+          ? ' <span style="color:var(--muted);font-weight:400">(−' + lost + " from absences)</span>"
+          : "") +
+        "</span></div>" +
         '<div style="font-size:0.78rem;color:var(--muted);margin:4px 0 2px;">' +
-          escapeHtml(whoLine) +
+        escapeHtml(whoLine) +
         "</div>" +
-        guideLine +
+        demandLine +
+        resultLine +
         absenceHtml +
         tempNote +
-      "</div>"
+        "</div>"
     );
   }
 
   const note =
     '<div class="forecast-note" style="margin-bottom:12px;line-height:1.5;">' +
-      "<strong>Simple view:</strong> each week shows what the team can produce " +
-      "(from daily rates) after holidays. " +
-      (guide
-        ? "Usual weekly load is set at <strong>" + guide + "</strong> stairs."
-        : "") +
-      " Temporary helpers only count through their last week." +
-    "</div>";
+    "<strong>How this works:</strong> capacity is who is in during the <em>work week</em>. " +
+    "Demand is stairs for the <em>following week</em> (what you produce in the work week). " +
+    "If no loads are entered for that demand week, the default (" +
+    (CONFIG.defaultWeeklyStairs || 0) +
+    ") is used.</div>";
 
-  container.innerHTML = note + '<div class="forecast-week-grid-inner">' + cards.join("") + "</div>";
+  container.innerHTML = note + cards.join("");
 
-  const tileBadge = document.getElementById("tileForecastBadge");
-  if (tileBadge) {
-    if (hasWarning) {
-      tileBadge.style.display = "";
-      tileBadge.textContent = "!";
-      tileBadge.className = "tile-badge danger";
-    } else {
-      tileBadge.style.display = "none";
-    }
-  }
+  renderLookaheadBanner(startMonday, holidayIndex, forecastEntries, stairEntries);
 
-  updateLookaheadBanner(startMonday, holidayIndex, guide);
+  const flag = document.getElementById("forecastWarningFlag");
+  if (flag) flag.style.display = hasWarning ? "" : "none";
 }
 
-function updateLookaheadBanner(startMonday, holidayIndex, guide) {
+function renderLookaheadBanner(startMonday, holidayIndex, forecastEntries, stairEntries) {
   const container = document.getElementById("lookaheadBanner");
   if (!container) return;
 
-  const nextStart = new Date(startMonday);
-  nextStart.setDate(nextStart.getDate() + 7);
-
-  const PEOPLE = peopleForWeek(nextStart);
+  const workStart = new Date(startMonday);
+  const PEOPLE = peopleForWeek(workStart);
 
   let capacity = 0;
   let full = 0;
   const offNames = [];
   PEOPLE.forEach(function (person) {
-    const cap = weekCapacityForPerson(person, nextStart, holidayIndex);
+    const cap = weekCapacityForPerson(person, workStart, holidayIndex);
     capacity += cap.capacity;
     full += cap.fullCapacity;
-    if (cap.offDays.length > 0) {
-      offNames.push(person.initials);
-    }
+    if (cap.offDays.length > 0) offNames.push(person.initials);
   });
 
+  const demand = demandForWorkWeek(forecastEntries, stairEntries, workStart);
   const lost = full - capacity;
-  let msg;
-  let short = false;
-  if (guide > 0) {
-    const gap = capacity - guide;
-    short = gap < 0;
-    msg =
-      "Next week capacity " + capacity +
-      (lost > 0 ? " (−" + lost + " absences" + (offNames.length ? ": " + offNames.join(", ") : "") + ")" : "") +
-      " · usual " + guide + " → " +
-      (short ? Math.abs(gap) + " short" : "+" + gap + " spare");
-  } else {
-    msg =
-      "Next week capacity " + capacity +
-      (lost > 0 ? " (−" + lost + " from absences)" : " (full team)");
-  }
+  const gap = capacity - demand.stairs;
+  const short = demand.stairs > 0 && gap < 0;
+
+  const msg =
+    "This work week capacity " +
+    capacity +
+    (lost > 0
+      ? " (−" + lost + " absences" + (offNames.length ? ": " + offNames.join(", ") : "") + ")"
+      : "") +
+    " · demand W/C " +
+    fmtDateShort(demand.demandMonday) +
+    " = " +
+    demand.stairs +
+    (demand.source === "default" ? " (default)" : "") +
+    " → " +
+    (demand.stairs <= 0
+      ? "no demand set"
+      : short
+        ? Math.abs(gap) + " short"
+        : "+" + gap + " spare");
 
   const color = short ? "var(--red)" : "var(--green)";
   const bg = short ? "rgba(231,76,60,0.08)" : "rgba(46,204,113,0.08)";
 
   container.innerHTML =
-    '<div style="background:' + bg + ";border:1px solid " + color +
+    '<div style="background:' +
+    bg +
+    ";border:1px solid " +
+    color +
     ';border-radius:10px;padding:10px 16px;margin-bottom:16px;text-align:center;' +
-    'font-size:0.85rem;font-weight:600;color:' + color + ';">' + escapeHtml(msg) + "</div>";
+    "font-size:0.85rem;font-weight:600;color:" +
+    color +
+    ';">' +
+    escapeHtml(msg) +
+    "</div>";
 }
 
 window.renderEnhancedForecast = function () {
   if (window._holidayIndex && window._today) {
-    renderEnhancedForecast(window._forecastEntries || [], window._holidayIndex, window._today);
+    renderEnhancedForecast(
+      window._forecastEntries || [],
+      window._holidayIndex,
+      window._today
+    );
   }
 };
