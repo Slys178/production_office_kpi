@@ -79,41 +79,50 @@ function parseDailyRows(rows) {
 
 function dialSvg(actual, target, size) {
   size = size || 160;
-  const pct = target > 0 ? Math.min(actual / target, 1.25) : (actual > 0 ? 1 : 0);
-  const angle = -90 + Math.min(pct, 1) * 180;
-  const r = size * 0.38;
-  const cx = size / 2;
-  const cy = size * 0.58;
-  const toRad = function (a) { return (a * Math.PI) / 180; };
-  const x = cx + r * Math.cos(toRad(angle));
-  const y = cy + r * Math.sin(toRad(angle));
+  var scale = target > 0 ? target : Math.max(actual, 1);
+  var pct = Math.min(Math.max(actual / scale, 0), 1);
+  var r = size * 0.38;
+  var cx = size / 2;
+  var cy = size * 0.55;
+  var endRad = Math.PI - pct * Math.PI;
+  var x2 = cx + r * Math.cos(endRad);
+  var y2 = cy - r * Math.sin(endRad);
 
-  let colour = '#e74c3c';
-  if (pct >= 0.95) colour = '#2ecc71';
+  var colour = '#e74c3c';
+  if (target <= 0 && actual > 0) colour = '#3498db';
+  else if (pct >= 0.95) colour = '#2ecc71';
   else if (pct >= 0.75) colour = '#f5a623';
 
-  const bg = 'M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy;
-  const arc = 'M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + x + ' ' + y;
+  var bg = 'M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy;
+  var large = pct > 0.5 ? 1 : 0;
+  var arc = pct < 0.005 ? '' : ('M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2);
 
-  return '<svg width="' + size + '" height="' + (size * 0.75) + '" viewBox="0 0 ' + size + ' ' + (size * 0.72) + '">' +
+  var sub = target > 0 ? ('of ' + target.toFixed(0) + ' m') : (actual > 0 ? 'm today (attendance not in)' : 'of 0 m');
+
+  return '<svg width="' + size + '" height="' + (size * 0.72) + '" viewBox="0 0 ' + size + ' ' + (size * 0.7) + '">' +
     '<path d="' + bg + '" fill="none" stroke="#2a3348" stroke-width="14" stroke-linecap="round"/>' +
-    '<path d="' + arc + '" fill="none" stroke="' + colour + '" stroke-width="14" stroke-linecap="round"/>' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="' + colour + '"/>' +
-    '<text x="' + cx + '" y="' + (cy - 18) + '" text-anchor="middle" fill="var(--text, #eef2fb)" font-size="22" font-weight="700">' + actual.toFixed(0) + '</text>' +
-    '<text x="' + cx + '" y="' + (cy + 8) + '" text-anchor="middle" fill="var(--muted, #8993ab)" font-size="11">of ' + target.toFixed(0) + ' m</text>' +
+    (arc ? '<path d="' + arc + '" fill="none" stroke="' + colour + '" stroke-width="14" stroke-linecap="round"/>' : '') +
+    '<circle cx="' + x2 + '" cy="' + y2 + '" r="6" fill="' + colour + '"/>' +
+    '<text x="' + cx + '" y="' + (cy - 12) + '" text-anchor="middle" fill="var(--text, #eef2fb)" font-size="22" font-weight="700">' + actual.toFixed(0) + '</text>' +
+    '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" fill="var(--muted, #8993ab)" font-size="11">' + sub + '</text>' +
     '</svg>';
 }
 
-function renderSummary(sectionExpected, sectionActual) {
+function renderSummary(sectionExpected, sectionActual, fullDaily) {
   const el = document.getElementById('secondFixSummary');
   if (!el) return;
+  fullDaily = fullDaily || 0;
   const pct = sectionExpected > 0 ? (100 * sectionActual / sectionExpected) : 0;
   const remaining = sectionExpected - sectionActual;
+  var note = sectionExpected <= 0
+    ? '<div class="forecast-note" style="grid-column:1/-1;">Attendance not marked in yet for today — expected is 0. Dial scale uses full section target (' + fullDaily.toFixed(0) + ' m).</div>'
+    : '';
   el.innerHTML =
     '<div class="stat-card"><div class="stat-label">Expected today</div><div class="stat-value">' + sectionExpected.toFixed(0) + ' m</div></div>' +
     '<div class="stat-card"><div class="stat-label">Actual so far</div><div class="stat-value" style="color:var(--green,#2ecc71)">' + sectionActual.toFixed(0) + ' m</div></div>' +
     '<div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value">' + remaining.toFixed(0) + ' m</div></div>' +
-    '<div class="stat-card"><div class="stat-label">% of expected</div><div class="stat-value">' + pct.toFixed(0) + '%</div></div>';
+    '<div class="stat-card"><div class="stat-label">% of expected</div><div class="stat-value">' + pct.toFixed(0) + '%</div></div>' +
+    note;
 }
 
 function renderSectionDial(sectionExpected, sectionActual) {
@@ -166,8 +175,10 @@ export async function loadSecondFix(force) {
       return;
     }
 
-    renderSummary(sectionExpected, sectionActual);
-    renderSectionDial(sectionExpected, sectionActual);
+    var fullDaily = people.reduce(function (s, p) { return s + (p.dailyTarget || 0); }, 0);
+    var dialExpected = sectionExpected > 0 ? sectionExpected : fullDaily;
+    renderSummary(sectionExpected, sectionActual, fullDaily);
+    renderSectionDial(dialExpected, sectionActual);
     renderPeopleDials(people);
 
     const weekEl = document.getElementById('secondFixWeekStrip');
