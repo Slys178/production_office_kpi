@@ -65,6 +65,9 @@
 <div id="errorBanner"></div>
 <div id="loadingMsg" class="loading">Loading live figures…</div>
 
+<!-- Hidden stubs so CDN main.js does not crash (Drive auto-search removed) -->
+<div id="driveAuthStatus" style="display:none" aria-hidden="true"><span id="driveStatusDot"></span><span id="driveStatusText"></span></div>
+
 <!-- TOP AREA CHOICE -->
 <div id="areaLandingPage" class="page-view" style="display:none;">
   <div class="landing-title">
@@ -265,7 +268,6 @@
   <div class="detail-section"><h3>🕒 Recent Incidents</h3><div id="rpRecentList"></div></div>
 </div>
 
-<!-- 2ND FIX DIALS -->
 <div id="secondFixPage" class="page-view" style="display:none;">
   <div class="page-header">
     <button class="back-btn" id="backToAreaFrom2ndFix">← Areas</button>
