@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Production Office</title>
+    <title>Login - Staircraft</title>
     <script src="https://accounts.google.com/gsi/client"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -135,7 +135,7 @@
                     <rect x="122" y="65" width="20" height="133" fill="white"/>
                 </svg>
                 <span class="logo-text">STAIRCRAFT</span>
-                <span class="app-name">Production Office</span>
+                <span class="app-name">Ops KPI</span>
             </div>
 
             <h2>Welcome back</h2>
@@ -180,7 +180,16 @@
             loginBtn.disabled = true;
         }
 
-        // Fetch user list from Google Sheets
+        /** Normalise AREA values from the sheet */
+        function normaliseArea(raw) {
+            const a = (raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
+            if (a === 'BOTH' || a === 'ALL' || a === 'ADMIN') return 'BOTH';
+            if (a === '2ND FIX' || a === '2NDFIX' || a === '2ND' || a === 'SECOND FIX') return '2ND FIX';
+            if (a === 'OFFICE' || a === '1ST' || a === '1ST FIX' || a === 'FIRST FIX' || a === 'PRODUCTION') return 'OFFICE';
+            // Default: if blank, treat as OFFICE so existing users keep working
+            return a || 'OFFICE';
+        }
+
         async function fetchUserList() {
             const url = `https://docs.google.com/spreadsheets/d/${USER_LIST_SHEET_ID}/gviz/tq?tqx=out:json&gid=${USER_LIST_GID}`;
             const response = await fetch(url);
@@ -195,36 +204,39 @@
                 const role = row.c[1]?.v || '';
                 const rights = row.c[2]?.v || '';
                 const email = row.c[3]?.v || '';
+                const area = row.c[4]?.v || '';
                 if (email) {
                     users.push({
                         name: name.trim(),
                         role: role.trim(),
                         rights: rights.trim().toUpperCase(),
-                        email: email.trim().toLowerCase()
+                        email: email.trim().toLowerCase(),
+                        area: normaliseArea(area)
                     });
                 }
             }
             return users;
         }
 
-       async function authorizeUser(email) {
-    try {
-        const users = await fetchUserList();
-        const user = users.find(u => u.email === email.toLowerCase().trim());
-        if (user) {
-            localStorage.setItem('userEmail', user.email);
-            localStorage.setItem('userRole', user.rights);
-            localStorage.setItem('userName', user.name);
-            localStorage.setItem('userRoleText', user.role);
-            localStorage.setItem('loginTime', Date.now().toString());
-            return true;
+        async function authorizeUser(email) {
+            try {
+                const users = await fetchUserList();
+                const user = users.find(u => u.email === email.toLowerCase().trim());
+                if (user) {
+                    localStorage.setItem('userEmail', user.email);
+                    localStorage.setItem('userRole', user.rights);
+                    localStorage.setItem('userName', user.name);
+                    localStorage.setItem('userRoleText', user.role);
+                    localStorage.setItem('userArea', user.area);
+                    localStorage.setItem('loginTime', Date.now().toString());
+                    return true;
+                }
+                return false;
+            } catch (err) {
+                console.error('Error fetching user list:', err);
+                return false;
+            }
         }
-        return false;
-    } catch (err) {
-        console.error('Error fetching user list:', err);
-        return false;
-    }
-}
 
         function loginWithGoogle() {
             showLoading();
@@ -265,22 +277,20 @@
             tokenClient.requestAccessToken({ prompt: 'consent' });
         }
 
-       function checkExistingSession() {
-    const email = localStorage.getItem('userEmail');
-    const role = localStorage.getItem('userRole');
-    const loginTime = localStorage.getItem('loginTime');
-    
-    if (email && role && loginTime) {
-        const daysSinceLogin = (Date.now() - parseInt(loginTime, 10)) / (1000 * 60 * 60 * 24);
-        if (daysSinceLogin < 7) {
-            // Still within 7 days — skip login
-            window.location.href = 'index.html';
-        } else {
-            // Expired — clear and stay on login page
-            localStorage.clear();
+        function checkExistingSession() {
+            const email = localStorage.getItem('userEmail');
+            const role = localStorage.getItem('userRole');
+            const loginTime = localStorage.getItem('loginTime');
+
+            if (email && role && loginTime) {
+                const daysSinceLogin = (Date.now() - parseInt(loginTime, 10)) / (1000 * 60 * 60 * 24);
+                if (daysSinceLogin < 7) {
+                    window.location.href = 'index.html';
+                } else {
+                    localStorage.clear();
+                }
+            }
         }
-    }
-}
 
         checkExistingSession();
         loginBtn.addEventListener('click', loginWithGoogle);
