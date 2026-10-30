@@ -65,10 +65,8 @@
 <div id="errorBanner"></div>
 <div id="loadingMsg" class="loading">Loading live figures…</div>
 
-<!-- Hidden stubs so CDN main.js does not crash (Drive auto-search removed) -->
 <div id="driveAuthStatus" style="display:none" aria-hidden="true"><span id="driveStatusDot"></span><span id="driveStatusText"></span></div>
 
-<!-- TOP AREA CHOICE -->
 <div id="areaLandingPage" class="page-view" style="display:none;">
   <div class="landing-title">
     <h1>STAIRCRAFT</h1>
@@ -89,6 +87,10 @@
 </div>
 
 <div id="landingPage" class="page-view" style="display:none;">
+  <div class="page-header" id="officeBackHeader" style="display:none;">
+    <button class="back-btn" id="backToAreaFromOffice">← Areas</button>
+    <h2>📊 Production Office</h2>
+  </div>
   <div class="landing-title">
     <h1>📊 PRODUCTION OFFICE</h1>
     <p>Choose a section</p>
@@ -174,7 +176,7 @@
   </div>
   <div class="detail-stats" id="detailStats"></div>
   <div class="detail-section">
-    <h3>📊 Weekly Breakdown (incl. error points & forecast)</h3>
+    <h3>📊 Weekly Breakdown</h3>
     <div class="detail-week-grid" id="detailWeeks"></div>
   </div>
   <div class="detail-section">
@@ -186,7 +188,7 @@
     <div class="detail-errors" id="detailErrors"></div>
   </div>
   <div class="detail-section">
-    <h3>🔧 Replacement Parts — Office-Caused (this year)</h3>
+    <h3>🔧 Replacement Parts</h3>
     <div class="detail-stats" id="detailRpStats"></div>
     <div class="detail-errors" id="detailRp"></div>
   </div>
@@ -218,19 +220,6 @@
       </div>
     </div>
     <div id="holidayGrid"></div>
-    <div class="holiday-legend">
-      <div class="legend-item"><span class="color-dot SF"></span> SF</div>
-      <div class="legend-item"><span class="color-dot LA"></span> LA</div>
-      <div class="legend-item"><span class="color-dot AS"></span> AS</div>
-      <div class="legend-item"><span class="color-dot DF"></span> DF</div>
-      <div class="legend-item"><span class="color-dot SA"></span> SA</div>
-      <div class="legend-item">H = Full day holiday</div>
-      <div class="legend-item">h/am, h/pm = Half day</div>
-      <div class="legend-item">C = Carrier</div>
-      <div class="legend-item">B = Bank holiday</div>
-      <div class="legend-item">O = Other</div>
-      <div class="legend-item">2nd = 2nd Fix help</div>
-    </div>
   </div>
 </div>
 
@@ -258,14 +247,14 @@
 <div id="replacementPartsPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromReplacementParts">← Production Office</button>
-    <h2>🔧 Replacement Parts — Office-Caused</h2>
+    <h2>🔧 Replacement Parts</h2>
   </div>
   <div class="detail-stats" id="rpSummaryStats"></div>
-  <div class="detail-section"><h3>💷 Cost — Last 6 Months</h3><div id="rpCostTrend"></div></div>
-  <div class="detail-section"><h3>📅 Incident Count — Last 6 Months</h3><div id="rpCountTrend"></div></div>
-  <div class="detail-section"><h3>📋 Top Reasons</h3><div class="leaderboard" id="rpTopReasons"></div></div>
-  <div class="detail-section"><h3>🪵 Top Parts Affected</h3><div class="leaderboard" id="rpTopParts"></div></div>
-  <div class="detail-section"><h3>🕒 Recent Incidents</h3><div id="rpRecentList"></div></div>
+  <div id="rpCostTrend"></div>
+  <div id="rpCountTrend"></div>
+  <div id="rpTopReasons"></div>
+  <div id="rpTopParts"></div>
+  <div id="rpRecentList"></div>
 </div>
 
 <div id="secondFixPage" class="page-view" style="display:none;">
@@ -416,6 +405,17 @@
                 else showPage('secondFixPage');
             });
             if (!canOffice) backToArea.style.display = 'none';
+        }
+
+        var officeBackHdr = document.getElementById('officeBackHeader');
+        var backFromOffice = document.getElementById('backToAreaFromOffice');
+        if (canOffice && can2ndFix) {
+            if (officeBackHdr) officeBackHdr.style.display = '';
+            if (backFromOffice) {
+                backFromOffice.addEventListener('click', function() {
+                    showPage('areaLandingPage');
+                });
+            }
         }
 
         var refresh2nd = document.getElementById('refresh2ndFixBtn');
