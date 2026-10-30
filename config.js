@@ -22,6 +22,10 @@ export const CONFIG = {
       id: "1my_N8O8D7d_UGODBMGxJNmTXvaH41mGtF7Q4Z7GQ9J4",
       gid: "0",
     },
+    secondFix: {
+      id: "1Bm_7Zeo2d2ZG3oDM-9F6fZ5X3QWvWmgkU4DumHfusb4",
+      gidDaily: "0",
+    },
   },
 
   // Google Drive / Identity
