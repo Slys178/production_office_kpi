@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Production Office</title>
+<title>Staircraft Ops KPI</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="presence.css">
 <link rel="stylesheet" href="finish.css">
@@ -45,7 +45,7 @@
     </svg>
     <div class="brand-text">
       <span class="brand-name">STAIRCRAFT</span>
-      <span class="brand-sub">Production Office</span>
+      <span class="brand-sub">Ops KPI</span>
     </div>
   </div>
   <div class="header-right">
@@ -65,7 +65,27 @@
 <div id="errorBanner"></div>
 <div id="loadingMsg" class="loading">Loading live figures…</div>
 
-<div id="landingPage" class="page-view">
+<!-- TOP AREA CHOICE -->
+<div id="areaLandingPage" class="page-view" style="display:none;">
+  <div class="landing-title">
+    <h1>STAIRCRAFT</h1>
+    <p>Choose an area</p>
+  </div>
+  <div class="tile-grid" style="max-width:720px;margin:0 auto;">
+    <div class="nav-tile" id="tileAreaOffice" style="min-height:140px;">
+      <div class="tile-icon">🏭</div>
+      <div class="tile-label">1ST FIX / PRODUCTION OFFICE</div>
+      <div class="tile-sub">Office KPI · Loads · Holidays · Forecast</div>
+    </div>
+    <div class="nav-tile" id="tileArea2ndFix" style="min-height:140px;">
+      <div class="tile-icon">🔩</div>
+      <div class="tile-label">2ND FIX</div>
+      <div class="tile-sub">Section target · Actual · Dials</div>
+    </div>
+  </div>
+</div>
+
+<div id="landingPage" class="page-view" style="display:none;">
   <div class="landing-title">
     <h1>📊 PRODUCTION OFFICE</h1>
     <p>Choose a section</p>
@@ -224,12 +244,11 @@
   <div class="detail-section" style="margin-bottom:20px;">
     <h3>🏁 This Week — Predicted Finish Day</h3>
     <div class="forecast-note" style="margin-bottom:12px;">
-      Uses remaining weekly stair targets vs who is available each remaining day (holidays / half-days / carrier already subtracted).
-      Projects the earliest day the team can clear this week's targets.
+      Uses remaining weekly stair targets vs who is available each remaining day.
     </div>
     <div id="currentWeekFinish"></div>
   </div>
-  <div class="forecast-note">Each upcoming week: team capacity from daily rates, minus who is on holiday. Compared to your usual weekly load when set.</div>
+  <div class="forecast-note">Each upcoming week: team capacity from daily rates, minus who is on holiday.</div>
   <div class="forecast-week-grid" id="forecastWeeks"></div>
 </div>
 
@@ -238,43 +257,8 @@
     <button class="back-btn" id="backToLandingFromErrors">← Production Office</button>
     <h2>⚠️ Office Errors</h2>
   </div>
-  <div class="parts-note" style="margin-bottom:12px;">
-    Click a person for their full error list. Tick <strong>1:1 done</strong> when you have followed up — saved on this device for you.
-  </div>
   <div id="officeErrorCards" class="office-error-grid"></div>
   <div id="officeErrorDetail" class="office-error-detail" style="display:none;"></div>
-  <details class="detail-section" style="margin-top:24px;">
-    <summary style="cursor:pointer;font-weight:700;font-size:1rem;margin-bottom:12px;">📊 Trends & patterns (optional)</summary>
-    <div class="detail-section">
-      <h3>🎯 Quality vs Speed</h3>
-      <div class="parts-note">Each dot is one person over the last 4 weeks.</div>
-      <div id="qualitySpeedChart"></div>
-    </div>
-    <div class="detail-section">
-      <h3>📈 Error Points — Last 6 Months</h3>
-      <div id="errorPointsTrend"></div>
-    </div>
-    <div class="detail-section">
-      <h3>📅 Error Count — Last 6 Months</h3>
-      <div class="leaderboard" id="errorCountTrend"></div>
-    </div>
-    <div class="detail-section">
-      <h3>⚠️ Repeated Errors & Patterns</h3>
-      <div id="repeatedErrors"></div>
-    </div>
-    <div class="detail-section">
-      <h3>📍 Top Sections</h3>
-      <div class="leaderboard" id="topSections"></div>
-    </div>
-    <div class="detail-section">
-      <h3>🔥 Top Errors</h3>
-      <div class="leaderboard" id="topErrors"></div>
-    </div>
-    <div class="detail-section">
-      <h3>👤 By Person (list)</h3>
-      <div class="leaderboard" id="errorsByPerson"></div>
-    </div>
-  </details>
 </div>
 
 <div id="replacementPartsPage" class="page-view">
@@ -282,38 +266,51 @@
     <button class="back-btn" id="backToLandingFromReplacementParts">← Production Office</button>
     <h2>🔧 Replacement Parts — Office-Caused</h2>
   </div>
-  <div class="parts-note">Showing entries logged against the OFFICE section of the Replacement Parts sheet, from this year onward only — parts damaged or scrapped due to an office mistake (wrong program, missing paperwork, etc.), not shop-floor or CNC-caused issues.</div>
   <div class="detail-stats" id="rpSummaryStats"></div>
+  <div class="detail-section"><h3>💷 Cost — Last 6 Months</h3><div id="rpCostTrend"></div></div>
+  <div class="detail-section"><h3>📅 Incident Count — Last 6 Months</h3><div id="rpCountTrend"></div></div>
+  <div class="detail-section"><h3>📋 Top Reasons</h3><div class="leaderboard" id="rpTopReasons"></div></div>
+  <div class="detail-section"><h3>🪵 Top Parts Affected</h3><div class="leaderboard" id="rpTopParts"></div></div>
+  <div class="detail-section"><h3>🕒 Recent Incidents</h3><div id="rpRecentList"></div></div>
+</div>
+
+<!-- 2ND FIX DIALS -->
+<div id="secondFixPage" class="page-view" style="display:none;">
+  <div class="page-header">
+    <button class="back-btn" id="backToAreaFrom2ndFix">← Areas</button>
+    <h2>🔩 2nd Fix — Today</h2>
+    <button class="back-btn" id="refresh2ndFixBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
+  </div>
+  <div id="secondFixSummary" class="detail-stats" style="margin-bottom:20px;"></div>
   <div class="detail-section">
-    <h3>💷 Cost — Last 6 Months</h3>
-    <div id="rpCostTrend"></div>
+    <h3>Section capability vs actual</h3>
+    <div id="secondFixSectionDial" style="display:flex;justify-content:center;padding:12px 0;"></div>
   </div>
   <div class="detail-section">
-    <h3>📅 Incident Count — Last 6 Months</h3>
-    <div id="rpCountTrend"></div>
+    <h3>Individual dials</h3>
+    <div class="grid" id="secondFixDialGrid"></div>
   </div>
-  <div class="detail-section">
-    <h3>📋 Top Reasons</h3>
-    <div class="leaderboard" id="rpTopReasons"></div>
-  </div>
-  <div class="detail-section">
-    <h3>🪵 Top Parts Affected</h3>
-    <div class="leaderboard" id="rpTopParts"></div>
-  </div>
-  <div class="detail-section">
-    <h3>🕒 Recent Incidents</h3>
-    <div id="rpRecentList"></div>
+  <div class="detail-section" id="secondFixWeekSection">
+    <h3>This week capacity (after holidays)</h3>
+    <div id="secondFixWeekStrip" class="forecast-note"></div>
   </div>
 </div>
 
 <footer>Live from Google Sheets · Drive auto-search enabled</footer>
 
 <script type="module" src="app.js"></script>
+<script type="module" src="second-fix.js"></script>
 <script>
 (function() {
     const email = localStorage.getItem('userEmail');
     const role  = localStorage.getItem('userRole');
     const loginTime = localStorage.getItem('loginTime');
+    let area = (localStorage.getItem('userArea') || 'OFFICE').toUpperCase();
+    if (!localStorage.getItem('userArea')) {
+        localStorage.setItem('userArea', 'OFFICE');
+        area = 'OFFICE';
+    }
+
     let valid = false;
     if (email && role && loginTime) {
         const daysSinceLogin = (Date.now() - parseInt(loginTime, 10)) / (1000 * 60 * 60 * 24);
@@ -324,6 +321,7 @@
         window.location.href = 'login.html';
         return;
     }
+
     const userName = localStorage.getItem('userName');
     if (userName) {
         const statusEl = document.querySelector('.status');
@@ -334,25 +332,102 @@
             statusEl.prepend(nameSpan);
         }
     }
-    if (role === 'USER') {
-        window.addEventListener('load', function() {
-            ['tileErrors', 'tileReplacementParts'].forEach(id => {
-                const el = document.getElementById(id);
+
+    const canOffice = (area === 'OFFICE' || area === 'BOTH');
+    const can2ndFix = (area === '2ND FIX' || area === 'BOTH');
+
+    function showPage(id) {
+        document.querySelectorAll('.page-view').forEach(function(el) { el.style.display = 'none'; });
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    }
+
+    function goAreaLanding() {
+        if (canOffice && !can2ndFix) {
+            showPage('landingPage');
+            return;
+        }
+        if (can2ndFix && !canOffice) {
+            showPage('secondFixPage');
+            if (window.loadSecondFix) window.loadSecondFix();
+            return;
+        }
+        var tileOffice = document.getElementById('tileAreaOffice');
+        var tile2nd = document.getElementById('tileArea2ndFix');
+        if (tileOffice) tileOffice.style.display = canOffice ? '' : 'none';
+        if (tile2nd) tile2nd.style.display = can2ndFix ? '' : 'none';
+        showPage('areaLandingPage');
+    }
+
+    function guardOfficeAccess(fn) {
+        return function(e) {
+            if (!canOffice) {
+                if (e && e.preventDefault) e.preventDefault();
+                alert('Your account only has access to 2nd Fix.');
+                showPage('secondFixPage');
+                return;
+            }
+            if (fn) fn(e);
+        };
+    }
+
+    window.addEventListener('load', function() {
+        if (role === 'USER' && canOffice) {
+            ['tileErrors', 'tileReplacementParts'].forEach(function(id) {
+                var el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
-            const landingTitle = document.querySelector('.landing-title p');
-            if (landingTitle) landingTitle.textContent = '👤 User view — team KPI & loads';
-        });
-    }
-    window.addEventListener('load', function() {
-        const logoutBtn = document.getElementById('logoutBtn');
+        }
+
+        var logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', function() {
                 localStorage.clear();
                 window.location.href = 'login.html';
             });
         }
+
+        var tileAreaOffice = document.getElementById('tileAreaOffice');
+        var tileArea2ndFix = document.getElementById('tileArea2ndFix');
+        if (tileAreaOffice) {
+            tileAreaOffice.addEventListener('click', guardOfficeAccess(function() {
+                showPage('landingPage');
+            }));
+        }
+        if (tileArea2ndFix) {
+            tileArea2ndFix.addEventListener('click', function() {
+                if (!can2ndFix) {
+                    alert('Your account only has access to Production Office.');
+                    return;
+                }
+                showPage('secondFixPage');
+                if (window.loadSecondFix) window.loadSecondFix();
+            });
+        }
+
+        var backToArea = document.getElementById('backToAreaFrom2ndFix');
+        if (backToArea) {
+            backToArea.addEventListener('click', function() {
+                if (canOffice && can2ndFix) showPage('areaLandingPage');
+                else if (canOffice) showPage('landingPage');
+                else showPage('secondFixPage');
+            });
+            if (!canOffice) backToArea.style.display = 'none';
+        }
+
+        var refresh2nd = document.getElementById('refresh2ndFixBtn');
+        if (refresh2nd) {
+            refresh2nd.addEventListener('click', function() {
+                if (window.loadSecondFix) window.loadSecondFix(true);
+            });
+        }
+
+        goAreaLanding();
     });
+
+    window.__userArea = area;
+    window.__canOffice = canOffice;
+    window.__can2ndFix = can2ndFix;
 })();
 </script>
 </body>
