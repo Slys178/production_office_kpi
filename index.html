@@ -102,7 +102,7 @@
     <div class="nav-tile" id="tileLoads">
       <div class="tile-icon">📦</div>
       <div class="tile-label">LOADS</div>
-      <div class="tile-sub">By person · Drive · check load</div>
+      <div class="tile-sub">By person · check load</div>
       <div class="tile-badge" id="tileLoadsBadge" style="display:none;"></div>
     </div>
     <div class="nav-tile" id="tileHolidays">
@@ -147,10 +147,6 @@
   </div>
   <div id="loadsContainer">
     <div class="loads-controls loads-controls-compact">
-      <div class="drive-auth-status" id="driveAuthStatus">
-        <span class="status-dot disconnected" id="driveStatusDot"></span>
-        <span id="driveStatusText">Drive: Disconnected</span>
-      </div>
       <div class="loads-stats" style="margin-left:auto;">
         <span class="highlight" id="loadsTotal">0</span> loads total
       </div>
@@ -179,7 +175,7 @@
     <div class="detail-week-grid" id="detailWeeks"></div>
   </div>
   <div class="detail-section">
-    <h3>📅 Daily Details <span style="font-weight:400;color:var(--muted);font-size:0.7rem;">(tap a day for parts breakdown)</span></h3>
+    <h3>📅 Daily Details</h3>
     <div class="detail-daily-grid" id="detailDays"></div>
   </div>
   <div class="detail-section">
@@ -200,7 +196,6 @@
   </div>
   <div class="detail-section">
     <h3>🧩 Parts Breakdown</h3>
-    <div class="parts-note">Totals from completed rows for this person on this day (Columns H–N)</div>
     <div class="detail-stats" id="dayDetailStats"></div>
   </div>
 </div>
@@ -243,12 +238,8 @@
   </div>
   <div class="detail-section" style="margin-bottom:20px;">
     <h3>🏁 This Week — Predicted Finish Day</h3>
-    <div class="forecast-note" style="margin-bottom:12px;">
-      Uses remaining weekly stair targets vs who is available each remaining day.
-    </div>
     <div id="currentWeekFinish"></div>
   </div>
-  <div class="forecast-note">Each upcoming week: team capacity from daily rates, minus who is on holiday.</div>
   <div class="forecast-week-grid" id="forecastWeeks"></div>
 </div>
 
@@ -296,7 +287,7 @@
   </div>
 </div>
 
-<footer>Live from Google Sheets · Drive auto-search enabled</footer>
+<footer>Live from Google Sheets</footer>
 
 <script type="module" src="app.js"></script>
 <script type="module" src="second-fix.js"></script>
@@ -337,10 +328,19 @@
     const can2ndFix = (area === '2ND FIX' || area === 'BOTH');
 
     function showPage(id) {
-        document.querySelectorAll('.page-view').forEach(function(el) { el.style.display = 'none'; });
-        const el = document.getElementById(id);
-        if (el) el.style.display = '';
+        document.querySelectorAll('.page-view').forEach(function(el) {
+            el.classList.remove('active');
+            el.style.display = 'none';
+        });
+        var el = document.getElementById(id);
+        if (el) {
+            el.classList.add('active');
+            el.style.display = 'block';
+        }
+        var loading = document.getElementById('loadingMsg');
+        if (loading) loading.style.display = 'none';
     }
+    window.__showPage = showPage;
 
     function goAreaLanding() {
         if (canOffice && !can2ndFix) {
@@ -358,6 +358,7 @@
         if (tile2nd) tile2nd.style.display = can2ndFix ? '' : 'none';
         showPage('areaLandingPage');
     }
+    window.__goAreaLanding = goAreaLanding;
 
     function guardOfficeAccess(fn) {
         return function(e) {
