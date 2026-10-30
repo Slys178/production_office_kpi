@@ -71,8 +71,8 @@ import("./kpi-privacy.js")
   .then(function () { callKpiPrivacy(); })
   .catch(function (e) { console.warn("kpi-privacy module failed", e); });
 
-import("./detail-net-fix.js")
-  .catch(function (e) { console.warn("detail-net-fix module failed", e); });
+import("./detail-net-points.js")
+  .catch(function (e) { console.warn("detail-net-points module failed", e); });
 
 import("./forecast-enhance.js")
   .then(function () { callForecastEnhance(); })
@@ -86,16 +86,7 @@ import("./loads-by-person.js")
   .then(function () { callLoadsByPerson(); })
   .catch(function (e) { console.warn("loads-by-person module failed", e); });
 
-// Local Drive module must be initialized separately from the CDN copy
-import("./drive.js")
-  .then(function (mod) {
-    if (mod && typeof mod.ensureDriveReady === "function") {
-      mod.ensureDriveReady(false).catch(function () {});
-    } else if (mod && typeof mod.initGapiClient === "function") {
-      mod.initGapiClient().catch(function () {});
-    }
-  })
-  .catch(function (e) { console.warn("drive init failed", e); });
+// Drive auto-search disabled (was unreliable; speeds up load)
 
 export async function initAndLoad() {
   const result = await _initAndLoad();
@@ -104,6 +95,10 @@ export async function initAndLoad() {
   callForecastEnhance();
   callOfficeErrors();
   callLoadsByPerson();
+  // Re-apply area routing (CDN forces office landing on first load)
+  try {
+    if (typeof window.__goAreaLanding === 'function') window.__goAreaLanding();
+  } catch (e) { console.warn('area route', e); }
   return result;
 }
 
@@ -142,9 +137,6 @@ document.addEventListener("DOMContentLoaded", function () {
     tileLoads.addEventListener("click", function () {
       setTimeout(callLoadsByPerson, 150);
       setTimeout(callLoadsByPerson, 800);
-      import("./drive.js").then(function (mod) {
-        if (mod && mod.ensureDriveReady) mod.ensureDriveReady(false);
-      }).catch(function () {});
     });
   }
   const refreshLoads = document.getElementById("refreshLoadsBtn");
