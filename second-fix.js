@@ -81,30 +81,48 @@ function dialSvg(actual, target, size) {
   size = size || 160;
   var scale = target > 0 ? target : Math.max(actual, 1);
   var pct = Math.min(Math.max(actual / scale, 0), 1);
-  var r = size * 0.38;
+  var stroke = Math.max(10, Math.round(size * 0.09));
+  var r = size * 0.36;
   var cx = size / 2;
-  var cy = size * 0.55;
-  var endRad = Math.PI - pct * Math.PI;
-  var x2 = cx + r * Math.cos(endRad);
-  var y2 = cy - r * Math.sin(endRad);
+  // Centre sits below midline so the semicircle fills the top of the viewBox
+  var cy = size * 0.62;
+  // Exact semicircle length (for stroke-dasharray)
+  var pathLen = Math.PI * r;
 
   var colour = '#e74c3c';
   if (target <= 0 && actual > 0) colour = '#3498db';
   else if (pct >= 0.95) colour = '#2ecc71';
   else if (pct >= 0.75) colour = '#f5a623';
 
-  var bg = 'M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy;
-  var large = pct > 0.5 ? 1 : 0;
-  var arc = pct < 0.005 ? '' : ('M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2);
+  // Same path for track and progress — left → right over the TOP
+  var semi = 'M ' + (cx - r).toFixed(2) + ' ' + cy.toFixed(2) +
+    ' A ' + r.toFixed(2) + ' ' + r.toFixed(2) + ' 0 0 1 ' +
+    (cx + r).toFixed(2) + ' ' + cy.toFixed(2);
 
-  var sub = target > 0 ? ('of ' + target.toFixed(0) + ' m') : (actual > 0 ? 'm today (attendance not in)' : 'of 0 m');
+  var dash = (pathLen * pct).toFixed(2);
+  var gap = pathLen.toFixed(2);
 
-  return '<svg width="' + size + '" height="' + (size * 0.72) + '" viewBox="0 0 ' + size + ' ' + (size * 0.7) + '">' +
-    '<path d="' + bg + '" fill="none" stroke="#2a3348" stroke-width="14" stroke-linecap="round"/>' +
-    (arc ? '<path d="' + arc + '" fill="none" stroke="' + colour + '" stroke-width="14" stroke-linecap="round"/>' : '') +
-    '<circle cx="' + x2 + '" cy="' + y2 + '" r="6" fill="' + colour + '"/>' +
-    '<text x="' + cx + '" y="' + (cy - 12) + '" text-anchor="middle" fill="var(--text, #eef2fb)" font-size="22" font-weight="700">' + actual.toFixed(0) + '</text>' +
-    '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" fill="var(--muted, #8993ab)" font-size="11">' + sub + '</text>' +
+  var sub = target > 0
+    ? ('of ' + target.toFixed(0) + ' m')
+    : (actual > 0 ? 'm today (attendance not in)' : 'of 0 m');
+
+  var h = Math.ceil(size * 0.72);
+  var vbH = Math.ceil(size * 0.72);
+
+  return '<svg width="' + size + '" height="' + h + '" viewBox="0 0 ' + size + ' ' + vbH + '">' +
+    // Background track
+    '<path d="' + semi + '" fill="none" stroke="#2a3348" stroke-width="' + stroke +
+      '" stroke-linecap="round"/>' +
+    // Progress on the IDENTICAL path, clipped with dasharray
+    '<path d="' + semi + '" fill="none" stroke="' + colour + '" stroke-width="' + stroke +
+      '" stroke-linecap="round" stroke-dasharray="' + dash + ' ' + gap + '"/>' +
+    // Value text
+    '<text x="' + cx + '" y="' + (cy - r * 0.15).toFixed(1) +
+      '" text-anchor="middle" fill="var(--text, #eef2fb)" font-size="' + Math.round(size * 0.14) +
+      '" font-weight="700">' + actual.toFixed(0) + '</text>' +
+    '<text x="' + cx + '" y="' + (cy + 4).toFixed(1) +
+      '" text-anchor="middle" fill="var(--muted, #8993ab)" font-size="' + Math.round(size * 0.07) +
+      '">' + sub + '</text>' +
     '</svg>';
 }
 
