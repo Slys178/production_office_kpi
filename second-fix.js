@@ -38,11 +38,10 @@ function parseNum(s) {
 }
 
 function parseDailyRows(rows) {
-  // Layout is fixed:
-  //   Summary rows near top: "Expected Capability", "Actual so far today", ...
-  //   Then a header row whose first cell is "Name"
-  //   Then people: Name | Daily Target | Status | Expected | Actual | ...
-  // GViz often blanks the middle header labels, so we key off column 0 = "Name".
+  // Summary rows: Expected Capability / Actual so far today
+  // Header row: first cell === "Name"
+  // People: Name | Daily Target | Status | Expected | Actual
+  // GViz often blanks middle header labels — use fixed column indexes.
 
   var sectionExpected = null;
   var sectionActual = null;
@@ -58,48 +57,35 @@ function parseDailyRows(rows) {
 
   var headerIdx = -1;
   for (var j = 0; j < rows.length; j++) {
-    var c0 = String(rows[j][0] || '').trim().toUpperCase();
-    if (c0 === 'NAME') { headerIdx = j; break; }
-  }
-  if (headerIdx === -1) {
-    for (var k = 0; k < rows.length; k++) {
-      var n = String(rows[k][0] || '').trim();
-      var t = parseNum(rows[k][1]);
-      var st = String(rows[k][2] || '').trim().toUpperCase();
-      if (n.length > 3 && t > 0 && (st === 'IN' || st === 'OUT' || st.indexOf('NO RECORD') >= 0 || st.indexOf('HOLIDAY') >= 0)) {
-        headerIdx = k - 1;
-        break;
-      }
+    if (String(rows[j][0] || '').trim().toUpperCase() === 'NAME') {
+      headerIdx = j;
+      break;
     }
   }
   if (headerIdx < 0) headerIdx = 6;
 
-  // Fixed columns (GViz header labels for B/D/E are often blank)
-  var nameCol = 0, targetCol = 1, statusCol = 2, expectedCol = 3, actualCol = 4;
-
   var people = [];
   for (var r = headerIdx + 1; r < rows.length; r++) {
     var row = rows[r];
-    var name = String(row[nameCol] || '').trim();
+    var name = String(row[0] || '').trim();
     if (!name) continue;
     var up = name.toUpperCase();
-    if (up.indexOf('SECTION TOTAL') >= 0 || up === 'TOTAL' || up.indexOf('AFTER ALLOW') >= 0 || up.indexOf('ALLOW ACCESS') >= 0) continue;
-    if (name.length < 2) continue;
+    if (up.indexOf('SECTION TOTAL') >= 0 || up === 'TOTAL') continue;
+    if (up.indexOf('AFTER ALLOW') >= 0 || up.indexOf('ALLOW ACCESS') >= 0) continue;
     if (up.indexOf('EXPECTED') >= 0 || up.indexOf('ACTUAL SO FAR') >= 0 || up.indexOf('REMAINING') >= 0) continue;
+    if (name.length < 2) continue;
 
     people.push({
       name: name,
-      dailyTarget: parseNum(row[targetCol]),
-      status: String(row[statusCol] || '').trim(),
-      expected: parseNum(row[expectedCol]),
-      actual: parseNum(row[actualCol])
+      dailyTarget: parseNum(row[1]),
+      status: String(row[2] || '').trim(),
+      expected: parseNum(row[3]),
+      actual: parseNum(row[4])
     });
   }
 
   var sumExp = people.reduce(function (s, p) { return s + p.expected; }, 0);
   var sumAct = people.reduce(function (s, p) { return s + p.actual; }, 0);
-
-  // Prefer the sheet's own SECTION SUMMARY figures when present
   if (sectionExpected == null) sectionExpected = sumExp;
   if (sectionActual == null) sectionActual = sumAct;
 
@@ -107,51 +93,48 @@ function parseDailyRows(rows) {
     people: people,
     sectionExpected: sectionExpected,
     sectionActual: sectionActual,
-    peopleIn: peopleIn,
-    sumExpected: sumExp,
-    sumActual: sumAct
+    peopleIn: peopleIn
   };
 }
 
+/** Full-circle dial matching Production Office style */
 function dialSvg(actual, target, size) {
   size = size || 160;
   var scale = target > 0 ? target : Math.max(actual, 1);
   var pct = Math.min(Math.max(actual / scale, 0), 1);
-  var stroke = Math.max(10, Math.round(size * 0.09));
-  var r = size * 0.36;
+  var stroke = Math.max(10, Math.round(size * 0.08));
+  var r = (size - stroke) / 2 * 0.85;
   var cx = size / 2;
-  var cy = size * 0.62;
-  var pathLen = Math.PI * r;
+  var cy = size / 2;
+  var circumference = 2 * Math.PI * r;
+  var dash = circumference * pct;
+  var gap = circumference;
 
   var colour = '#e74c3c';
   if (target <= 0 && actual > 0) colour = '#3498db';
   else if (pct >= 0.95) colour = '#2ecc71';
   else if (pct >= 0.75) colour = '#f5a623';
 
-  var semi = 'M ' + (cx - r).toFixed(2) + ' ' + cy.toFixed(2) +
-    ' A ' + r.toFixed(2) + ' ' + r.toFixed(2) + ' 0 0 1 ' +
-    (cx + r).toFixed(2) + ' ' + cy.toFixed(2);
-
-  var dash = (pathLen * pct).toFixed(2);
-  var gap = pathLen.toFixed(2);
-
   var sub = target > 0
     ? ('of ' + target.toFixed(0) + ' m')
     : (actual > 0 ? 'm today (attendance not in)' : 'of 0 m');
 
-  var h = Math.ceil(size * 0.72);
-  var vbH = Math.ceil(size * 0.72);
+  var fontMain = Math.round(size * 0.16);
+  var fontSub = Math.round(size * 0.07);
 
-  return '<svg width="' + size + '" height="' + h + '" viewBox="0 0 ' + size + ' ' + vbH + '">' +
-    '<path d="' + semi + '" fill="none" stroke="#2a3348" stroke-width="' + stroke +
-      '" stroke-linecap="round"/>' +
-    '<path d="' + semi + '" fill="none" stroke="' + colour + '" stroke-width="' + stroke +
-      '" stroke-linecap="round" stroke-dasharray="' + dash + ' ' + gap + '"/>' +
-    '<text x="' + cx + '" y="' + (cy - r * 0.15).toFixed(1) +
-      '" text-anchor="middle" fill="var(--text, #eef2fb)" font-size="' + Math.round(size * 0.14) +
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r.toFixed(2) +
+      '" fill="none" stroke="#2a3348" stroke-width="' + stroke + '"/>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r.toFixed(2) +
+      '" fill="none" stroke="' + colour + '" stroke-width="' + stroke +
+      '" stroke-linecap="round"' +
+      ' stroke-dasharray="' + dash.toFixed(2) + ' ' + gap.toFixed(2) + '"' +
+      ' transform="rotate(-90 ' + cx + ' ' + cy + ')"/>' +
+    '<text x="' + cx + '" y="' + (cy - 2) +
+      '" text-anchor="middle" dominant-baseline="middle" fill="var(--text, #eef2fb)" font-size="' + fontMain +
       '" font-weight="700">' + actual.toFixed(0) + '</text>' +
-    '<text x="' + cx + '" y="' + (cy + 4).toFixed(1) +
-      '" text-anchor="middle" fill="var(--muted, #8993ab)" font-size="' + Math.round(size * 0.07) +
+    '<text x="' + cx + '" y="' + (cy + fontMain * 0.75) +
+      '" text-anchor="middle" fill="var(--muted, #8993ab)" font-size="' + fontSub +
       '">' + sub + '</text>' +
     '</svg>';
 }
@@ -176,7 +159,7 @@ function renderSummary(sectionExpected, sectionActual, fullDaily) {
 function renderSectionDial(sectionExpected, sectionActual) {
   const el = document.getElementById('secondFixSectionDial');
   if (!el) return;
-  el.innerHTML = dialSvg(sectionActual, sectionExpected, 220);
+  el.innerHTML = dialSvg(sectionActual, sectionExpected, 200);
 }
 
 function renderPeopleDials(people) {
@@ -197,7 +180,7 @@ function renderPeopleDials(people) {
     return '<div class="dial-card" style="text-align:center;padding:12px;background:var(--card-bg,#161d2e);border-radius:12px;border:1px solid var(--card-border,#232c42);">' +
       '<div style="font-weight:700;font-size:0.85rem;margin-bottom:2px;">' + p.name + '</div>' +
       statusBadge +
-      dialSvg(p.actual, scale, 140) +
+      dialSvg(p.actual, scale, 130) +
       detail +
       '</div>';
   }).join('');
