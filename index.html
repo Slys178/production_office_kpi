@@ -67,7 +67,7 @@
 
 <div id="driveAuthStatus" style="display:none" aria-hidden="true"><span id="driveStatusDot"></span><span id="driveStatusText"></span></div>
 
-<div id="areaLandingPage" class="page-view" style="display:none;">
+<div id="areaLandingPage" class="page-view">
   <div class="landing-title">
     <h1>STAIRCRAFT</h1>
     <p>Choose an area</p>
@@ -86,7 +86,7 @@
   </div>
 </div>
 
-<div id="landingPage" class="page-view" style="display:none;">
+<div id="landingPage" class="page-view">
   <div class="page-header" id="officeBackHeader" style="display:none;">
     <button class="back-btn" id="backToAreaFromOffice">← Areas</button>
     <h2>📊 Production Office</h2>
@@ -257,7 +257,7 @@
   <div id="rpRecentList"></div>
 </div>
 
-<div id="secondFixPage" class="page-view" style="display:none;">
+<div id="secondFixPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToAreaFrom2ndFix">← Areas</button>
     <h2>🔩 2nd Fix — Today</h2>
@@ -319,17 +319,19 @@
     const can2ndFix = (area === '2ND FIX' || area === 'BOTH');
 
     function showPage(id) {
+        // Only one page visible: use .active (CSS) and clear any leftover inline display
         document.querySelectorAll('.page-view').forEach(function(el) {
             el.classList.remove('active');
-            el.style.display = 'none';
+            el.style.removeProperty('display');
         });
         var el = document.getElementById(id);
         if (el) {
             el.classList.add('active');
-            el.style.display = 'block';
+            el.style.removeProperty('display');
         }
         var loading = document.getElementById('loadingMsg');
         if (loading) loading.style.display = 'none';
+        try { window.scrollTo(0, 0); } catch (e) {}
     }
     window.__showPage = showPage;
 
