@@ -6,6 +6,12 @@
  */
 
 import { initAndLoad, loadAndRender, REFRESH_MS } from "./main.js";
+import { applyKpiTargetOverride, initAdminTargets } from "./admin-targets.js";
+
+// Apply admin target override before any KPI maths run
+applyKpiTargetOverride();
+window.loadAndRender = loadAndRender;
+
 
 /* =========================================================
    THEME TOGGLE
@@ -42,7 +48,9 @@ function showLoadError(err) {
   }
 }
 
-initAndLoad().catch(showLoadError);
+initAndLoad()
+  .then(function () { try { initAdminTargets(); } catch (e) { console.warn(e); } })
+  .catch(showLoadError);
 setInterval(() => {
   loadAndRender().catch(e => console.warn("refresh failed", e));
 }, REFRESH_MS);
