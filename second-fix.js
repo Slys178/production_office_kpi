@@ -38,43 +38,79 @@ function parseNum(s) {
 }
 
 function parseDailyRows(rows) {
-  let headerIdx = -1;
-  for (let i = 0; i < Math.min(rows.length, 25); i++) {
-    const upper = rows[i].map(function (c) { return (c || '').toUpperCase(); });
-    if (upper.some(function (c) { return c.includes('NAME'); }) &&
-        upper.some(function (c) { return c.includes('EXPECTED') || c.includes('ACTUAL'); })) {
-      headerIdx = i;
-      break;
+  // Layout is fixed:
+  //   Summary rows near top: "Expected Capability", "Actual so far today", ...
+  //   Then a header row whose first cell is "Name"
+  //   Then people: Name | Daily Target | Status | Expected | Actual | ...
+  // GViz often blanks the middle header labels, so we key off column 0 = "Name".
+
+  var sectionExpected = null;
+  var sectionActual = null;
+  var peopleIn = null;
+
+  for (var i = 0; i < Math.min(rows.length, 15); i++) {
+    var label = String(rows[i][0] || '').trim().toUpperCase();
+    var val = parseNum(rows[i][1]);
+    if (label.indexOf('EXPECTED CAPABILITY') >= 0) sectionExpected = val;
+    else if (label.indexOf('ACTUAL SO FAR') >= 0) sectionActual = val;
+    else if (label.indexOf('PEOPLE CURRENTLY IN') >= 0) peopleIn = val;
+  }
+
+  var headerIdx = -1;
+  for (var j = 0; j < rows.length; j++) {
+    var c0 = String(rows[j][0] || '').trim().toUpperCase();
+    if (c0 === 'NAME') { headerIdx = j; break; }
+  }
+  if (headerIdx === -1) {
+    for (var k = 0; k < rows.length; k++) {
+      var n = String(rows[k][0] || '').trim();
+      var t = parseNum(rows[k][1]);
+      var st = String(rows[k][2] || '').trim().toUpperCase();
+      if (n.length > 3 && t > 0 && (st === 'IN' || st === 'OUT' || st.indexOf('NO RECORD') >= 0 || st.indexOf('HOLIDAY') >= 0)) {
+        headerIdx = k - 1;
+        break;
+      }
     }
   }
-  if (headerIdx === -1) headerIdx = 11;
+  if (headerIdx < 0) headerIdx = 6;
 
-  const header = rows[headerIdx].map(function (c) { return (c || '').toUpperCase(); });
-  const nameCol = header.findIndex(function (c) { return c.includes('NAME'); });
-  const targetCol = header.findIndex(function (c) { return c.includes('DAILY TARGET'); });
-  const statusCol = header.findIndex(function (c) { return c.includes('STATUS'); });
-  const expectedCol = header.findIndex(function (c) { return c.includes('EXPECTED'); });
-  const actualCol = header.findIndex(function (c) { return c.includes('ACTUAL'); });
+  // Fixed columns (GViz header labels for B/D/E are often blank)
+  var nameCol = 0, targetCol = 1, statusCol = 2, expectedCol = 3, actualCol = 4;
 
-  const people = [];
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const r = rows[i];
-    const name = (r[nameCol >= 0 ? nameCol : 0] || '').trim();
-    if (!name || name.toUpperCase().includes('SECTION TOTAL') || name.toUpperCase().includes('TOTAL')) continue;
+  var people = [];
+  for (var r = headerIdx + 1; r < rows.length; r++) {
+    var row = rows[r];
+    var name = String(row[nameCol] || '').trim();
+    if (!name) continue;
+    var up = name.toUpperCase();
+    if (up.indexOf('SECTION TOTAL') >= 0 || up === 'TOTAL' || up.indexOf('AFTER ALLOW') >= 0 || up.indexOf('ALLOW ACCESS') >= 0) continue;
     if (name.length < 2) continue;
+    if (up.indexOf('EXPECTED') >= 0 || up.indexOf('ACTUAL SO FAR') >= 0 || up.indexOf('REMAINING') >= 0) continue;
 
     people.push({
       name: name,
-      dailyTarget: parseNum(r[targetCol >= 0 ? targetCol : 1]),
-      status: (r[statusCol >= 0 ? statusCol : 2] || '').trim(),
-      expected: parseNum(r[expectedCol >= 0 ? expectedCol : 3]),
-      actual: parseNum(r[actualCol >= 0 ? actualCol : 4])
+      dailyTarget: parseNum(row[targetCol]),
+      status: String(row[statusCol] || '').trim(),
+      expected: parseNum(row[expectedCol]),
+      actual: parseNum(row[actualCol])
     });
   }
 
-  const sectionExpected = people.reduce(function (s, p) { return s + p.expected; }, 0);
-  const sectionActual = people.reduce(function (s, p) { return s + p.actual; }, 0);
-  return { people: people, sectionExpected: sectionExpected, sectionActual: sectionActual };
+  var sumExp = people.reduce(function (s, p) { return s + p.expected; }, 0);
+  var sumAct = people.reduce(function (s, p) { return s + p.actual; }, 0);
+
+  // Prefer the sheet's own SECTION SUMMARY figures when present
+  if (sectionExpected == null) sectionExpected = sumExp;
+  if (sectionActual == null) sectionActual = sumAct;
+
+  return {
+    people: people,
+    sectionExpected: sectionExpected,
+    sectionActual: sectionActual,
+    peopleIn: peopleIn,
+    sumExpected: sumExp,
+    sumActual: sumAct
+  };
 }
 
 function dialSvg(actual, target, size) {
@@ -84,9 +120,7 @@ function dialSvg(actual, target, size) {
   var stroke = Math.max(10, Math.round(size * 0.09));
   var r = size * 0.36;
   var cx = size / 2;
-  // Centre sits below midline so the semicircle fills the top of the viewBox
   var cy = size * 0.62;
-  // Exact semicircle length (for stroke-dasharray)
   var pathLen = Math.PI * r;
 
   var colour = '#e74c3c';
@@ -94,7 +128,6 @@ function dialSvg(actual, target, size) {
   else if (pct >= 0.95) colour = '#2ecc71';
   else if (pct >= 0.75) colour = '#f5a623';
 
-  // Same path for track and progress — left → right over the TOP
   var semi = 'M ' + (cx - r).toFixed(2) + ' ' + cy.toFixed(2) +
     ' A ' + r.toFixed(2) + ' ' + r.toFixed(2) + ' 0 0 1 ' +
     (cx + r).toFixed(2) + ' ' + cy.toFixed(2);
@@ -110,13 +143,10 @@ function dialSvg(actual, target, size) {
   var vbH = Math.ceil(size * 0.72);
 
   return '<svg width="' + size + '" height="' + h + '" viewBox="0 0 ' + size + ' ' + vbH + '">' +
-    // Background track
     '<path d="' + semi + '" fill="none" stroke="#2a3348" stroke-width="' + stroke +
       '" stroke-linecap="round"/>' +
-    // Progress on the IDENTICAL path, clipped with dasharray
     '<path d="' + semi + '" fill="none" stroke="' + colour + '" stroke-width="' + stroke +
       '" stroke-linecap="round" stroke-dasharray="' + dash + ' ' + gap + '"/>' +
-    // Value text
     '<text x="' + cx + '" y="' + (cy - r * 0.15).toFixed(1) +
       '" text-anchor="middle" fill="var(--text, #eef2fb)" font-size="' + Math.round(size * 0.14) +
       '" font-weight="700">' + actual.toFixed(0) + '</text>' +
@@ -158,13 +188,17 @@ function renderPeopleDials(people) {
   });
 
   grid.innerHTML = sorted.map(function (p) {
-    const statusBadge = p.status
+    var scale = p.expected > 0 ? p.expected : p.dailyTarget;
+    var statusBadge = p.status
       ? '<span style="font-size:0.7rem;opacity:0.8;">' + p.status + '</span>'
       : '';
+    var detail = '<div style="font-size:0.7rem;color:var(--muted,#8993ab);margin-top:2px;">' +
+      p.actual.toFixed(1) + ' / ' + (p.expected > 0 ? p.expected.toFixed(1) : scale.toFixed(1)) + ' m</div>';
     return '<div class="dial-card" style="text-align:center;padding:12px;background:var(--card-bg,#161d2e);border-radius:12px;border:1px solid var(--card-border,#232c42);">' +
-      '<div style="font-weight:700;font-size:0.85rem;margin-bottom:4px;">' + p.name + '</div>' +
+      '<div style="font-weight:700;font-size:0.85rem;margin-bottom:2px;">' + p.name + '</div>' +
       statusBadge +
-      dialSvg(p.actual, p.expected || p.dailyTarget, 140) +
+      dialSvg(p.actual, scale, 140) +
+      detail +
       '</div>';
   }).join('');
 }
