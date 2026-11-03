@@ -141,6 +141,7 @@
   </div>
   <div id="todayOffBanner"></div>
   <div id="teamSummary"></div>
+  <div id="adminTargetPanel" style="display:none;"></div>
   <div class="grid" id="dialGrid"></div>
 </div>
 
@@ -252,8 +253,8 @@
   <div class="detail-stats" id="rpSummaryStats"></div>
   <div id="rpCostTrend"></div>
   <div id="rpCountTrend"></div>
-  <div id="rpTopReasons"></div>
   <div id="rpTopParts"></div>
+  <div id="rpTopReasons"></div>
   <div id="rpRecentList"></div>
 </div>
 
@@ -319,7 +320,6 @@
     const can2ndFix = (area === '2ND FIX' || area === 'BOTH');
 
     function showPage(id) {
-        // Only one page visible: use .active (CSS) and clear any leftover inline display
         document.querySelectorAll('.page-view').forEach(function(el) {
             el.classList.remove('active');
             el.style.removeProperty('display');
