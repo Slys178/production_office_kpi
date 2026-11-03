@@ -113,6 +113,31 @@ export async function loadAndRender() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  // Force exclusive page visibility after CDN navigation
+  (function () {
+    var navIds = [
+      "tileKpi", "tileLoads", "tileHolidays", "tileForecast", "tileErrors", "tileReplacementParts",
+      "backToLandingFromKpi", "backToLandingFromLoads", "backToLandingFromHolidays",
+      "backToLandingFromForecast", "backToLandingFromErrors", "backToLandingFromReplacementParts",
+      "backToKpi", "backToDetail"
+    ];
+    navIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("click", function () {
+        setTimeout(function () {
+          var active = document.querySelector(".page-view.active");
+          document.querySelectorAll(".page-view").forEach(function (p) {
+            p.style.removeProperty("display");
+            if (active && p !== active) p.classList.remove("active");
+          });
+          if (active) active.classList.add("active");
+          try { window.scrollTo(0, 0); } catch (e) {}
+        }, 10);
+      });
+    });
+  })();
+
   const tileForecast = document.getElementById("tileForecast");
   if (tileForecast) {
     tileForecast.addEventListener("click", function () {
