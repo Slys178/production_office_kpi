@@ -149,6 +149,9 @@ document.addEventListener("DOMContentLoaded", function () {
   if (tileKpi) {
     tileKpi.addEventListener("click", function () {
       setTimeout(callKpiPrivacy, 150);
+      setTimeout(function () {
+        if (typeof window.renderAdminTargetPanel === "function") window.renderAdminTargetPanel();
+      }, 200);
     });
   }
   const tileErrors = document.getElementById("tileErrors");
