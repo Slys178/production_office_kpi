@@ -58,7 +58,9 @@ export const CONFIG = {
   },
 
   // KPI targets & timing
-  baseRate: 56 / 9,
+  // full-day target 53 → ~250 stairs/week for 9h×4 + 6.5h Fri (buffer for ~20 min/day procedure)
+  baseRate: 53 / 9,
+  fullDayTarget: 53,
   refreshMs: 3 * 60 * 1000,
   forecastWeeks: 8,
   trendWeeks: 4,
