@@ -51,7 +51,7 @@ export const CONFIG = {
   hours: {
     SF: { MonThu: 9, Fri: 6.5 },
     LA: { MonThu: 9, Fri: 6.5 },
-    AS: { MonThu: 10.625, Fri: 0 },
+    AS: { MonThu: 9, Fri: 6.5 }, // same pattern as SF/LA → 250/week at fullDayTarget 53
     DF: { MonThu: 6, Fri: 3.5 },
     DK: { MonThu: 9, Fri: 6.5 },
     SA: { MonThu: 0, Fri: 0 },
