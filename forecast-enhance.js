@@ -5,7 +5,7 @@
  *   Work week W (who is in / off)  →  capacity
  *   Demand week W+1 (stairs due)   →  demand
  *
- * Demand = sum of load stairs with delivery in demand week,
+ * Demand = sum of OPEN load stairs (no green tick) with delivery in demand week,
  * or CONFIG.defaultWeeklyStairs when none entered yet.
  */
 import { CONFIG } from "./config.js";
@@ -83,20 +83,42 @@ function getWarningLevel(capacity, demand) {
   return { level: "ok", label: "+" + gap + " spare", className: "ok" };
 }
 
+function toDayDate(d) {
+  if (!d) return null;
+  if (d instanceof Date && !isNaN(d.getTime())) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  const s = String(d).trim();
+  const gviz = /^Date\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(s);
+  if (gviz) {
+    return new Date(+gviz[1], +gviz[2], +gviz[3]);
+  }
+  const parts = s.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    let dd = parseInt(parts[0], 10);
+    let mm = parseInt(parts[1], 10);
+    let yy = parseInt(parts[2], 10);
+    if (yy < 100) yy += 2000;
+    if (dd && mm && yy) return new Date(yy, mm - 1, dd);
+  }
+  const t = new Date(d);
+  if (!isNaN(t.getTime())) return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  return null;
+}
+
 function stairsForDemandWeek(entries, demandMonday) {
-  const start = new Date(demandMonday);
-  start.setHours(0, 0, 0, 0);
+  const start = toDayDate(demandMonday);
+  if (!start) return { total: 0, count: 0 };
   const end = new Date(start);
   end.setDate(end.getDate() + 7);
 
   let total = 0;
   let count = 0;
   (entries || []).forEach(function (e) {
-    const d = e.deliveryDate || e.date;
+    if (e.isCompleted === true) return;
+    const d = toDayDate(e.deliveryDate || e.date);
     if (!d) return;
-    const t = d instanceof Date ? d : new Date(d);
-    if (isNaN(t.getTime())) return;
-    if (t >= start && t < end) {
+    if (d >= start && d < end) {
       const n = Number(e.stairs) || 0;
       if (n > 0) {
         total += n;
@@ -110,9 +132,11 @@ function stairsForDemandWeek(entries, demandMonday) {
 function demandForWorkWeek(forecastEntries, stairEntries, workMonday) {
   const demandMonday = new Date(workMonday);
   demandMonday.setDate(demandMonday.getDate() + 7);
+  demandMonday.setHours(0, 0, 0, 0);
 
-  const all = [].concat(forecastEntries || [], stairEntries || []);
-  const fromLoads = stairsForDemandWeek(all, demandMonday);
+  // Demand = open (not green-ticked) loads with delivery in demand week W+1
+  const open = [].concat(forecastEntries || []);
+  const fromLoads = stairsForDemandWeek(open, demandMonday);
   const fallback = Math.round(Number(CONFIG.defaultWeeklyStairs) || 0);
 
   if (fromLoads.total > 0) {
@@ -181,7 +205,9 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     if (warning.level === "danger" || warning.level === "warning") hasWarning = true;
 
     const headLabel =
-      i === 0 ? "This work week" : "Work W/C " + fmtDateShort(workStart);
+      i === 0
+        ? "This work week · W/C " + fmtDateShort(workStart)
+        : "Work week · W/C " + fmtDateShort(workStart);
 
     const whoLine = perPerson
       .map(function (p) {
@@ -233,10 +259,10 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     const gap = totalCapacity - demandStairs;
     let demandLabel =
       demand.source === "loads"
-        ? "Stairs due W/C " + fmtDateShort(demandStart) + " (" + demand.loadCount + " loads)"
+        ? "Open loads · delivery W/C " + fmtDateShort(demandStart) + " (" + demand.loadCount + " loads)"
         : demand.source === "default"
-          ? "Stairs due W/C " + fmtDateShort(demandStart) + " (default " + demandStairs + ")"
-          : "Stairs due W/C " + fmtDateShort(demandStart);
+          ? "No open loads found for delivery W/C " + fmtDateShort(demandStart) + " — using default"
+          : "Delivery W/C " + fmtDateShort(demandStart);
 
     let demandLine =
       '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:6px 0;border-top:1px solid var(--card-border);padding-top:8px;">' +
@@ -276,7 +302,7 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
         warning.label +
         "</div></div>" +
         '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">' +
-        "Producing for <strong>W/C " +
+        "Producing for <strong>delivery W/C " +
         fmtDateShort(demandStart) +
         "</strong> (" +
         fmtDateShort(demandStart) +
@@ -303,11 +329,15 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     );
   }
 
+  const demandExample = new Date(startMonday.getFullYear(), startMonday.getMonth(), startMonday.getDate() + 7);
   const note =
     '<div class="forecast-note" style="margin-bottom:12px;line-height:1.5;">' +
-    "<strong>How this works:</strong> capacity is who is in during the <em>work week</em>. " +
-    "Demand is stairs for the <em>following week</em> (what you produce in the work week). " +
-    "If no loads are entered for that demand week, the default (" +
+    "<strong>How this works:</strong> each card is a <em>work week</em> (W/C shown). " +
+    "You produce stairs for the <em>next</em> week — demand is open loads (no green tick) with delivery in that W/C. " +
+    "Example: this work week produces for <strong>delivery W/C " +
+    fmtDateShort(demandExample) +
+    "</strong>. " +
+    "If no open loads are found for a demand week, default (" +
     (CONFIG.defaultWeeklyStairs || 0) +
     ") is used.</div>";
 
@@ -342,16 +372,18 @@ function renderLookaheadBanner(startMonday, holidayIndex, forecastEntries, stair
   const short = demand.stairs > 0 && gap < 0;
 
   const msg =
-    "This work week capacity " +
+    "This work week (W/C " +
+    fmtDateShort(workStart) +
+    ") capacity " +
     capacity +
     (lost > 0
       ? " (−" + lost + " absences" + (offNames.length ? ": " + offNames.join(", ") : "") + ")"
       : "") +
-    " · demand W/C " +
+    " · demand delivery W/C " +
     fmtDateShort(demand.demandMonday) +
     " = " +
     demand.stairs +
-    (demand.source === "default" ? " (default)" : "") +
+    (demand.source === "default" ? " (default)" : demand.source === "loads" ? " (" + demand.loadCount + " open loads)" : "") +
     " → " +
     (demand.stairs <= 0
       ? "no demand set"
