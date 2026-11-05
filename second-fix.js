@@ -9,13 +9,17 @@ const SHEET_ID = (CONFIG.sheets && CONFIG.sheets.secondFix && CONFIG.sheets.seco
 
 const GID_DAILY = (CONFIG.sheets && CONFIG.sheets.secondFix && CONFIG.sheets.secondFix.gidDaily) || '0';
 
-function gvizUrl(sheetId, gid) {
-  const gidPart = gid != null && gid !== '' ? '&gid=' + gid : '';
-  return 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json' + gidPart;
+const ROSTER_TAB = (CONFIG.sheets && CONFIG.sheets.secondFix && CONFIG.sheets.secondFix.rosterTab) || 'Roster';
+
+function gvizUrl(sheetId, gid, tabName) {
+  var part = '';
+  if (tabName) part = '&sheet=' + encodeURIComponent(tabName);
+  else if (gid != null && gid !== '') part = '&gid=' + gid;
+  return 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json' + part;
 }
 
-async function fetchGviz(sheetId, gid) {
-  const res = await fetch(gvizUrl(sheetId, gid));
+async function fetchGviz(sheetId, gid, tabName) {
+  const res = await fetch(gvizUrl(sheetId, gid, tabName));
   const text = await res.text();
   const json = JSON.parse(text.substring(47, text.length - 2));
   if (json.status === 'error') throw new Error((json.errors && json.errors[0] && json.errors[0].detailed_message) || 'Sheet error');
@@ -95,6 +99,42 @@ function parseDailyRows(rows) {
     sectionActual: sectionActual,
     peopleIn: peopleIn
   };
+}
+
+function normName(s) {
+  return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Roster tab (in the capability sheet): A = Name, B = Temp Help.
+ * Blank Temp Help = regular team member (always shown).
+ * "Yes" = temp helper, shown.  "No" = temp helper, hidden and not counted.
+ */
+function parseRoster(rows) {
+  var map = {};
+  var count = 0;
+  rows.forEach(function (row) {
+    var name = normName(row[0]);
+    if (!name || name === 'NAME') return;
+    map[name] = String(row[1] || '').trim().toUpperCase();
+    count++;
+  });
+  return count ? map : null;
+}
+
+function applyRoster(people, roster) {
+  if (!roster) return { people: people, filtered: false, removed: [] };
+  var known = people.filter(function (p) { return roster.hasOwnProperty(normName(p.name)); });
+  // Safety: if nothing matches, the roster tab is wrong - don't blank the dials
+  if (!known.length) return { people: people, filtered: false, removed: [] };
+  var removed = [];
+  var visible = people.filter(function (p) {
+    var key = normName(p.name);
+    if (!roster.hasOwnProperty(key)) { removed.push(p.name + ' (not on Targets)'); return false; }
+    if (roster[key] === 'NO') { removed.push(p.name + ' (Temp Help = No)'); return false; }
+    return true;
+  });
+  return { people: visible, filtered: true, removed: removed };
 }
 
 /** Full-circle dial matching Production Office style */
@@ -197,9 +237,9 @@ export async function loadSecondFix(force) {
   try {
     const rows = await fetchGviz(SHEET_ID, GID_DAILY);
     const parsed = parseDailyRows(rows);
-    const people = parsed.people;
-    const sectionExpected = parsed.sectionExpected;
-    const sectionActual = parsed.sectionActual;
+    var people = parsed.people;
+    var sectionExpected = parsed.sectionExpected;
+    var sectionActual = parsed.sectionActual;
 
     if (!people.length) {
       if (summary) {
@@ -208,6 +248,22 @@ export async function loadSecondFix(force) {
           'and complete Allow access on the Live Data tab of that sheet.</div>';
       }
       return;
+    }
+
+    // Apply Roster tab: drops leavers and hides temp helpers set to "No"
+    var roster = null;
+    try {
+      roster = parseRoster(await fetchGviz(SHEET_ID, null, ROSTER_TAB));
+    } catch (e) {
+      console.warn('2nd Fix: Roster tab not available, showing everyone from the Daily tab', e);
+    }
+    var applied = applyRoster(people, roster);
+    if (applied.filtered) {
+      people = applied.people;
+      // Totals must only include the people still shown
+      sectionExpected = people.reduce(function (s, p) { return s + p.expected; }, 0);
+      sectionActual = people.reduce(function (s, p) { return s + p.actual; }, 0);
+      if (applied.removed.length) console.info('2nd Fix: hidden from dials -', applied.removed.join(', '));
     }
 
     var fullDaily = people.reduce(function (s, p) { return s + (p.dailyTarget || 0); }, 0);
