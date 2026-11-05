@@ -166,6 +166,26 @@ function stairsForDemandWeek(entries, demandMonday) {
   return { total: Math.round(total), count: count };
 }
 
+/** Loads for a delivery week that are already ticked complete (these drop out of the open list). */
+function tickedLoadsForWeek(forecastEntries, stairEntries, demandMonday) {
+  const start = toDayDate(demandMonday);
+  if (!start) return 0;
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+
+  let count = 0;
+  const check = function (e) {
+    const d = toDayDate(e.deliveryDate);
+    if (!d || d < start || d >= end) return;
+    if ((Number(e.stairs) || 0) > 0) count += 1;
+  };
+  (forecastEntries || []).forEach(function (e) {
+    if (e.isCompleted === true) check(e);
+  });
+  (stairEntries || []).forEach(check);
+  return count;
+}
+
 function demandForWorkWeek(forecastEntries, stairEntries, workMonday) {
   const demandMonday = new Date(workMonday);
   demandMonday.setDate(demandMonday.getDate() + 7);
@@ -180,6 +200,17 @@ function demandForWorkWeek(forecastEntries, stairEntries, workMonday) {
       stairs: fromLoads.total,
       source: "loads",
       loadCount: fromLoads.count,
+      demandMonday: demandMonday,
+    };
+  }
+
+  // Loads exist for that week but every one is ticked -> week is finished, not "no loads entered"
+  const ticked = tickedLoadsForWeek(forecastEntries, stairEntries, demandMonday);
+  if (ticked > 0) {
+    return {
+      stairs: 0,
+      source: "done",
+      loadCount: ticked,
       demandMonday: demandMonday,
     };
   }
@@ -298,7 +329,9 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
         ? "Open loads · delivery W/C " + fmtDateShort(demandStart) + " (" + demand.loadCount + " loads)"
         : demand.source === "default"
           ? "No open loads found for delivery W/C " + fmtDateShort(demandStart) + " — using default"
-          : "Delivery W/C " + fmtDateShort(demandStart);
+          : demand.source === "done"
+            ? "All " + demand.loadCount + " loads for delivery W/C " + fmtDateShort(demandStart) + " ticked complete ✓"
+            : "Delivery W/C " + fmtDateShort(demandStart);
 
     let demandLine =
       '<div class="fw-row" style="display:flex;justify-content:space-between;gap:12px;margin:6px 0;border-top:1px solid var(--card-border);padding-top:8px;">' +
@@ -373,9 +406,9 @@ export function renderEnhancedForecast(forecastEntries, holidayIndex, today) {
     "Example: this work week produces for <strong>delivery W/C " +
     fmtDateShort(demandExample) +
     "</strong>. " +
-    "If no open loads are found for a demand week, default (" +
+    "If no loads are entered for a demand week, default (" +
     (CONFIG.defaultWeeklyStairs || 0) +
-    ") is used.</div>";
+    ") is used. If every load for that week is ticked, it counts as complete (0 demand).</div>";
 
   container.innerHTML = note + cards.join("");
 
@@ -404,16 +437,46 @@ function renderLookaheadBanner(startMonday, holidayIndex, forecastEntries, stair
     if (cap.offDays.length > 0) offNames.push(person.initials);
   });
 
-  const demand = demandForWorkWeek(forecastEntries, stairEntries, workStart);
+  // Skip delivery weeks where every load is already ticked; roll on to the next unfinished week.
+  // Capacity then includes the work weeks in between (they can work ahead).
+  const maxSkip = CONFIG.forecastWeeks || 8;
+  let demand = demandForWorkWeek(forecastEntries, stairEntries, workStart);
+  const doneWeeks = [];
+  let extraCapacity = 0;
+  const extraWeeks = [];
+  for (let k = 1; k <= maxSkip && demand.source === "done"; k++) {
+    doneWeeks.push(demand.demandMonday);
+    const nextWork = new Date(workStart);
+    nextWork.setDate(nextWork.getDate() + 7 * k);
+    nextWork.setHours(0, 0, 0, 0);
+    peopleForWeek(nextWork).forEach(function (person) {
+      const cap = weekCapacityForPerson(person, nextWork, holidayIndex);
+      extraCapacity += cap.capacity;
+      full += cap.fullCapacity;
+      if (cap.offDays.length > 0 && offNames.indexOf(person.initials) < 0) offNames.push(person.initials);
+    });
+    extraWeeks.push(nextWork);
+    demand = demandForWorkWeek(forecastEntries, stairEntries, nextWork);
+  }
+  const thisWeekCapacity = capacity;
+  capacity += extraCapacity;
+
   const lost = full - capacity;
   const gap = capacity - demand.stairs;
   const short = demand.stairs > 0 && gap < 0;
 
+  const doneNote = doneWeeks.length
+    ? "Delivery W/C " + doneWeeks.map(fmtDateShort).join(", ") + " complete ✓ · "
+    : "";
+
+  const capLabel = extraWeeks.length
+    ? "Capacity left (this week from today + W/C " + extraWeeks.map(fmtDateShort).join(", ") + ") " +
+      thisWeekCapacity + " + " + extraCapacity + " = " + capacity
+    : "Capacity left this week (W/C " + fmtDateShort(workStart) + ", from today) " + capacity;
+
   const msg =
-    "Capacity left this week (W/C " +
-    fmtDateShort(workStart) +
-    ", from today) " +
-    capacity +
+    doneNote +
+    capLabel +
     (offNames.length
       ? " (− absences: " + offNames.join(", ") + ")"
       : "") +
@@ -424,7 +487,7 @@ function renderLookaheadBanner(startMonday, holidayIndex, forecastEntries, stair
     (demand.source === "default" ? " (default)" : demand.source === "loads" ? " (" + demand.loadCount + " open loads)" : "") +
     " → " +
     (demand.stairs <= 0
-      ? "no demand set"
+      ? (demand.source === "done" ? "all loads complete" : "no demand set")
       : short
         ? Math.abs(gap) + " short"
         : "+" + gap + " spare");
