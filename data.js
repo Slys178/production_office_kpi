@@ -119,9 +119,24 @@ export function creditableHoursLost(code, fullDayHours){
   return hoursLostForCode(code, fullDayHours);
 }
 
+/** True once a temporary helper's last week (CONFIG.temporaryHelperLastWeek) has passed. */
+function helperHasLeft(initials, date){
+  const map = CONFIG.temporaryHelperLastWeek || {};
+  const lastStr = map[initials];
+  if(!lastStr) return false;
+  const m = String(lastStr).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return false;
+  const last = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+  const mon = new Date(date);
+  mon.setHours(0,0,0,0);
+  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7)); // Monday of that week
+  return mon.getTime() > last.getTime();
+}
+
 export function targetFor(initials, date, code){
   const bucket = dayBucket(date);
   if(!bucket) return 0;
+  if(helperHasLeft(initials, date)) return 0; // e.g. DK after his last week: no target
   const fullDayHours = CONFIG.hours[initials][bucket];
   const lost = hoursLostForCode(code, fullDayHours);
   const available = Math.max(0, fullDayHours - lost);
