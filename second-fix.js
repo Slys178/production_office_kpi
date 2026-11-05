@@ -138,12 +138,13 @@ function applyRoster(people, roster) {
 }
 
 /** Full-circle dial matching Production Office style */
-function dialSvg(actual, target, size) {
+function dialSvg(actual, target, size, opts) {
   size = size || 160;
+  var tv = !!(opts && opts.tv);
   var scale = target > 0 ? target : Math.max(actual, 1);
   var pct = Math.min(Math.max(actual / scale, 0), 1);
-  var stroke = Math.max(10, Math.round(size * 0.08));
-  var r = (size - stroke) / 2 * 0.85;
+  var stroke = Math.max(10, Math.round(size * (tv ? 0.1 : 0.08)));
+  var r = (size - stroke) / 2 * (tv ? 0.95 : 0.85);
   var cx = size / 2;
   var cy = size / 2;
   var circumference = 2 * Math.PI * r;
@@ -157,12 +158,13 @@ function dialSvg(actual, target, size) {
 
   var sub = target > 0
     ? ('of ' + target.toFixed(0) + ' m')
-    : (actual > 0 ? 'm today (attendance not in)' : 'of 0 m');
+    : (actual > 0 ? (tv ? 'm today' : 'm today (attendance not in)') : 'of 0 m');
 
-  var fontMain = Math.round(size * 0.16);
-  var fontSub = Math.round(size * 0.07);
+  var fontMain = Math.round(size * (tv ? 0.24 : 0.16));
+  var fontSub = Math.round(size * (tv ? 0.09 : 0.07));
+  var wAttr = tv ? '100%' : size;
 
-  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+  return '<svg width="' + wAttr + '" height="' + wAttr + '" viewBox="0 0 ' + size + ' ' + size + '">' +
     '<circle cx="' + cx + '" cy="' + cy + '" r="' + r.toFixed(2) +
       '" fill="none" stroke="#2a3348" stroke-width="' + stroke + '"/>' +
     '<circle cx="' + cx + '" cy="' + cy + '" r="' + r.toFixed(2) +
@@ -227,6 +229,9 @@ function renderPeopleDials(people) {
 }
 
 var loading = false;
+var lastData = null;
+var tvActive = false;
+var tvTimer = null;
 
 export async function loadSecondFix(force) {
   if (loading && !force) return;
@@ -272,6 +277,15 @@ export async function loadSecondFix(force) {
     renderSectionDial(dialExpected, sectionActual);
     renderPeopleDials(people);
 
+    lastData = {
+      people: people,
+      sectionExpected: sectionExpected,
+      sectionActual: sectionActual,
+      dialExpected: dialExpected,
+      updated: new Date()
+    };
+    if (tvActive) renderTv();
+
     const weekEl = document.getElementById('secondFixWeekStrip');
     if (weekEl) {
       weekEl.textContent = 'Weekly forward view is on the Weekly tab of the capability sheet.';
@@ -287,5 +301,182 @@ export async function loadSecondFix(force) {
     loading = false;
   }
 }
+
+
+/* ───────────── TV mode ─────────────
+ * Full-screen view sized from the screen so every dial fits with no scrolling.
+ * Opened from the "TV" button under Refresh. Esc / Exit button closes it.
+ */
+function esc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+
+function renderTv() {
+  var o = document.getElementById('sfTvOverlay');
+  if (!o || !lastData) return;
+  var d = lastData;
+  var W = window.innerWidth;
+  var H = window.innerHeight;
+  var pad = Math.round(H * 0.018);
+  var barH = Math.round(H * 0.07);
+  var topH = Math.round(H * 0.27);
+  var gridH = H - barH - topH - pad * 4;
+  var gridW = W - pad * 2;
+
+  var people = d.people.slice().sort(function (a, b) {
+    if ((b.expected > 0) !== (a.expected > 0)) return b.expected > 0 ? 1 : -1;
+    return a.name.localeCompare(b.name);
+  });
+  var n = Math.max(people.length, 1);
+
+  // Choose the column count that gives the biggest dials
+  var best = { dial: 0, cols: 1, rows: n };
+  for (var c = 1; c <= n; c++) {
+    var rows = Math.ceil(n / c);
+    var cellW = gridW / c;
+    var cellH = gridH / rows;
+    var dial = Math.min(cellW * 0.92, cellH * 0.7);
+    if (dial > best.dial) best = { dial: dial, cols: c, rows: rows };
+  }
+  var cellW2 = gridW / best.cols;
+  var cellH2 = gridH / best.rows;
+  var maxLen = people.reduce(function (m, p) { return Math.max(m, p.name.length); }, 8);
+  var nameFs = Math.max(12, Math.min(cellH2 * 0.1, (cellW2 * 0.88) / (maxLen * 0.72), 48));
+  var detailFs = Math.max(12, Math.min(cellH2 * 0.075, (cellW2 * 0.9) / (13 * 0.62), 36, nameFs * 1.05));
+
+  var pct = d.sectionExpected > 0 ? (100 * d.sectionActual / d.sectionExpected) : 0;
+  var remaining = d.sectionExpected - d.sectionActual;
+  var statW = (W - topH - pad * 3) / 4;
+  var valFs = Math.min(topH * 0.3, statW / (7 * 0.62));
+  var lblFs = Math.max(12, Math.min(topH * 0.1, 26));
+
+  function stat(label, value, colour) {
+    return '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;' +
+      'background:var(--card-bg,#161d2e);border:1px solid var(--card-border,#232c42);border-radius:16px;min-width:0;">' +
+      '<div style="font-size:' + lblFs + 'px;color:var(--muted,#8993ab);text-transform:uppercase;letter-spacing:0.06em;">' + label + '</div>' +
+      '<div style="font-size:' + valFs + 'px;font-weight:800;line-height:1.1;' + (colour ? 'color:' + colour + ';' : '') + '">' + value + '</div>' +
+      '</div>';
+  }
+
+  var cards = people.map(function (p) {
+    var scale = p.expected > 0 ? p.expected : p.dailyTarget;
+    var away = p.status && p.status.toUpperCase() !== 'IN'
+      ? ' <span style="font-size:' + (detailFs * 0.8) + 'px;color:var(--muted,#8993ab);font-weight:600;">' + esc(p.status) + '</span>' : '';
+    return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;' +
+      'background:var(--card-bg,#161d2e);border:1px solid var(--card-border,#232c42);border-radius:14px;padding:4px;overflow:hidden;">' +
+      '<div style="font-size:' + nameFs + 'px;font-weight:700;white-space:nowrap;">' + esc(p.name) + away + '</div>' +
+      '<div style="flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;">' +
+        dialSvg(p.actual, scale, 200, { tv: true }) +
+      '</div>' +
+      '<div style="font-size:' + detailFs + 'px;color:var(--muted,#8993ab);">' +
+        p.actual.toFixed(1) + ' / ' + (scale > 0 ? scale.toFixed(1) : '0') + ' m</div>' +
+      '</div>';
+  }).join('');
+
+  var hh = d.updated.getHours(), mm = d.updated.getMinutes();
+  var stamp = 'Updated ' + (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+  var note = d.sectionExpected <= 0 ? 'Attendance not in yet – dials scaled to full target' : '';
+
+  o.innerHTML =
+    '<div style="height:100%;box-sizing:border-box;padding:' + pad + 'px;display:flex;flex-direction:column;gap:' + pad + 'px;">' +
+      '<div style="height:' + barH + 'px;display:flex;align-items:center;justify-content:space-between;">' +
+        '<div style="font-size:' + (barH * 0.55) + 'px;font-weight:800;">🔩 2nd Fix — Today</div>' +
+        '<div style="font-size:' + (barH * 0.3) + 'px;color:var(--muted,#8993ab);">' + note + '</div>' +
+        '<div style="display:flex;align-items:center;gap:14px;">' +
+          '<span style="font-size:' + (barH * 0.32) + 'px;color:var(--muted,#8993ab);">' + stamp + '</span>' +
+          '<button id="sfTvExit" type="button" style="font-family:inherit;font-size:' + (barH * 0.3) + 'px;padding:6px 16px;border-radius:10px;' +
+          'border:1px solid var(--card-border,#232c42);background:transparent;color:var(--muted,#8993ab);cursor:pointer;">✕ Exit</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="height:' + topH + 'px;display:flex;gap:' + pad + 'px;">' +
+        '<div style="width:' + topH + 'px;height:' + topH + 'px;flex:none;">' + dialSvg(d.sectionActual, d.dialExpected, 200, { tv: true }) + '</div>' +
+        stat('Expected today', d.sectionExpected.toFixed(0) + ' m') +
+        stat('Actual so far', d.sectionActual.toFixed(0) + ' m', 'var(--green,#2ecc71)') +
+        stat('Remaining', remaining.toFixed(0) + ' m') +
+        stat('% of expected', pct.toFixed(0) + '%') +
+      '</div>' +
+      '<div style="height:' + gridH + 'px;display:grid;gap:' + pad + 'px;' +
+        'grid-template-columns:repeat(' + best.cols + ',minmax(0,1fr));grid-template-rows:repeat(' + best.rows + ',minmax(0,1fr));">' +
+        cards +
+      '</div>' +
+    '</div>';
+
+  var exit = document.getElementById('sfTvExit');
+  if (exit) exit.addEventListener('click', closeTv);
+}
+
+function onTvResize() { if (tvActive) renderTv(); }
+
+function onTvFullscreenChange() {
+  // Esc in fullscreen exits fullscreen -> close the TV view too
+  if (tvActive && !document.fullscreenElement) closeTv();
+}
+
+function onTvKey(e) {
+  if (e.key === 'Escape' && tvActive) closeTv();
+}
+
+function openTv() {
+  var o = document.getElementById('sfTvOverlay');
+  if (!o) {
+    o = document.createElement('div');
+    o.id = 'sfTvOverlay';
+    o.style.cssText = 'position:fixed;inset:0;z-index:99999;background:var(--bg,#0b1020);color:var(--text,#eef2fb);' +
+      'font-family:inherit;overflow:hidden;';
+    document.body.appendChild(o);
+  }
+  o.style.display = 'block';
+  tvActive = true;
+  document.documentElement.style.overflow = 'hidden';
+  if (lastData) renderTv();
+  else o.innerHTML = '<div style="padding:40px;font-size:28px;">Loading live figures…</div>';
+
+  try {
+    if (o.requestFullscreen) o.requestFullscreen().catch(function () {});
+  } catch (e) { /* overlay still covers the whole window */ }
+
+  window.addEventListener('resize', onTvResize);
+  document.addEventListener('fullscreenchange', onTvFullscreenChange);
+  document.addEventListener('keydown', onTvKey);
+
+  loadSecondFix(true);
+  tvTimer = setInterval(function () { loadSecondFix(true); }, 60 * 1000);
+}
+
+function closeTv() {
+  tvActive = false;
+  if (tvTimer) { clearInterval(tvTimer); tvTimer = null; }
+  window.removeEventListener('resize', onTvResize);
+  document.removeEventListener('fullscreenchange', onTvFullscreenChange);
+  document.removeEventListener('keydown', onTvKey);
+  var o = document.getElementById('sfTvOverlay');
+  if (o) o.style.display = 'none';
+  document.documentElement.style.overflow = '';
+  try {
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+  } catch (e) { /* ignore */ }
+}
+
+/** Adds a "TV" button directly under the Refresh button */
+function initTvButton() {
+  var refresh = document.getElementById('refresh2ndFixBtn');
+  if (!refresh || document.getElementById('sf2TvBtn')) return;
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;align-items:stretch;';
+  refresh.parentNode.insertBefore(wrap, refresh);
+  wrap.appendChild(refresh);
+  var btn = document.createElement('button');
+  btn.id = 'sf2TvBtn';
+  btn.type = 'button';
+  btn.className = refresh.className;
+  btn.textContent = '📺 TV';
+  btn.style.cssText = 'background:var(--card-bg,#161d2e);color:var(--text,#eef2fb);border:1px solid var(--card-border,#232c42);';
+  btn.addEventListener('click', openTv);
+  wrap.appendChild(btn);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTvButton);
+else initTvButton();
 
 window.loadSecondFix = loadSecondFix;
