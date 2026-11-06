@@ -251,3 +251,35 @@ document.addEventListener("DOMContentLoaded", function () {
   setTimeout(bind, 500);
   setTimeout(bind, 1200);
 })();
+
+(function overrideAreaLanding() {
+  function install() {
+    window.__goAreaLanding = function () {
+      const office = typeof window.__canOffice === "boolean" ? window.__canOffice : true;
+      const second = typeof window.__can2ndFix === "boolean" ? window.__can2ndFix : false;
+      const tileOffice = document.getElementById("tileAreaOffice");
+      const tile2nd = document.getElementById("tileArea2ndFix");
+      const tileInc = document.getElementById("tileAreaIncidents");
+      if (tileOffice) tileOffice.style.display = office ? "" : "none";
+      if (tile2nd) tile2nd.style.display = second ? "" : "none";
+      if (tileInc) tileInc.style.display = "";
+      if (typeof window.__showPage === "function") window.__showPage("areaLandingPage");
+      else if (typeof window.showPage === "function") window.showPage("areaLandingPage");
+      else {
+        document.querySelectorAll(".page-view").forEach(function (p) {
+          p.classList.remove("active");
+          p.style.display = "none";
+        });
+        const page = document.getElementById("areaLandingPage");
+        if (page) {
+          page.classList.add("active");
+          page.style.display = "";
+        }
+      }
+    };
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+  setTimeout(install, 200);
+  setTimeout(install, 800);
+})();
