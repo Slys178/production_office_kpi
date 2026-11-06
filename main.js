@@ -1,6 +1,6 @@
 /**
  * Local main.js – loads the known-good modular build from CDN,
- * then wires in finish prediction, KPI privacy, detail net-points, and forecast defaults.
+ * then wires in finish prediction, KPI privacy, detail net-points, forecast, incidents.
  */
 import {
   initAndLoad as _initAndLoad,
@@ -105,14 +105,14 @@ import("./incident-report.js")
 
 export async function initAndLoad() {
   const result = await _initAndLoad();
-  try {
-    if (typeof window.__goAreaLanding === "function") window.__goAreaLanding();
-  } catch (e) { console.warn("area route", e); }
   callFinishIfReady();
   callKpiPrivacy();
   callForecastEnhance();
   callOfficeErrors();
   callLoadsByPerson();
+  try {
+    if (typeof window.__goAreaLanding === "function") window.__goAreaLanding();
+  } catch (e) { console.warn("area route", e); }
   return result;
 }
 
@@ -164,6 +164,43 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+(function ensureIncidentsDom() {
+  function run() {
+    const grid = document.querySelector("#landingPage .tile-grid");
+    if (grid && !document.getElementById("tileIncidents")) {
+      const tile = document.createElement("div");
+      tile.className = "nav-tile";
+      tile.id = "tileIncidents";
+      tile.innerHTML =
+        '<div class="tile-icon">🩹</div>' +
+        '<div class="tile-label">INCIDENTS</div>' +
+        '<div class="tile-sub">Report · photos · near miss & injury</div>';
+      grid.appendChild(tile);
+    }
+    if (!document.getElementById("incidentsPage")) {
+      const page = document.createElement("div");
+      page.id = "incidentsPage";
+      page.className = "page-view";
+      page.innerHTML =
+        '<div class="page-header">' +
+        '<button class="back-btn" id="backToLandingFromIncidents">← Production Office</button>' +
+        "<h2>🩹 Incidents</h2></div>" +
+        '<div id="incidentsPageBody" class="page-body" style="padding:12px 16px 32px;"></div>';
+      const app = document.getElementById("landingPage") || document.body;
+      app.parentNode.insertBefore(page, app.nextSibling);
+    }
+    if (!document.querySelector('link[href="incident-report.css"]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "incident-report.css";
+      document.head.appendChild(link);
+    }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);
+  else run();
+  setTimeout(run, 300);
+})();
 
 (function wireIncidentsNav() {
   function bind() {
