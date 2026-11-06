@@ -507,12 +507,18 @@ function renderDetail(root) {
   }
   const photos = (inc.photos || [])
     .map(
-      (p) =>
-        '<a href="' + p + '" target="_blank" rel="noopener"><img src="' + p + '" class="inc-detail-photo" alt="" /></a>'
+      (p, i) =>
+        '<button type="button" class="inc-photo-open" data-i="' +
+        i +
+        '"><img src="' +
+        p +
+        '" class="inc-detail-photo" alt="Photo ' +
+        (i + 1) +
+        '" /></button>'
     )
     .join("");
   const links = (inc.photoLinks || [])
-    .map((l) => '<a href="' + escapeHtml(l) + '" target="_blank" rel="noopener">Drive photo</a>')
+    .map((l) => '<a href="' + escapeHtml(l) + '" target="_blank" rel="noopener">Open on Drive</a>')
     .join(" · ");
 
   root.innerHTML =
@@ -560,15 +566,92 @@ function renderDetail(root) {
     "</p>" +
     (inc.actions ? "<p><strong>Actions:</strong> " + escapeHtml(inc.actions) + "</p>" : "") +
     "<p><strong>Sync:</strong> " +
-    (inc.synced ? "Saved to Google Sheet" : "On this device only — not yet on sheet") +
+    (inc.synced
+      ? "Saved to Google Sheet" +
+        (inc.photoLinks && inc.photoLinks.length ? " · photos on Drive" : "")
+      : "On this device only — not yet on the Google Sheet (sign-in or permissions may have failed)") +
     "</p>" +
+    (!inc.synced
+      ? '<p><button type="button" class="inc-btn primary" id="incRetrySync">Retry save to Sheet / Drive</button></p>'
+      : "") +
     (photos ? '<div class="inc-detail-photos">' + photos + "</div>" : "") +
     (links ? "<p>" + links + "</p>" : "") +
+    '<div id="incLightbox" class="inc-lightbox" style="display:none;" aria-hidden="true">' +
+    '<button type="button" class="inc-lightbox-close" id="incLightboxClose">×</button>' +
+    '<img id="incLightboxImg" alt="Incident photo" />' +
+    "</div>" +
     "</div>";
 
   document.getElementById("incBackList")?.addEventListener("click", () => {
     viewMode = "list";
     renderShell();
+  });
+
+  const lb = document.getElementById("incLightbox");
+  const lbImg = document.getElementById("incLightboxImg");
+  const closeLb = function () {
+    if (lb) {
+      lb.style.display = "none";
+      lb.setAttribute("aria-hidden", "true");
+    }
+    if (lbImg) lbImg.removeAttribute("src");
+  };
+  document.getElementById("incLightboxClose")?.addEventListener("click", closeLb);
+  lb?.addEventListener("click", function (e) {
+    if (e.target === lb) closeLb();
+  });
+  root.querySelectorAll(".inc-photo-open").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const i = parseInt(btn.getAttribute("data-i"), 10);
+      const src = (inc.photos || [])[i];
+      if (!src || !lb || !lbImg) return;
+      lbImg.src = src;
+      lb.style.display = "flex";
+      lb.setAttribute("aria-hidden", "false");
+    });
+  });
+
+  document.getElementById("incRetrySync")?.addEventListener("click", async function () {
+    const btn = document.getElementById("incRetrySync");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+    }
+    setStatus("Retrying Sheet / Drive save…");
+    try {
+      const links = [];
+      for (let i = 0; i < (inc.photos || []).length; i++) {
+        try {
+          const file = await uploadPhotoToDrive(
+            inc.photos[i],
+            "incident_" + inc.id + "_" + (i + 1) + ".jpg"
+          );
+          if (file.webViewLink) links.push(file.webViewLink);
+          else if (file.id)
+            links.push("https://drive.google.com/file/d/" + file.id + "/view");
+        } catch (pe) {
+          console.warn("photo upload", pe);
+        }
+      }
+      inc.photoLinks = links;
+      await appendIncidentRow(incidentToSheetRow(inc));
+      inc.synced = true;
+      const all = loadLocal().map((x) => (x.id === inc.id ? inc : x));
+      saveLocal(all);
+      setStatus("Saved to sheet" + (links.length ? " · " + links.length + " photo(s) on Drive" : ""));
+      renderShell();
+    } catch (e) {
+      setStatus(
+        "Still could not sync: " +
+          (e.message || String(e)) +
+          " — check Google sign-in and edit access on the incident sheet.",
+        true
+      );
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Retry save to Sheet / Drive";
+      }
+    }
   });
 }
 
