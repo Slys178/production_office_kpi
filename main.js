@@ -43,6 +43,16 @@ function callLoadsByPerson() {
   }
 }
 
+function callIncidents() {
+  try {
+    if (typeof window.renderIncidents === "function") {
+      window.renderIncidents();
+    }
+  } catch (e) {
+    console.warn("incidents render error", e);
+  }
+}
+
 function callOfficeErrors() {
   try {
     if (typeof window.renderOfficeErrors === "function") {
@@ -86,19 +96,23 @@ import("./loads-by-person.js")
   .then(function () { callLoadsByPerson(); })
   .catch(function (e) { console.warn("loads-by-person module failed", e); });
 
-// Drive auto-search disabled (was unreliable; speeds up load)
+import("./admin-targets.js")
+  .catch(function (e) { console.warn("admin-targets module failed", e); });
+
+import("./incident-report.js")
+  .then(function () { callIncidents(); })
+  .catch(function (e) { console.warn("incident-report module failed", e); });
 
 export async function initAndLoad() {
   const result = await _initAndLoad();
+  try {
+    if (typeof window.__goAreaLanding === "function") window.__goAreaLanding();
+  } catch (e) { console.warn("area route", e); }
   callFinishIfReady();
   callKpiPrivacy();
   callForecastEnhance();
   callOfficeErrors();
   callLoadsByPerson();
-  // Re-apply area routing (CDN forces office landing on first load)
-  try {
-    if (typeof window.__goAreaLanding === 'function') window.__goAreaLanding();
-  } catch (e) { console.warn('area route', e); }
   return result;
 }
 
@@ -113,36 +127,11 @@ export async function loadAndRender() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  // Force exclusive page visibility after CDN navigation
-  (function () {
-    var navIds = [
-      "tileKpi", "tileLoads", "tileHolidays", "tileForecast", "tileErrors", "tileReplacementParts",
-      "backToLandingFromKpi", "backToLandingFromLoads", "backToLandingFromHolidays",
-      "backToLandingFromForecast", "backToLandingFromErrors", "backToLandingFromReplacementParts",
-      "backToKpi", "backToDetail"
-    ];
-    navIds.forEach(function (id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener("click", function () {
-        setTimeout(function () {
-          var active = document.querySelector(".page-view.active");
-          document.querySelectorAll(".page-view").forEach(function (p) {
-            p.style.removeProperty("display");
-            if (active && p !== active) p.classList.remove("active");
-          });
-          if (active) active.classList.add("active");
-          try { window.scrollTo(0, 0); } catch (e) {}
-        }, 10);
-      });
-    });
-  })();
-
   const tileForecast = document.getElementById("tileForecast");
   if (tileForecast) {
     tileForecast.addEventListener("click", function () {
-      setTimeout(callFinishIfReady, 150);
       setTimeout(callForecastEnhance, 200);
+      setTimeout(callForecastEnhance, 800);
     });
   }
   const tileKpi = document.getElementById("tileKpi");
@@ -175,3 +164,43 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+(function wireIncidentsNav() {
+  function bind() {
+    const tile = document.getElementById("tileIncidents");
+    const back = document.getElementById("backToLandingFromIncidents");
+    if (tile && !tile._incBound) {
+      tile._incBound = true;
+      tile.addEventListener("click", function () {
+        if (typeof window.showPage === "function") window.showPage("incidentsPage");
+        else if (typeof window.setActiveView === "function") window.setActiveView("incidents");
+        else {
+          document.querySelectorAll(".page-view").forEach(function (p) {
+            p.classList.remove("active");
+            p.style.display = "none";
+          });
+          const page = document.getElementById("incidentsPage");
+          if (page) {
+            page.classList.add("active");
+            page.style.display = "";
+          }
+        }
+        if (typeof window.renderIncidents === "function") window.renderIncidents();
+        try { window.scrollTo(0, 0); } catch (e) {}
+      });
+    }
+    if (back && !back._incBound) {
+      back._incBound = true;
+      back.addEventListener("click", function () {
+        if (typeof window.showPage === "function") window.showPage("landingPage");
+        else if (typeof window.setActiveView === "function") window.setActiveView("landing");
+      });
+    }
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bind);
+  } else {
+    bind();
+  }
+  setTimeout(bind, 500);
+})();
