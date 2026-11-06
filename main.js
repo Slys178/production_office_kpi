@@ -167,28 +167,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
 (function ensureIncidentsDom() {
   function run() {
-    const grid = document.querySelector("#landingPage .tile-grid");
-    if (grid && !document.getElementById("tileIncidents")) {
+    const areaGrid = document.querySelector("#areaLandingPage .tile-grid");
+    if (areaGrid && !document.getElementById("tileAreaIncidents")) {
       const tile = document.createElement("div");
       tile.className = "nav-tile";
-      tile.id = "tileIncidents";
+      tile.id = "tileAreaIncidents";
+      tile.style.minHeight = "140px";
       tile.innerHTML =
         '<div class="tile-icon">🩹</div>' +
         '<div class="tile-label">INCIDENTS</div>' +
         '<div class="tile-sub">Report · photos · near miss & injury</div>';
-      grid.appendChild(tile);
+      areaGrid.appendChild(tile);
     }
+    const oldTile = document.getElementById("tileIncidents");
+    if (oldTile) oldTile.remove();
+
     if (!document.getElementById("incidentsPage")) {
       const page = document.createElement("div");
       page.id = "incidentsPage";
       page.className = "page-view";
       page.innerHTML =
         '<div class="page-header">' +
-        '<button class="back-btn" id="backToLandingFromIncidents">← Production Office</button>' +
+        '<button class="back-btn" id="backToLandingFromIncidents">← Areas</button>' +
         "<h2>🩹 Incidents</h2></div>" +
         '<div id="incidentsPageBody" class="page-body" style="padding:12px 16px 32px;"></div>';
-      const app = document.getElementById("landingPage") || document.body;
-      app.parentNode.insertBefore(page, app.nextSibling);
+      const anchor = document.getElementById("areaLandingPage") || document.getElementById("landingPage") || document.body;
+      anchor.parentNode.insertBefore(page, anchor.nextSibling);
+    } else {
+      const back = document.getElementById("backToLandingFromIncidents");
+      if (back) back.textContent = "← Areas";
     }
     if (!document.querySelector('link[href="incident-report.css"]')) {
       const link = document.createElement("link");
@@ -203,34 +210,36 @@ document.addEventListener("DOMContentLoaded", function () {
 })();
 
 (function wireIncidentsNav() {
+  function openIncidents() {
+    if (typeof window.showPage === "function") window.showPage("incidentsPage");
+    else if (typeof window.__showPage === "function") window.__showPage("incidentsPage");
+    else {
+      document.querySelectorAll(".page-view").forEach(function (p) {
+        p.classList.remove("active");
+        p.style.display = "none";
+      });
+      const page = document.getElementById("incidentsPage");
+      if (page) {
+        page.classList.add("active");
+        page.style.display = "";
+      }
+    }
+    if (typeof window.renderIncidents === "function") window.renderIncidents();
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
   function bind() {
-    const tile = document.getElementById("tileIncidents");
+    const tile = document.getElementById("tileAreaIncidents") || document.getElementById("tileIncidents");
     const back = document.getElementById("backToLandingFromIncidents");
     if (tile && !tile._incBound) {
       tile._incBound = true;
-      tile.addEventListener("click", function () {
-        if (typeof window.showPage === "function") window.showPage("incidentsPage");
-        else if (typeof window.setActiveView === "function") window.setActiveView("incidents");
-        else {
-          document.querySelectorAll(".page-view").forEach(function (p) {
-            p.classList.remove("active");
-            p.style.display = "none";
-          });
-          const page = document.getElementById("incidentsPage");
-          if (page) {
-            page.classList.add("active");
-            page.style.display = "";
-          }
-        }
-        if (typeof window.renderIncidents === "function") window.renderIncidents();
-        try { window.scrollTo(0, 0); } catch (e) {}
-      });
+      tile.addEventListener("click", openIncidents);
     }
     if (back && !back._incBound) {
       back._incBound = true;
       back.addEventListener("click", function () {
-        if (typeof window.showPage === "function") window.showPage("landingPage");
-        else if (typeof window.setActiveView === "function") window.setActiveView("landing");
+        if (typeof window.__goAreaLanding === "function") window.__goAreaLanding();
+        else if (typeof window.showPage === "function") window.showPage("areaLandingPage");
+        else if (typeof window.__showPage === "function") window.__showPage("areaLandingPage");
       });
     }
   }
@@ -240,4 +249,5 @@ document.addEventListener("DOMContentLoaded", function () {
     bind();
   }
   setTimeout(bind, 500);
+  setTimeout(bind, 1200);
 })();
