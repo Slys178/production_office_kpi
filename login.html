@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Staircraft</title>
     <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -58,11 +59,9 @@
             font-size: 0.9rem;
             margin-bottom: 28px;
         }
-        .btn-google {
+        .btn-google, .btn-ms {
             width: 100%;
             padding: 12px;
-            background: #fff;
-            color: #1a1a2e;
             border: none;
             border-radius: 8px;
             font-size: 1rem;
@@ -74,12 +73,45 @@
             gap: 10px;
             transition: all 0.2s;
             font-family: inherit;
+            margin-bottom: 12px;
+        }
+        .btn-google {
+            background: #fff;
+            color: #1a1a2e;
         }
         .btn-google:hover {
             transform: scale(1.02);
             box-shadow: 0 4px 12px rgba(255,255,255,0.1);
         }
-        .btn-google svg { width: 20px; height: 20px; }
+        .btn-ms {
+            background: #2f2f2f;
+            color: #fff;
+            border: 1px solid #5a5a5a;
+        }
+        .btn-ms:hover {
+            transform: scale(1.02);
+            background: #3a3a3a;
+        }
+        .btn-google:disabled, .btn-ms:disabled {
+            opacity: 0.6;
+            cursor: wait;
+            transform: none;
+        }
+        .btn-google svg, .btn-ms svg { width: 20px; height: 20px; }
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #8993ab;
+            font-size: 0.75rem;
+            margin: 8px 0 16px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #232c42;
+        }
         .error-msg {
             display: none;
             color: #e74c3c;
@@ -139,9 +171,21 @@
             </div>
 
             <h2>Welcome back</h2>
-            <p class="subheading">Sign in with your Google account to continue</p>
+            <p class="subheading">Sign in with your Staircraft Microsoft account or Google</p>
 
-            <button id="googleLoginBtn" class="btn-google">
+            <button type="button" id="msLoginBtn" class="btn-ms">
+                <svg viewBox="0 0 21 21" aria-hidden="true">
+                    <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                    <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                </svg>
+                Sign in with Microsoft
+            </button>
+
+            <div class="divider">or</div>
+
+            <button type="button" id="googleLoginBtn" class="btn-google">
                 <svg viewBox="0 0 48 48">
                     <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
                     <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
@@ -160,11 +204,17 @@
 
     <script>
         // ===== CONFIG =====
+        // Google (existing)
         const CLIENT_ID = '965947227076-hrls555o1pv7coftc80qng6chgtf0sh7.apps.googleusercontent.com';
         const USER_LIST_SHEET_ID = '1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw';
         const USER_LIST_GID = '0';
 
-        const loginBtn = document.getElementById('googleLoginBtn');
+        // Microsoft Entra ID (SPA app registration) — paste from Azure Overview
+        const MSAL_CLIENT_ID = 'REPLACE_WITH_APPLICATION_CLIENT_ID';
+        const MSAL_TENANT_ID = 'REPLACE_WITH_DIRECTORY_TENANT_ID';
+
+        const googleLoginBtn = document.getElementById('googleLoginBtn');
+        const msLoginBtn = document.getElementById('msLoginBtn');
         const errorMsg = document.getElementById('errorMsg');
         const loadingMsg = document.getElementById('loadingMsg');
 
@@ -172,21 +222,21 @@
             errorMsg.textContent = message;
             errorMsg.classList.add('visible');
             loadingMsg.classList.remove('active');
-            loginBtn.disabled = false;
+            googleLoginBtn.disabled = false;
+            msLoginBtn.disabled = false;
         }
         function showLoading() {
             loadingMsg.classList.add('active');
             errorMsg.classList.remove('visible');
-            loginBtn.disabled = true;
+            googleLoginBtn.disabled = true;
+            msLoginBtn.disabled = true;
         }
 
-        /** Normalise AREA values from the sheet */
         function normaliseArea(raw) {
             const a = (raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
             if (a === 'BOTH' || a === 'ALL' || a === 'ADMIN') return 'BOTH';
             if (a === '2ND FIX' || a === '2NDFIX' || a === '2ND' || a === 'SECOND FIX') return '2ND FIX';
             if (a === 'OFFICE' || a === '1ST' || a === '1ST FIX' || a === 'FIRST FIX' || a === 'PRODUCTION') return 'OFFICE';
-            // Default: if blank, treat as OFFICE so existing users keep working
             return a || 'OFFICE';
         }
 
@@ -238,6 +288,19 @@
             }
         }
 
+        async function finishLoginWithEmail(email) {
+            if (!email) {
+                showError('Could not retrieve email from sign-in. Please try again.');
+                return;
+            }
+            const authorized = await authorizeUser(email);
+            if (authorized) {
+                window.location.href = 'index.html';
+            } else {
+                showError('Access Denied: ' + email + ' is not on the authorised users sheet. Ask an admin to add this email.');
+            }
+        }
+
         function loginWithGoogle() {
             showLoading();
             const tokenClient = google.accounts.oauth2.initTokenClient({
@@ -250,20 +313,10 @@
                                 headers: { Authorization: 'Bearer ' + response.access_token }
                             });
                             const userInfo = await userInfoResp.json();
-                            const email = userInfo.email;
-                            if (!email) {
-                                showError('Could not retrieve email from Google. Please try again.');
-                                return;
-                            }
-                            const authorized = await authorizeUser(email);
-                            if (authorized) {
-                                window.location.href = 'index.html';
-                            } else {
-                                showError('Access Denied: This email is not authorized. Please contact your administrator.');
-                            }
+                            await finishLoginWithEmail(userInfo.email);
                         } catch (err) {
                             console.error('Error:', err);
-                            showError('An error occurred during login. Please try again.');
+                            showError('An error occurred during Google login. Please try again.');
                         }
                     } else {
                         showError('Google sign-in was cancelled or failed. Please try again.');
@@ -275,6 +328,89 @@
                 }
             });
             tokenClient.requestAccessToken({ prompt: 'consent' });
+        }
+
+        function msalConfigured() {
+            return MSAL_CLIENT_ID &&
+                MSAL_TENANT_ID &&
+                MSAL_CLIENT_ID.indexOf('REPLACE_') !== 0 &&
+                MSAL_TENANT_ID.indexOf('REPLACE_') !== 0;
+        }
+
+        let msalInstance = null;
+
+        function getMsalInstance() {
+            if (!msalConfigured()) return null;
+            if (msalInstance) return msalInstance;
+            const msalConfig = {
+                auth: {
+                    clientId: MSAL_CLIENT_ID,
+                    authority: 'https://login.microsoftonline.com/' + MSAL_TENANT_ID,
+                    redirectUri: window.location.origin + '/login.html',
+                    postLogoutRedirectUri: window.location.origin + '/login.html',
+                    navigateToLoginRequestUrl: false
+                },
+                cache: {
+                    cacheLocation: 'localStorage',
+                    storeAuthStateInCookie: false
+                }
+            };
+            msalInstance = new msal.PublicClientApplication(msalConfig);
+            return msalInstance;
+        }
+
+        async function loginWithMicrosoft() {
+            if (!msalConfigured()) {
+                showError('Microsoft login is not configured yet. Add Application (client) ID and Directory (tenant) ID in login.html.');
+                return;
+            }
+            if (typeof msal === 'undefined') {
+                showError('Microsoft login library failed to load. Check your network and try again.');
+                return;
+            }
+            showLoading();
+            try {
+                const instance = getMsalInstance();
+                await instance.initialize();
+
+                const loginRequest = {
+                    scopes: ['openid', 'profile', 'email', 'User.Read']
+                };
+
+                const result = await instance.loginPopup(loginRequest);
+                const account = result.account;
+                let email =
+                    (account && (account.username || account.mail)) ||
+                    (result.idTokenClaims && (result.idTokenClaims.preferred_username || result.idTokenClaims.email)) ||
+                    '';
+
+                if (!email && account) {
+                    try {
+                        const token = await instance.acquireTokenSilent({
+                            scopes: ['User.Read'],
+                            account: account
+                        });
+                        const me = await fetch('https://graph.microsoft.com/v1.0/me',
+                            { headers: { Authorization: 'Bearer ' + token.accessToken } });
+                        if (me.ok) {
+                            const profile = await me.json();
+                            email = profile.mail || profile.userPrincipalName || '';
+                        }
+                    } catch (graphErr) {
+                        console.warn('Graph profile lookup failed', graphErr);
+                    }
+                }
+
+                await finishLoginWithEmail(email);
+            } catch (err) {
+                console.error('Microsoft sign-in error:', err);
+                const msg = (err && (err.message || err.errorMessage)) || String(err);
+                if (/user_cancelled|popup_window_closed|access_denied/i.test(msg)) {
+                    showError('Microsoft sign-in was cancelled.');
+                } else {
+                    showError('Microsoft sign-in failed: ' + msg);
+                }
+            }
         }
 
         function checkExistingSession() {
@@ -293,7 +429,8 @@
         }
 
         checkExistingSession();
-        loginBtn.addEventListener('click', loginWithGoogle);
+        googleLoginBtn.addEventListener('click', loginWithGoogle);
+        msLoginBtn.addEventListener('click', loginWithMicrosoft);
     </script>
 </body>
 </html>
