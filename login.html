@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Staircraft</title>
     <script src="https://accounts.google.com/gsi/client"></script>
-    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -204,12 +204,10 @@
 
     <script>
         // ===== CONFIG =====
-        // Google (existing)
         const CLIENT_ID = '965947227076-hrls555o1pv7coftc80qng6chgtf0sh7.apps.googleusercontent.com';
         const USER_LIST_SHEET_ID = '1uX_f3jc123mX2SsK7vIVIxN_zpQ3GkUqmA9U0QdJ2Dw';
         const USER_LIST_GID = '0';
 
-        // Microsoft Entra ID (SPA app registration)
         const MSAL_CLIENT_ID = '32bb8424-b6a8-4a97-a4d1-9af7c5a5aa8c';
         const MSAL_TENANT_ID = 'd9037317-b903-4545-806c-14c523127368';
 
@@ -330,6 +328,12 @@
             tokenClient.requestAccessToken({ prompt: 'consent' });
         }
 
+        function getMsalApi() {
+            if (typeof msal !== 'undefined') return msal;
+            if (typeof window !== 'undefined' && window.msal) return window.msal;
+            return null;
+        }
+
         function msalConfigured() {
             return MSAL_CLIENT_ID &&
                 MSAL_TENANT_ID &&
@@ -342,6 +346,8 @@
         function getMsalInstance() {
             if (!msalConfigured()) return null;
             if (msalInstance) return msalInstance;
+            const api = getMsalApi();
+            if (!api || !api.PublicClientApplication) return null;
             const msalConfig = {
                 auth: {
                     clientId: MSAL_CLIENT_ID,
@@ -355,22 +361,26 @@
                     storeAuthStateInCookie: false
                 }
             };
-            msalInstance = new msal.PublicClientApplication(msalConfig);
+            msalInstance = new api.PublicClientApplication(msalConfig);
             return msalInstance;
         }
 
         async function loginWithMicrosoft() {
             if (!msalConfigured()) {
-                showError('Microsoft login is not configured yet. Add Application (client) ID and Directory (tenant) ID in login.html.');
+                showError('Microsoft login is not configured yet.');
                 return;
             }
-            if (typeof msal === 'undefined') {
-                showError('Microsoft login library failed to load. Check your network and try again.');
+            if (!getMsalApi()) {
+                showError('Microsoft login library failed to load. Try hard-refresh (Ctrl+F5) or use Google sign-in for now.');
                 return;
             }
             showLoading();
             try {
                 const instance = getMsalInstance();
+                if (!instance) {
+                    showError('Could not start Microsoft login.');
+                    return;
+                }
                 await instance.initialize();
 
                 const loginRequest = {
