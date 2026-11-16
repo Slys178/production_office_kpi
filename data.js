@@ -1,16 +1,12 @@
 /**
- * Data fetching & parsing layer (Google Sheets via GViz JSONP).
- * Browser fetch is blocked by Google CORS — JSONP is required.
+ * Data fetching & parsing layer (Google Sheets via GViz).
+ * Restored to pre–replacement-parts-sections version.
  */
 
 import { CONFIG } from "./config.js";
 import { parseUKDate, sameDay, dayBucket } from "./utils.js";
 
 let jsonpCounter = 0;
-
-/** Slim query for the large replacement-parts sheet (avoids 1MB+ download on every load) */
-const RP_SLIM_QUERY =
-  "select C,E,F,G,I,J,K,M,N,O where K is not null";
 
 function cellToString(cell) {
   if (!cell) return "";
@@ -23,112 +19,53 @@ function cellToString(cell) {
   return "";
 }
 
-function tableToRows(table) {
-  if (!table || !table.cols) return [];
-  const dataRows = (table.rows || []).map(function (r) {
-    return table.cols.map(function (c, i) {
-      const cell = r.c ? r.c[i] : null;
-      return cellToString(cell);
-    });
-  });
-  const labelRow = table.cols.map(function (c) {
-    return c.label || "";
-  });
-  const hasLabels = labelRow.some(function (v) {
-    return v.trim() !== "";
-  });
-  return hasLabels ? [labelRow].concat(dataRows) : dataRows;
-}
-
-/**
- * Load a Google Sheet tab via GViz JSONP (works from browser).
- * @param {string} sheetId
- * @param {string|number} [gid]
- * @param {string} [query] optional Visualization API query
- */
-export function fetchGvizRows(sheetId, gid, query) {
-  return new Promise(function (resolve, reject) {
-    // Never download the full 3,500-row RP sheet — it freezes Office KPI startup
-    var effectiveQuery = query;
-    try {
-      if (
-        !effectiveQuery &&
-        CONFIG.sheets &&
-        CONFIG.sheets.replacementParts &&
-        sheetId === CONFIG.sheets.replacementParts.id
-      ) {
-        effectiveQuery = RP_SLIM_QUERY;
-      }
-    } catch (_) {}
-
-    jsonpCounter += 1;
-    const callbackName = "__gvizCallback_" + jsonpCounter + "_" + Date.now();
-    const script = document.createElement("script");
+export function fetchGvizRows(sheetId, gid){
+  return new Promise((resolve, reject)=>{
+    jsonpCounter++;
+    const callbackName = `__gvizCallback_${jsonpCounter}_${Date.now()}`;
+    const script = document.createElement('script');
     let settled = false;
-
-    const timeoutMs = 25000;
-    const timeout = setTimeout(function () {
-      if (settled) return;
+    const timeout = setTimeout(()=>{
+      if(settled) return;
       settled = true;
       cleanup();
-      reject(
-        new Error("Timed out loading sheet (" + String(sheetId).slice(0, 8) + "…)")
-      );
-    }, timeoutMs);
-
-    function cleanup() {
+      reject(new Error('Timed out loading sheet data'));
+    }, 15000);
+    function cleanup(){
       clearTimeout(timeout);
-      try {
-        delete window[callbackName];
-      } catch (_) {}
-      if (script.parentNode) script.remove();
+      delete window[callbackName];
+      script.remove();
     }
-
-    window[callbackName] = function (response) {
-      if (settled) return;
+    window[callbackName] = function(response){
+      if(settled) return;
       settled = true;
       cleanup();
-      try {
-        if (!response || response.status === "error") {
-          const msg =
-            (response &&
-              response.errors &&
-              response.errors[0] &&
-              (response.errors[0].detailed_message || response.errors[0].message)) ||
-            "Sheet returned an error";
-          reject(new Error(msg));
-          return;
-        }
-        resolve(tableToRows(response.table));
-      } catch (e) {
-        reject(e);
-      }
+      try{
+        if(response.status === 'error'){ reject(new Error('Sheet returned an error')); return; }
+        const table = response.table;
+        const dataRows = table.rows.map(r =>
+          table.cols.map((c,i)=>{
+            const cell = r.c ? r.c[i] : null;
+            return cellToString(cell);
+          })
+        );
+        const labelRow = table.cols.map(c => c.label || '');
+        const hasLabels = labelRow.some(v => v.trim() !== '');
+        const rows = hasLabels ? [labelRow, ...dataRows] : dataRows;
+        resolve(rows);
+      } catch(e){ reject(e); }
     };
-
-    script.onerror = function () {
-      if (settled) return;
+    script.onerror = ()=>{
+      if(settled) return;
       settled = true;
       cleanup();
-      reject(
-        new Error(
-          "Failed to load sheet. Share it as Anyone with the link can view."
-        )
-      );
+      reject(new Error('Failed to load sheet'));
     };
-
-    // Match original working URL shape used by the rest of the app
-    var gidPart =
-      gid !== undefined && gid !== null && gid !== "" ? "&gid=" + gid : "";
-    var tqPart = effectiveQuery
-      ? "&tq=" + encodeURIComponent(effectiveQuery)
-      : "";
-    script.src =
-      "https://docs.google.com/spreadsheets/d/" +
-      sheetId +
-      "/gviz/tq?tqx=out:json;responseHandler:" +
-      callbackName +
-      gidPart +
-      tqPart;
+    function gvizJsonUrl(sheetId, callbackName, gid){
+      const gidPart = gid ? `&gid=${gid}` : '';
+      return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json;responseHandler:${callbackName}${gidPart}`;
+    }
+    script.src = gvizJsonUrl(sheetId, callbackName, gid);
     document.body.appendChild(script);
   });
 }
@@ -375,16 +312,14 @@ export function parseErrorRows(rows){
   return out;
 }
 
+/** Office-only replacement parts (original behaviour). */
 export function parseReplacementPartsRows(rows){
   let headerIdx = -1;
   for(let i=0;i<rows.length;i++){
     const r = rows[i];
-    if(r && r.length > 2) {
+    if(r && r.length > 5) {
       const upper = r.map(c => (c||'').trim().toUpperCase());
-      if (
-        upper.some(c => c.includes('SECTION')) &&
-        (upper.some(c => c.includes('WEEK NO')) || upper.some(c => c.includes('DATE')))
-      ) {
+      if(upper.some(c => c.includes('WEEK NO')) && upper.some(c => c.includes('SECTION'))) {
         headerIdx = i;
         break;
       }
@@ -406,15 +341,13 @@ export function parseReplacementPartsRows(rows){
   const out = [];
   for(let i=headerIdx+1;i<rows.length;i++){
     const r = rows[i];
-    if(!r || r.length < 2) continue;
+    if(!r || r.length < 3) continue;
     const dateStr = (r[dateCol]||'').trim();
     if(!dateStr) continue;
     const date = parseUKDate(dateStr);
     if(!date) continue;
-
-    var sectionRaw = sectionCol >= 0 ? (r[sectionCol]||'').trim() : '';
-    if (!sectionRaw) continue;
-    var section = sectionRaw.toUpperCase();
+    const section = (r[sectionCol]||'').trim().toUpperCase();
+    if(section !== 'OFFICE') continue;
 
     const costStr = (r[costCol]||'').replace(/[£,\s]/g, '');
     const cost = parseFloat(costStr) || 0;
@@ -429,8 +362,6 @@ export function parseReplacementPartsRows(rows){
       quantity: parseInt(r[qtyCol],10) || 1,
       material: (r[materialCol]||'').trim(),
       reason: (r[reasonCol]||'').trim() || 'Unspecified',
-      section: section,
-      sectionLabel: sectionRaw,
       operator: (r[operatorCol]||'').trim(),
       initials: matchedPerson ? matchedPerson.initials : null,
       loadNo: (r[loadCol]||'').trim(),
