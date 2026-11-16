@@ -83,6 +83,11 @@
       <div class="tile-label">2ND FIX</div>
       <div class="tile-sub">Section target · Actual · Dials</div>
     </div>
+    <div class="nav-tile" id="tileAreaReplacementParts" style="min-height:140px;">
+      <div class="tile-icon">🔧</div>
+      <div class="tile-label">REPLACEMENT PARTS</div>
+      <div class="tile-sub">By section · cost · reasons</div>
+    </div>
   </div>
 </div>
 
@@ -125,11 +130,6 @@
       <div class="tile-icon">⚠️</div>
       <div class="tile-label">OFFICE ERRORS</div>
       <div class="tile-sub">By person · breakdown · 1:1 follow-ups</div>
-    </div>
-    <div class="nav-tile" id="tileReplacementParts">
-      <div class="tile-icon">🔧</div>
-      <div class="tile-label">REPLACEMENT PARTS</div>
-      <div class="tile-sub">Office-caused parts, cost & trends</div>
     </div>
   </div>
 </div>
@@ -247,7 +247,7 @@
 
 <div id="replacementPartsPage" class="page-view">
   <div class="page-header">
-    <button class="back-btn" id="backToLandingFromReplacementParts">← Production Office</button>
+    <button class="back-btn" id="backToLandingFromReplacementParts">← Areas</button>
     <h2>🔧 Replacement Parts</h2>
   </div>
   <div class="detail-stats" id="rpSummaryStats"></div>
@@ -335,21 +335,35 @@
         try { window.scrollTo(0, 0); } catch (e) {}
     }
     window.__showPage = showPage;
+    window.showPage = showPage;
+
+    function openReplacementParts() {
+        showPage('replacementPartsPage');
+        if (window.enhanceReplacementPartsView) window.enhanceReplacementPartsView();
+        setTimeout(function () {
+            if (window.enhanceReplacementPartsView) window.enhanceReplacementPartsView();
+        }, 300);
+    }
+    window.__openReplacementParts = openReplacementParts;
 
     function goAreaLanding() {
+        // Always show main hub when both areas exist, or when opening RP from anywhere
+        var tileOffice = document.getElementById('tileAreaOffice');
+        var tile2nd = document.getElementById('tileArea2ndFix');
+        var tileRp = document.getElementById('tileAreaReplacementParts');
+        if (tileOffice) tileOffice.style.display = canOffice ? '' : 'none';
+        if (tile2nd) tile2nd.style.display = can2ndFix ? '' : 'none';
+        if (tileRp) tileRp.style.display = '';
+
         if (canOffice && !can2ndFix) {
-            showPage('landingPage');
+            // Office-only users still see area page so RP is reachable
+            showPage('areaLandingPage');
             return;
         }
         if (can2ndFix && !canOffice) {
-            showPage('secondFixPage');
-            if (window.loadSecondFix) window.loadSecondFix();
+            showPage('areaLandingPage');
             return;
         }
-        var tileOffice = document.getElementById('tileAreaOffice');
-        var tile2nd = document.getElementById('tileArea2ndFix');
-        if (tileOffice) tileOffice.style.display = canOffice ? '' : 'none';
-        if (tile2nd) tile2nd.style.display = can2ndFix ? '' : 'none';
         showPage('areaLandingPage');
     }
     window.__goAreaLanding = goAreaLanding;
@@ -368,7 +382,7 @@
 
     window.addEventListener('load', function() {
         if (role === 'USER' && canOffice) {
-            ['tileErrors', 'tileReplacementParts'].forEach(function(id) {
+            ['tileErrors'].forEach(function(id) {
                 var el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
@@ -400,25 +414,33 @@
             });
         }
 
+        var tileRp = document.getElementById('tileAreaReplacementParts');
+        if (tileRp) {
+            tileRp.addEventListener('click', openReplacementParts);
+        }
+
+        var backRp = document.getElementById('backToLandingFromReplacementParts');
+        if (backRp) {
+            backRp.addEventListener('click', function () {
+                goAreaLanding();
+            });
+        }
+
         var backToArea = document.getElementById('backToAreaFrom2ndFix');
         if (backToArea) {
             backToArea.addEventListener('click', function() {
-                if (canOffice && can2ndFix) showPage('areaLandingPage');
-                else if (canOffice) showPage('landingPage');
-                else showPage('secondFixPage');
+                goAreaLanding();
             });
-            if (!canOffice) backToArea.style.display = 'none';
+            if (!canOffice && !can2ndFix) backToArea.style.display = 'none';
         }
 
         var officeBackHdr = document.getElementById('officeBackHeader');
         var backFromOffice = document.getElementById('backToAreaFromOffice');
-        if (canOffice && can2ndFix) {
-            if (officeBackHdr) officeBackHdr.style.display = '';
-            if (backFromOffice) {
-                backFromOffice.addEventListener('click', function() {
-                    showPage('areaLandingPage');
-                });
-            }
+        if (officeBackHdr) officeBackHdr.style.display = '';
+        if (backFromOffice) {
+            backFromOffice.addEventListener('click', function() {
+                goAreaLanding();
+            });
         }
 
         var refresh2nd = document.getElementById('refresh2ndFixBtn');
