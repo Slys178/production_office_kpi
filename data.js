@@ -346,8 +346,10 @@ export function parseReplacementPartsRows(rows){
     if(!dateStr) continue;
     const date = parseUKDate(dateStr);
     if(!date) continue;
-    const section = (r[sectionCol]||'').trim().toUpperCase();
-    if(section !== 'OFFICE') continue;
+
+    // Column K / SECTION — keep all sections (was OFFICE-only)
+    var sectionRaw = sectionCol >= 0 ? (r[sectionCol]||'').trim() : '';
+    var section = sectionRaw ? sectionRaw.toUpperCase() : 'UNSPECIFIED';
 
     const costStr = (r[costCol]||'').replace(/[£,\s]/g, '');
     const cost = parseFloat(costStr) || 0;
@@ -362,6 +364,8 @@ export function parseReplacementPartsRows(rows){
       quantity: parseInt(r[qtyCol],10) || 1,
       material: (r[materialCol]||'').trim(),
       reason: (r[reasonCol]||'').trim() || 'Unspecified',
+      section: section,
+      sectionLabel: sectionRaw || 'Unspecified',
       operator: (r[operatorCol]||'').trim(),
       initials: matchedPerson ? matchedPerson.initials : null,
       loadNo: (r[loadCol]||'').trim(),
