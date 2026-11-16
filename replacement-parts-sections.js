@@ -1,6 +1,6 @@
 /**
- * Replacement Parts — loads sheet itself (does not rely on CDN _rpEntries),
- * groups by SECTION (column K), click section to list rows.
+ * Replacement Parts — JSONP load (CORS-safe) with a slim GViz query,
+ * then group by SECTION (column K).
  */
 import { CONFIG } from "./config.js";
 import { fetchGvizRows, parseReplacementPartsRows } from "./data.js";
@@ -8,7 +8,10 @@ import { fmtDate } from "./utils.js";
 
 let selectedSection = null;
 let loading = false;
-let lastError = null;
+
+/** Only the columns we need, and only rows with a section filled in */
+const RP_QUERY =
+  "select C,E,F,G,I,J,K,M,N,O where K is not null";
 
 function escapeHtml(s) {
   const el = document.createElement("div");
@@ -127,8 +130,7 @@ function renderFromEntries(entries) {
   if (!groups.length) {
     dom.sectionHost.innerHTML =
       '<div class="parts-note" style="grid-column:1/-1;padding:16px;">' +
-      "No replacement parts found. Check the sheet is shared “Anyone with the link can view”, " +
-      "and that rows have a Date + SECTION (column K).</div>";
+      "No replacement parts with a SECTION found. Check column K on the sheet.</div>";
     dom.detail.style.display = "none";
     dom.detail.innerHTML = "";
     return;
@@ -239,51 +241,46 @@ export async function loadAndRenderReplacementParts(force) {
   if (!dom) return;
   if (loading && !force) return;
   loading = true;
-  lastError = null;
 
   hideLegacyLists();
   setSummaryMessage(
-    '<div class="parts-note" style="padding:12px;">Loading replacement parts (large sheet ~3,500 rows — may take a few seconds)…</div>'
+    '<div class="parts-note" style="padding:12px;">Loading replacement parts…</div>'
   );
   if (dom.sectionHost) {
     dom.sectionHost.innerHTML =
-      '<div class="parts-note" style="grid-column:1/-1;padding:12px;">Downloading from Google Sheets…</div>';
+      '<div class="parts-note" style="grid-column:1/-1;padding:12px;">Fetching rows with a SECTION from Google Sheets…</div>';
   }
 
   try {
     const sheetId = CONFIG.sheets.replacementParts.id;
     const gid = CONFIG.sheets.replacementParts.gid;
-    const rows = await fetchGvizRows(sheetId, gid);
-    if (dom.sectionHost) {
-      dom.sectionHost.innerHTML =
-        '<div class="parts-note" style="grid-column:1/-1;padding:12px;">Parsing ' +
-        rows.length +
-        " rows…</div>";
-    }
+    const rows = await fetchGvizRows(sheetId, gid, RP_QUERY);
     const entries = parseReplacementPartsRows(rows);
     window._rpEntries = entries;
     window._today = window._today || new Date();
     renderFromEntries(entries);
   } catch (err) {
     console.error("Replacement parts load failed", err);
-    lastError = err;
     setSummaryMessage(
       '<div class="parts-note" style="color:var(--red,#e74c3c);padding:12px;">' +
-        "Could not load replacement parts: " +
+        "Could not load: " +
         escapeHtml(err && err.message ? err.message : String(err)) +
-        ". Share the sheet as “Anyone with the link can view”.</div>"
+        '</div><button type="button" class="back-btn" id="rpRetryBtn" style="margin-top:8px;">Try again</button>'
     );
     if (dom.sectionHost) {
-      dom.sectionHost.innerHTML =
-        '<div class="parts-note" style="grid-column:1/-1;color:var(--red,#e74c3c);padding:12px;">' +
-        "Load failed. Check sheet sharing, then reopen this tab.</div>";
+      dom.sectionHost.innerHTML = "";
+    }
+    const retry = document.getElementById("rpRetryBtn");
+    if (retry) {
+      retry.addEventListener("click", function () {
+        loadAndRenderReplacementParts(true);
+      });
     }
   } finally {
     loading = false;
   }
 }
 
-/** Called from nav / main.js — always force so stuck loading can recover */
 export function enhanceReplacementPartsView() {
   loadAndRenderReplacementParts(true);
 }
