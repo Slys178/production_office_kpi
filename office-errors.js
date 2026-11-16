@@ -1,6 +1,7 @@
 /**
- * Office Errors — person cards, click-through breakdown, 1:1 follow-up ticks.
- * 1:1 status is stored in localStorage on this browser (manager device).
+ * Office Errors — person cards, click-through breakdown, 1:1 follow-up ticks,
+ * and "No fault" (error stays logged, points not charged, green + note).
+ * 1:1 / no-fault status is stored in localStorage on this browser (manager device).
  */
 import { CONFIG } from "./config.js";
 import { fmtDate } from "./utils.js";
@@ -40,18 +41,26 @@ function productionPeople() {
   });
 }
 
+/** Points that count on the scoreboard (0 if No fault). */
+function chargedPoints(e, rec) {
+  if (rec && rec.noFault) return 0;
+  return Number(e.points) || 0;
+}
+
 let selectedInitials = null;
 
-function groupByPerson(errorEntries) {
+function groupByPerson(errorEntries, oneToOnes) {
   const people = productionPeople();
   const map = {};
   people.forEach(function (p) {
-    map[p.initials] = { person: p, entries: [], totalPoints: 0 };
+    map[p.initials] = { person: p, entries: [], totalPoints: 0, noFaultCount: 0 };
   });
   (errorEntries || []).forEach(function (e) {
     if (!e.initials || !map[e.initials]) return;
     map[e.initials].entries.push(e);
-    map[e.initials].totalPoints += Number(e.points) || 0;
+    const rec = oneToOnes[errorKey(e)] || {};
+    map[e.initials].totalPoints += chargedPoints(e, rec);
+    if (rec.noFault) map[e.initials].noFaultCount += 1;
   });
   Object.keys(map).forEach(function (k) {
     map[k].entries.sort(function (a, b) {
@@ -66,12 +75,14 @@ function renderCards(grouped, oneToOnes) {
   if (!container) return;
 
   const cards = productionPeople().map(function (p) {
-    const g = grouped[p.initials] || { entries: [], totalPoints: 0 };
+    const g = grouped[p.initials] || { entries: [], totalPoints: 0, noFaultCount: 0 };
     const count = g.entries.length;
     let openFollowUps = 0;
     g.entries.forEach(function (e) {
-      const rec = oneToOnes[errorKey(e)];
-      if (!rec || !rec.done) openFollowUps += 1;
+      const rec = oneToOnes[errorKey(e)] || {};
+      // No-fault items don't need a 1:1 chase
+      if (rec.noFault) return;
+      if (!rec.done) openFollowUps += 1;
     });
 
     const pts = g.totalPoints;
@@ -85,9 +96,10 @@ function renderCards(grouped, oneToOnes) {
           '<span class="oe-name">' + escapeHtml(p.name) + '</span>' +
         '</div>' +
         '<div class="oe-points ' + ptsClass + '">' + (pts > 0 ? "+" : "") + pts + '</div>' +
-        '<div class="oe-sub">error points</div>' +
+        '<div class="oe-sub">error points (charged)</div>' +
         '<div class="oe-meta">' +
           count + ' error' + (count === 1 ? "" : "s") +
+          (g.noFaultCount ? ' · <span class="oe-nofault-meta">' + g.noFaultCount + ' no fault</span>' : '') +
           (count > 0
             ? (openFollowUps > 0
                 ? ' · <span class="oe-open">' + openFollowUps + ' need 1:1</span>'
@@ -132,10 +144,14 @@ function renderDetail(grouped, oneToOnes) {
       const key = errorKey(e);
       const rec = oneToOnes[key] || {};
       const done = !!rec.done;
+      const noFault = !!rec.noFault;
       const note = rec.note || "";
-      const pts = Number(e.points) || 0;
+      const rawPts = Number(e.points) || 0;
+      const showPts = noFault ? 0 : rawPts;
+      const rowClass = noFault ? " oe-row-nofault" : (done ? " oe-row-done" : "");
+
       return (
-        '<div class="oe-error-row' + (done ? " oe-row-done" : "") + '" data-key="' + escapeHtml(key) + '">' +
+        '<div class="oe-error-row' + rowClass + '" data-key="' + escapeHtml(key) + '">' +
           '<div class="oe-error-main">' +
             '<div class="oe-error-date">' + escapeHtml(fmtDate(e.date)) +
               (e.plot ? " · Plot " + escapeHtml(e.plot) : "") +
@@ -145,13 +161,26 @@ function renderDetail(grouped, oneToOnes) {
               (e.section ? ' <span class="oe-section">(' + escapeHtml(e.section) + ")</span>" : "") +
             '</div>' +
             (e.impact ? '<div class="oe-error-impact">' + escapeHtml(e.impact) + "</div>" : "") +
+            (noFault ? '<div class="oe-nofault-badge">No fault — points not charged</div>' : '') +
           '</div>' +
-          '<div class="oe-error-points">' + (pts > 0 ? "+" : "") + pts + '</div>' +
-          '<label class="oe-oto">' +
-            '<input type="checkbox" class="oe-oto-check" data-key="' + escapeHtml(key) + '"' + (done ? " checked" : "") + ' />' +
-            '<span>1:1 done</span>' +
-          '</label>' +
-          '<input type="text" class="oe-oto-note" data-key="' + escapeHtml(key) + '" placeholder="Optional note…" value="' + escapeHtml(note) + '" />' +
+          '<div class="oe-error-points' + (noFault ? ' oe-pts-waived' : '') + '">' +
+            (noFault
+              ? '<span class="oe-pts-struck">' + (rawPts > 0 ? "+" : "") + rawPts + '</span> → 0'
+              : (showPts > 0 ? "+" : "") + showPts) +
+          '</div>' +
+          '<div class="oe-flags">' +
+            '<label class="oe-oto">' +
+              '<input type="checkbox" class="oe-oto-check" data-key="' + escapeHtml(key) + '"' + (done ? " checked" : "") + (noFault ? " disabled" : "") + ' />' +
+              '<span>1:1 done</span>' +
+            '</label>' +
+            '<label class="oe-nofault">' +
+              '<input type="checkbox" class="oe-nofault-check" data-key="' + escapeHtml(key) + '"' + (noFault ? " checked" : "") + ' />' +
+              '<span>No fault</span>' +
+            '</label>' +
+          '</div>' +
+          '<input type="text" class="oe-oto-note" data-key="' + escapeHtml(key) + '" placeholder="' +
+            (noFault ? 'Why no fault? (e.g. only option in predef…)' : 'Optional note…') +
+            '" value="' + escapeHtml(note) + '" />' +
         '</div>'
       );
     }).join("");
@@ -163,10 +192,11 @@ function renderDetail(grouped, oneToOnes) {
       '<button type="button" class="back-btn" id="oeCloseDetail">← All people</button>' +
       '<h3><span class="oe-dot" style="background:' + p.color + ';"></span> ' +
         escapeHtml(p.name) + " — breakdown</h3>" +
-      '<div class="oe-detail-total">Total: <strong class="' +
+      '<div class="oe-detail-total">Charged total: <strong class="' +
         (g.totalPoints < 0 ? "negative" : "") + '">' +
         (g.totalPoints > 0 ? "+" : "") + g.totalPoints +
       '</strong> points · ' + entries.length + ' error' + (entries.length === 1 ? "" : "s") +
+      (g.noFaultCount ? ' · ' + g.noFaultCount + ' marked no fault' : '') +
       '</div>' +
     '</div>' +
     '<div class="oe-error-list">' + rows + '</div>';
@@ -191,6 +221,33 @@ function renderDetail(grouped, oneToOnes) {
     });
   });
 
+  detail.querySelectorAll(".oe-nofault-check").forEach(function (cb) {
+    cb.addEventListener("change", function () {
+      const key = cb.getAttribute("data-key");
+      const map = loadOneToOnes();
+      if (!map[key]) map[key] = {};
+      map[key].noFault = cb.checked;
+      if (cb.checked) {
+        map[key].done = true; // no need to chase 1:1 for no-fault
+      }
+      map[key].updatedAt = new Date().toISOString();
+      saveOneToOnes(map);
+      renderOfficeErrors();
+      // focus note if empty after marking no fault
+      if (cb.checked) {
+        const noteInp = detail.querySelector('.oe-oto-note[data-key="' + key.replace(/"/g, '') + '"]');
+        // key may contain special chars — use attribute selector carefully
+        const notes = detail.querySelectorAll(".oe-oto-note");
+        notes.forEach(function (inp) {
+          if (inp.getAttribute("data-key") === key && !inp.value.trim()) {
+            inp.focus();
+            inp.placeholder = "Why no fault? (e.g. only option in predef…)";
+          }
+        });
+      }
+    });
+  });
+
   detail.querySelectorAll(".oe-oto-note").forEach(function (inp) {
     inp.addEventListener("change", function () {
       const key = inp.getAttribute("data-key");
@@ -206,7 +263,7 @@ function renderDetail(grouped, oneToOnes) {
 export function renderOfficeErrors() {
   const entries = window._errorEntries || [];
   const oneToOnes = loadOneToOnes();
-  const grouped = groupByPerson(entries);
+  const grouped = groupByPerson(entries, oneToOnes);
   renderCards(grouped, oneToOnes);
   renderDetail(grouped, oneToOnes);
 }
