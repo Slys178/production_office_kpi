@@ -342,17 +342,15 @@ function renderPeopleDials(people) {
   if (!grid) return;
   var mgr = isManager();
 
-  // Keep closed name-rows short: do not stretch every cell to the tallest dial
-  grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(210px, 1fr))';
-  grid.style.alignItems = 'start';
-  grid.style.gridAutoRows = 'min-content';
-  grid.style.gap = '10px';
+  // Use page CSS grid — do not force a tight minmax that shrinks dials
+  grid.style.display = '';
+  grid.style.gridTemplateColumns = '';
+  grid.style.alignItems = '';
+  grid.style.gridAutoRows = '';
+  grid.style.gap = '';
 
+  // Alphabetical only (do not group In first / stack by status)
   const sorted = people.slice().sort(function (a, b) {
-    var ao = a.appStatus === 'OUT' ? 1 : 0;
-    var bo = b.appStatus === 'OUT' ? 1 : 0;
-    if (ao !== bo) return ao - bo;
     return a.name.localeCompare(b.name);
   });
 
@@ -363,31 +361,35 @@ function renderPeopleDials(people) {
     var chevron = open ? '▼' : '▶';
     var clickHint = mgr ? ' title="Tap to change: Out → In → Half"' : ' title="View only"';
 
-    // OUT: single compact bar only (no empty body stretching the row)
     var head =
       '<button type="button" class="sf-person-head" data-name="' + esc(p.name) + '"' + clickHint + ' style="' +
       'width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;' +
-      'padding:10px 12px;background:transparent;border:none;color:inherit;font:inherit;cursor:' +
+      'padding:12px 14px;background:transparent;border:none;color:inherit;font:inherit;cursor:' +
       (mgr ? 'pointer' : 'default') + ';">' +
-      '<span style="font-weight:700;font-size:0.9rem;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+      '<span style="font-weight:700;font-size:0.95rem;text-align:left;">' +
       chevron + ' ' + esc(p.name) + '</span>' +
-      '<span style="font-size:0.72rem;font-weight:700;flex-shrink:0;color:' + statusColour(st) + ';">' +
+      '<span style="font-size:0.75rem;font-weight:700;color:' + statusColour(st) + ';">' +
       st + (mgr ? ' · edit' : '') + '</span></button>';
 
     var body = '';
     if (open) {
       body =
-        '<div class="sf-person-body" style="text-align:center;padding:0 10px 12px;">' +
-        dialSvg(p.actual, scale > 0 ? scale : p.dailyTarget || 1, 120) +
-        '<div style="font-size:0.72rem;color:var(--muted,#8993ab);margin-top:2px;">' +
+        '<div class="sf-person-body" style="text-align:center;padding:0 12px 14px;">' +
+        dialSvg(p.actual, scale > 0 ? scale : p.dailyTarget || 1, 130) +
+        '<div style="font-size:0.75rem;color:var(--muted,#8993ab);margin-top:4px;">' +
         p.actual.toFixed(1) + ' / ' + (p.expected > 0 ? p.expected.toFixed(1) : '0') + ' m' +
-        (st === 'HALF' ? ' (half)' : '') +
+        (st === 'HALF' ? ' (half day)' : '') +
         '</div></div>';
+    } else {
+      body =
+        '<div class="sf-person-body" style="padding:0 14px 12px;font-size:0.8rem;color:var(--muted,#8993ab);">' +
+        'Not in — dial hidden' +
+        (mgr ? '. Tap name to mark In.' : '.') +
+        '</div>';
     }
 
     return '<div class="dial-card sf-person-card" data-name="' + esc(p.name) + '" style="' +
-      'align-self:start;height:auto;max-width:100%;text-align:left;' +
-      'background:var(--card-bg,#161d2e);border-radius:12px;' +
+      'text-align:left;background:var(--card-bg,#161d2e);border-radius:12px;' +
       'border:1px solid var(--card-border,#232c42);overflow:hidden;">' +
       head + body + '</div>';
   }).join('');
@@ -533,7 +535,7 @@ function renderTv() {
   var people = d.people.filter(function (p) {
     return p.appStatus === 'IN' || p.appStatus === 'HALF';
   }).slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
-  if (!people.length) people = d.people.slice();
+  if (!people.length) people = d.people.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
   var n = Math.max(people.length, 1);
   var best = { dial: 0, cols: 1, rows: n };
   for (var c = 1; c <= n; c++) {
