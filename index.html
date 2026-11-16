@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="finish.css">
 <link rel="stylesheet" href="office-errors.css">
 <link rel="stylesheet" href="loads-by-person.css">
+<link rel="stylesheet" href="incident-report.css">
 <link rel="manifest" href="manifest.json">
 <style>
   @keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -87,6 +88,11 @@
       <div class="tile-icon">🔧</div>
       <div class="tile-label">REPLACEMENT PARTS</div>
       <div class="tile-sub">By section · cost · reasons</div>
+    </div>
+    <div class="nav-tile" id="tileAreaIncidents" style="min-height:140px;">
+      <div class="tile-icon">🩹</div>
+      <div class="tile-label">INCIDENTS</div>
+      <div class="tile-sub">Report · photos · near miss & injury</div>
     </div>
   </div>
 </div>
@@ -258,6 +264,14 @@
   <div id="rpRecentList"></div>
 </div>
 
+<div id="incidentsPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToLandingFromIncidents">← Areas</button>
+    <h2>🩹 Incidents</h2>
+  </div>
+  <div id="incidentsPageBody" class="page-body" style="padding:12px 16px 32px;"></div>
+</div>
+
 <div id="secondFixPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToAreaFrom2ndFix">← Areas</button>
@@ -346,24 +360,24 @@
     }
     window.__openReplacementParts = openReplacementParts;
 
+    function openIncidents() {
+        showPage('incidentsPage');
+        if (window.renderIncidents) window.renderIncidents();
+        setTimeout(function () {
+            if (window.renderIncidents) window.renderIncidents();
+        }, 300);
+    }
+    window.__openIncidents = openIncidents;
+
     function goAreaLanding() {
-        // Always show main hub when both areas exist, or when opening RP from anywhere
         var tileOffice = document.getElementById('tileAreaOffice');
         var tile2nd = document.getElementById('tileArea2ndFix');
         var tileRp = document.getElementById('tileAreaReplacementParts');
+        var tileInc = document.getElementById('tileAreaIncidents');
         if (tileOffice) tileOffice.style.display = canOffice ? '' : 'none';
         if (tile2nd) tile2nd.style.display = can2ndFix ? '' : 'none';
         if (tileRp) tileRp.style.display = '';
-
-        if (canOffice && !can2ndFix) {
-            // Office-only users still see area page so RP is reachable
-            showPage('areaLandingPage');
-            return;
-        }
-        if (can2ndFix && !canOffice) {
-            showPage('areaLandingPage');
-            return;
-        }
+        if (tileInc) tileInc.style.display = '';
         showPage('areaLandingPage');
     }
     window.__goAreaLanding = goAreaLanding;
@@ -419,28 +433,31 @@
             tileRp.addEventListener('click', openReplacementParts);
         }
 
+        var tileInc = document.getElementById('tileAreaIncidents');
+        if (tileInc) {
+            tileInc.addEventListener('click', openIncidents);
+        }
+
         var backRp = document.getElementById('backToLandingFromReplacementParts');
         if (backRp) {
-            backRp.addEventListener('click', function () {
-                goAreaLanding();
-            });
+            backRp.addEventListener('click', function () { goAreaLanding(); });
+        }
+
+        var backInc = document.getElementById('backToLandingFromIncidents');
+        if (backInc) {
+            backInc.addEventListener('click', function () { goAreaLanding(); });
         }
 
         var backToArea = document.getElementById('backToAreaFrom2ndFix');
         if (backToArea) {
-            backToArea.addEventListener('click', function() {
-                goAreaLanding();
-            });
-            if (!canOffice && !can2ndFix) backToArea.style.display = 'none';
+            backToArea.addEventListener('click', function() { goAreaLanding(); });
         }
 
         var officeBackHdr = document.getElementById('officeBackHeader');
         var backFromOffice = document.getElementById('backToAreaFromOffice');
         if (officeBackHdr) officeBackHdr.style.display = '';
         if (backFromOffice) {
-            backFromOffice.addEventListener('click', function() {
-                goAreaLanding();
-            });
+            backFromOffice.addEventListener('click', function() { goAreaLanding(); });
         }
 
         var refresh2nd = document.getElementById('refresh2ndFixBtn');
