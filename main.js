@@ -179,7 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
       setTimeout(callLoadsByPerson, 500);
     });
   }
-  const tileRp = document.getElementById("tileReplacementParts");
+  const tileRp = document.getElementById("tileAreaReplacementParts") || document.getElementById("tileReplacementParts");
   if (tileRp) {
     tileRp.addEventListener("click", function () {
       setTimeout(callReplacementPartsSections, 200);
@@ -283,9 +283,11 @@ document.addEventListener("DOMContentLoaded", function () {
       const tileOffice = document.getElementById("tileAreaOffice");
       const tile2nd = document.getElementById("tileArea2ndFix");
       const tileInc = document.getElementById("tileAreaIncidents");
+      const tileRp = document.getElementById("tileAreaReplacementParts");
       if (tileOffice) tileOffice.style.display = office ? "" : "none";
       if (tile2nd) tile2nd.style.display = second ? "" : "none";
       if (tileInc) tileInc.style.display = "";
+      if (tileRp) tileRp.style.display = "";
       if (typeof window.__showPage === "function") window.__showPage("areaLandingPage");
       else if (typeof window.showPage === "function") window.showPage("areaLandingPage");
       else {
