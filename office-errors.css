@@ -70,6 +70,7 @@
 
 .oe-open { color: var(--amber, #f5a623); font-weight: 600; }
 .oe-done { color: var(--green, #2ecc71); font-weight: 600; }
+.oe-nofault-meta { color: var(--green, #2ecc71); font-weight: 600; }
 
 .office-error-detail {
   background: var(--card);
@@ -106,7 +107,7 @@
   grid-template-columns: 1fr auto;
   grid-template-areas:
     "main points"
-    "oto oto"
+    "flags flags"
     "note note";
   gap: 6px 12px;
   padding: 12px;
@@ -120,12 +121,28 @@
   border-color: rgba(46, 204, 113, 0.35);
 }
 
+.oe-error-row.oe-row-nofault {
+  background: rgba(46, 204, 113, 0.12);
+  border-color: rgba(46, 204, 113, 0.55);
+  opacity: 1;
+}
+
 .oe-error-main { grid-area: main; }
 .oe-error-points {
   grid-area: points;
   font-weight: 700;
   color: var(--red, #e74c3c);
   white-space: nowrap;
+}
+.oe-error-points.oe-pts-waived {
+  color: var(--green, #2ecc71);
+}
+.oe-pts-struck {
+  text-decoration: line-through;
+  opacity: 0.65;
+  color: var(--muted);
+  font-weight: 600;
+  margin-right: 4px;
 }
 .oe-error-date {
   font-size: 0.72rem;
@@ -139,9 +156,27 @@
   color: var(--muted);
   margin-top: 2px;
 }
+.oe-nofault-badge {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1e8449;
+  background: rgba(46, 204, 113, 0.2);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
 
-.oe-oto {
-  grid-area: oto;
+.oe-flags {
+  grid-area: flags;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+
+.oe-oto,
+.oe-nofault {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -150,7 +185,16 @@
   user-select: none;
 }
 
-.oe-oto input { width: 16px; height: 16px; accent-color: var(--teal, #00A99D); }
+.oe-oto input,
+.oe-nofault input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--teal, #00A99D);
+}
+
+.oe-nofault input {
+  accent-color: var(--green, #2ecc71);
+}
 
 .oe-oto-note {
   grid-area: note;
@@ -165,12 +209,17 @@
   font-size: 0.8rem;
 }
 
+.oe-row-nofault .oe-oto-note {
+  border-color: rgba(46, 204, 113, 0.45);
+}
+
 @media (min-width: 640px) {
   .oe-error-row {
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto;
     grid-template-areas:
-      "main points oto"
-      "note note note";
-    align-items: center;
+      "main points"
+      "flags flags"
+      "note note";
+    align-items: start;
   }
 }
