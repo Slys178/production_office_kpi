@@ -1,5 +1,6 @@
 /**
- * Data fetching & parsing layer (Google Sheets via GViz).
+ * Data fetching & parsing layer (Google Sheets via GViz JSONP).
+ * Browser fetch is blocked by Google CORS — JSONP is required.
  */
 
 import { CONFIG } from "./config.js";
@@ -9,7 +10,6 @@ let jsonpCounter = 0;
 
 function cellToString(cell) {
   if (!cell) return "";
-  // Prefer GViz Date(y,m,d) raw value — avoids locale format issues on f
   if (cell.v !== undefined && cell.v !== null) {
     const vs = String(cell.v);
     if (/^Date\(/i.test(vs)) return vs;
@@ -20,7 +20,7 @@ function cellToString(cell) {
 }
 
 function tableToRows(table) {
-  const dataRows = table.rows.map(function (r) {
+  const dataRows = (table.rows || []).map(function (r) {
     return table.cols.map(function (c, i) {
       const cell = r.c ? r.c[i] : null;
       return cellToString(cell);
@@ -35,106 +35,80 @@ function tableToRows(table) {
   return hasLabels ? [labelRow].concat(dataRows) : dataRows;
 }
 
-function gvizBaseUrl(sheetId, gid) {
-  const gidPart = gid !== undefined && gid !== null && gid !== "" ? "&gid=" + gid : "";
-  return (
-    "https://docs.google.com/spreadsheets/d/" +
-    sheetId +
-    "/gviz/tq?tqx=out:json" +
-    gidPart
-  );
-}
-
-/** Prefer fetch (handles ~1MB+ sheets). JSONP fallback for older paths. */
-export function fetchGvizRows(sheetId, gid) {
-  const url = gvizBaseUrl(sheetId, gid);
-
+/**
+ * Load a Google Sheet tab via GViz JSONP (works from browser).
+ * @param {string} sheetId
+ * @param {string|number} [gid]
+ * @param {string} [query] optional Visualization API query, e.g. "select * where K is not null"
+ */
+export function fetchGvizRows(sheetId, gid, query) {
   return new Promise(function (resolve, reject) {
-    const controller =
-      typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timer = setTimeout(function () {
-      if (controller) controller.abort();
-      reject(new Error("Timed out loading sheet data (" + sheetId.slice(0, 8) + "…)"));
-    }, 60000);
+    jsonpCounter += 1;
+    const callbackName = "__gvizCallback_" + jsonpCounter + "_" + Date.now();
+    const script = document.createElement("script");
+    let settled = false;
 
-    function doneOk(rows) {
-      clearTimeout(timer);
-      resolve(rows);
-    }
-    function doneErr(err) {
-      clearTimeout(timer);
-      reject(err);
+    const timeoutMs = query ? 45000 : 30000;
+    const timeout = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error("Timed out loading sheet (" + String(sheetId).slice(0, 8) + "…)"))
+    }, timeoutMs);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      try {
+        delete window[callbackName];
+      } catch (_) {}
+      if (script.parentNode) script.remove();
     }
 
-    fetch(url, {
-      method: "GET",
-      mode: "cors",
-      credentials: "omit",
-      signal: controller ? controller.signal : undefined,
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error("Sheet HTTP " + res.status);
-        return res.text();
-      })
-      .then(function (text) {
-        // GViz wraps JSON: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
-        const start = text.indexOf("{");
-        const end = text.lastIndexOf("}");
-        if (start < 0 || end < 0) throw new Error("Unexpected sheet response");
-        const response = JSON.parse(text.slice(start, end + 1));
-        if (response.status === "error") {
-          throw new Error(
-            (response.errors && response.errors[0] && response.errors[0].detailed_message) ||
-              "Sheet returned an error"
-          );
+    window[callbackName] = function (response) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      try {
+        if (!response || response.status === "error") {
+          const msg =
+            (response &&
+              response.errors &&
+              response.errors[0] &&
+              (response.errors[0].detailed_message || response.errors[0].message)) ||
+            "Sheet returned an error";
+          reject(new Error(msg));
+          return;
         }
-        doneOk(tableToRows(response.table));
-      })
-      .catch(function (fetchErr) {
-        // Fallback: JSONP (smaller sheets)
-        console.warn("GViz fetch failed, trying JSONP", fetchErr);
-        jsonpCounter++;
-        const callbackName = "__gvizCallback_" + jsonpCounter + "_" + Date.now();
-        const script = document.createElement("script");
-        let settled = false;
-        function cleanup() {
-          try {
-            delete window[callbackName];
-          } catch (_) {}
-          if (script.parentNode) script.remove();
-        }
-        window[callbackName] = function (response) {
-          if (settled) return;
-          settled = true;
-          cleanup();
-          try {
-            if (response.status === "error") {
-              doneErr(new Error("Sheet returned an error"));
-              return;
-            }
-            doneOk(tableToRows(response.table));
-          } catch (e) {
-            doneErr(e);
-          }
-        };
-        script.onerror = function () {
-          if (settled) return;
-          settled = true;
-          cleanup();
-          doneErr(
-            new Error(
-              "Failed to load sheet (fetch + JSONP). Check sharing: Anyone with the link can view."
-            )
-          );
-        };
-        script.src =
-          "https://docs.google.com/spreadsheets/d/" +
-          sheetId +
-          "/gviz/tq?tqx=out:json;responseHandler:" +
-          callbackName +
-          (gid !== undefined && gid !== null && gid !== "" ? "&gid=" + gid : "");
-        document.body.appendChild(script);
-      });
+        resolve(tableToRows(response.table));
+      } catch (e) {
+        reject(e);
+      }
+    };
+
+    script.onerror = function () {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(
+        new Error(
+          "Failed to load sheet. Share it as “Anyone with the link can view”."
+        )
+      );
+    };
+
+    let src =
+      "https://docs.google.com/spreadsheets/d/" +
+      sheetId +
+      "/gviz/tq?tqx=out:json;responseHandler:" +
+      callbackName;
+    if (gid !== undefined && gid !== null && gid !== "") {
+      src += "&gid=" + gid;
+    }
+    if (query) {
+      src += "&tq=" + encodeURIComponent(query);
+    }
+    script.src = src;
+    document.body.appendChild(script);
   });
 }
 
@@ -187,7 +161,6 @@ export function creditableHoursLost(code, fullDayHours){
   return hoursLostForCode(code, fullDayHours);
 }
 
-/** True once a temporary helper's last week (CONFIG.temporaryHelperLastWeek) has passed. */
 function helperHasLeft(initials, date){
   const map = CONFIG.temporaryHelperLastWeek || {};
   const lastStr = map[initials];
@@ -197,14 +170,14 @@ function helperHasLeft(initials, date){
   const last = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
   const mon = new Date(date);
   mon.setHours(0,0,0,0);
-  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7)); // Monday of that week
+  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
   return mon.getTime() > last.getTime();
 }
 
 export function targetFor(initials, date, code){
   const bucket = dayBucket(date);
   if(!bucket) return 0;
-  if(helperHasLeft(initials, date)) return 0; // e.g. DK after his last week: no target
+  if(helperHasLeft(initials, date)) return 0;
   const fullDayHours = CONFIG.hours[initials][bucket];
   const lost = hoursLostForCode(code, fullDayHours);
   const available = Math.max(0, fullDayHours - lost);
@@ -385,9 +358,13 @@ export function parseReplacementPartsRows(rows){
   let headerIdx = -1;
   for(let i=0;i<rows.length;i++){
     const r = rows[i];
-    if(r && r.length > 5) {
+    if(r && r.length > 2) {
       const upper = r.map(c => (c||'').trim().toUpperCase());
-      if(upper.some(c => c.includes('WEEK NO')) && upper.some(c => c.includes('SECTION'))) {
+      // Full sheet has WEEK NO + SECTION; filtered query may only have DATE + SECTION
+      if (
+        upper.some(c => c.includes('SECTION')) &&
+        (upper.some(c => c.includes('WEEK NO')) || upper.some(c => c.includes('DATE')))
+      ) {
         headerIdx = i;
         break;
       }
@@ -409,15 +386,13 @@ export function parseReplacementPartsRows(rows){
   const out = [];
   for(let i=headerIdx+1;i<rows.length;i++){
     const r = rows[i];
-    if(!r || r.length < 3) continue;
+    if(!r || r.length < 2) continue;
     const dateStr = (r[dateCol]||'').trim();
     if(!dateStr) continue;
     const date = parseUKDate(dateStr);
     if(!date) continue;
 
-    // Column K / SECTION — keep all sections (was OFFICE-only)
     var sectionRaw = sectionCol >= 0 ? (r[sectionCol]||'').trim() : '';
-    // Skip completely blank section rows from the giant empty tail of the sheet
     if (!sectionRaw) continue;
     var section = sectionRaw.toUpperCase();
 
