@@ -262,6 +262,7 @@
   <div class="page-header">
     <button class="back-btn" id="backToAreaFrom2ndFix">← Areas</button>
     <h2>🔩 2nd Fix — Today</h2>
+    <button class="back-btn" id="tv2ndFixBtn" style="background:#1abc9c;color:#0b1a18;font-weight:700;">📺 TV</button>
     <button class="back-btn" id="refresh2ndFixBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
   </div>
   <div id="secondFixSummary" class="detail-stats" style="margin-bottom:20px;"></div>
@@ -424,6 +425,18 @@
         if (refresh2nd) {
             refresh2nd.addEventListener('click', function() {
                 if (window.loadSecondFix) window.loadSecondFix(true);
+            });
+        }
+
+        var tv2nd = document.getElementById('tv2ndFixBtn');
+        if (tv2nd) {
+            tv2nd.addEventListener('click', function() {
+                if (window.openSecondFixTv) window.openSecondFixTv();
+                else if (window.loadSecondFix) {
+                    window.loadSecondFix(true).then(function() {
+                        if (window.openSecondFixTv) window.openSecondFixTv();
+                    });
+                }
             });
         }
 
