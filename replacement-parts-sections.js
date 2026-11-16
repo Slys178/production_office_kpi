@@ -243,17 +243,23 @@ export async function loadAndRenderReplacementParts(force) {
 
   hideLegacyLists();
   setSummaryMessage(
-    '<div class="parts-note" style="padding:12px;">Loading replacement parts…</div>'
+    '<div class="parts-note" style="padding:12px;">Loading replacement parts (large sheet ~3,500 rows — may take a few seconds)…</div>'
   );
   if (dom.sectionHost) {
     dom.sectionHost.innerHTML =
-      '<div class="parts-note" style="grid-column:1/-1;padding:12px;">Loading from Google Sheet…</div>';
+      '<div class="parts-note" style="grid-column:1/-1;padding:12px;">Downloading from Google Sheets…</div>';
   }
 
   try {
     const sheetId = CONFIG.sheets.replacementParts.id;
     const gid = CONFIG.sheets.replacementParts.gid;
     const rows = await fetchGvizRows(sheetId, gid);
+    if (dom.sectionHost) {
+      dom.sectionHost.innerHTML =
+        '<div class="parts-note" style="grid-column:1/-1;padding:12px;">Parsing ' +
+        rows.length +
+        " rows…</div>";
+    }
     const entries = parseReplacementPartsRows(rows);
     window._rpEntries = entries;
     window._today = window._today || new Date();
@@ -277,13 +283,13 @@ export async function loadAndRenderReplacementParts(force) {
   }
 }
 
-/** Called from nav / main.js */
+/** Called from nav / main.js — always force so stuck loading can recover */
 export function enhanceReplacementPartsView() {
-  loadAndRenderReplacementParts(false);
+  loadAndRenderReplacementParts(true);
 }
 
 window.loadAndRenderReplacementParts = loadAndRenderReplacementParts;
 window.enhanceReplacementPartsView = enhanceReplacementPartsView;
 window.renderReplacementPartsBySection = function () {
-  loadAndRenderReplacementParts(false);
+  loadAndRenderReplacementParts(true);
 };
