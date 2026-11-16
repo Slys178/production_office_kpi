@@ -73,6 +73,16 @@ function callForecastEnhance() {
   }
 }
 
+function callReplacementPartsSections() {
+  try {
+    if (typeof window.enhanceReplacementPartsView === "function") {
+      window.enhanceReplacementPartsView();
+    }
+  } catch (e) {
+    console.warn("replacement parts sections error", e);
+  }
+}
+
 import("./finish-week.js")
   .then(function () { callFinishIfReady(); })
   .catch(function (e) { console.warn("finish-week module failed", e); });
@@ -103,6 +113,10 @@ import("./incident-report.js")
   .then(function () { callIncidents(); })
   .catch(function (e) { console.warn("incident-report module failed", e); });
 
+import("./replacement-parts-sections.js")
+  .then(function () { callReplacementPartsSections(); })
+  .catch(function (e) { console.warn("replacement-parts-sections module failed", e); });
+
 export async function initAndLoad() {
   const result = await _initAndLoad();
   callFinishIfReady();
@@ -110,6 +124,7 @@ export async function initAndLoad() {
   callForecastEnhance();
   callOfficeErrors();
   callLoadsByPerson();
+  callReplacementPartsSections();
   try {
     if (typeof window.__goAreaLanding === "function") window.__goAreaLanding();
   } catch (e) { console.warn("area route", e); }
@@ -123,6 +138,7 @@ export async function loadAndRender() {
   callForecastEnhance();
   callOfficeErrors();
   callLoadsByPerson();
+  callReplacementPartsSections();
   return result;
 }
 
@@ -161,6 +177,13 @@ document.addEventListener("DOMContentLoaded", function () {
     refreshLoads.addEventListener("click", function () {
       setTimeout(callLoadsByPerson, 100);
       setTimeout(callLoadsByPerson, 500);
+    });
+  }
+  const tileRp = document.getElementById("tileReplacementParts");
+  if (tileRp) {
+    tileRp.addEventListener("click", function () {
+      setTimeout(callReplacementPartsSections, 200);
+      setTimeout(callReplacementPartsSections, 800);
     });
   }
 });
