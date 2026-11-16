@@ -52,12 +52,13 @@ function normName(s) {
 }
 
 function esc(t) {
-  return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
-    return { '&': '&', '<': '<', '>': '>', '"': '"', "'": '&#39;' }[c];
-  });
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"');
 }
 
-/** Shift day resets at 06:30 */
 function shiftDateISO() {
   var now = new Date();
   var d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -75,7 +76,6 @@ function isManager() {
   var roleText = (localStorage.getItem('userRoleText') || '').toUpperCase();
   var blob = role + ' ' + roleText;
   if (/ADMIN|MANAGER|SUPER|WRITE|EDIT|BOTH/.test(blob)) return true;
-  // Explicit viewer / TV accounts stay read-only
   if (/VIEW|TV|READ\s*ONLY|READONLY/.test(blob)) return false;
   return false;
 }
@@ -117,10 +117,6 @@ function parseDailyRows(rows) {
       expanded: false
     });
   }
-  var sumExp = people.reduce(function (s, p) { return s + p.expected; }, 0);
-  var sumAct = people.reduce(function (s, p) { return s + p.actual; }, 0);
-  if (sectionExpected == null) sectionExpected = sumExp;
-  if (sectionActual == null) sectionActual = sumAct;
   return { people: people, sectionExpected: sectionExpected, sectionActual: sectionActual };
 }
 
@@ -150,16 +146,13 @@ function applyRoster(people, roster) {
   return { people: visible, filtered: true, removed: removed };
 }
 
-/** Read AppInToday: Date | Name | Status */
 function parseAttendance(rows, dayISO) {
   var map = {};
   rows.forEach(function (row) {
     var d = String(row[0] || '').trim();
-    // GViz may return Date(yyyy,mm,dd) or dd/mm/yyyy
     var iso = normalizeSheetDate(d);
     if (iso && iso !== dayISO) return;
     if (!iso && d && d.indexOf(dayISO) < 0 && d !== dayISO) {
-      // allow exact match of displayed date strings containing the day
       if (d.replace(/\//g, '-').indexOf(dayISO) < 0) return;
     }
     var name = normName(row[1]);
@@ -207,8 +200,6 @@ function applyAttendance(people, attendMap) {
   var sectionActual = people.reduce(function (s, p) {
     return s + (p.appStatus === 'OUT' ? 0 : (p.actual || 0));
   }, 0);
-  // If someone is OUT we still show their actual in the folded row optionally;
-  // section actual only counts people marked in/half so % makes sense
   return { sectionExpected: sectionExpected, sectionActual: sectionActual };
 }
 
@@ -226,7 +217,6 @@ async function saveAttendanceStatus(name, status) {
   var who = localStorage.getItem('userName') || localStorage.getItem('userEmail') || '';
   var when = new Date().toISOString();
 
-  // Read existing rows via API so we can update in place
   var getUrl = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID +
     '/values/' + encodeURIComponent(ATTEND_TAB + '!A:E');
   var getRes = await fetch(getUrl, { headers: { Authorization: 'Bearer ' + token } });
@@ -320,7 +310,7 @@ function renderSummary(sectionExpected, sectionActual, fullDaily, mgr) {
   var note = sectionExpected <= 0
     ? '<div class="forecast-note" style="grid-column:1/-1;">' +
       (mgr
-        ? 'Nobody marked <strong>In</strong> yet — tap a name to set In / Half / Out. Expected stays 0 until someone is in.'
+        ? 'Nobody marked <strong>In</strong> yet — tap a name to set In / Half / Out.'
         : 'Nobody marked in yet today (manager sets this on their login).') +
       '</div>'
     : '';
@@ -351,6 +341,14 @@ function renderPeopleDials(people) {
   const grid = document.getElementById('secondFixDialGrid');
   if (!grid) return;
   var mgr = isManager();
+
+  // Keep closed name-rows short: do not stretch every cell to the tallest dial
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(210px, 1fr))';
+  grid.style.alignItems = 'start';
+  grid.style.gridAutoRows = 'min-content';
+  grid.style.gap = '10px';
+
   const sorted = people.slice().sort(function (a, b) {
     var ao = a.appStatus === 'OUT' ? 1 : 0;
     var bo = b.appStatus === 'OUT' ? 1 : 0;
@@ -364,33 +362,32 @@ function renderPeopleDials(people) {
     var scale = p.expected > 0 ? p.expected : p.dailyTarget;
     var chevron = open ? '▼' : '▶';
     var clickHint = mgr ? ' title="Tap to change: Out → In → Half"' : ' title="View only"';
+
+    // OUT: single compact bar only (no empty body stretching the row)
     var head =
       '<button type="button" class="sf-person-head" data-name="' + esc(p.name) + '"' + clickHint + ' style="' +
-      'width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;' +
-      'background:transparent;border:none;color:inherit;font:inherit;cursor:' + (mgr ? 'pointer' : 'default') + ';">' +
-      '<span style="font-weight:700;font-size:0.95rem;text-align:left;">' + chevron + ' ' + esc(p.name) + '</span>' +
-      '<span style="font-size:0.75rem;font-weight:700;color:' + statusColour(st) + ';">' + st +
-      (mgr ? ' · edit' : '') + '</span></button>';
+      'width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;' +
+      'padding:10px 12px;background:transparent;border:none;color:inherit;font:inherit;cursor:' +
+      (mgr ? 'pointer' : 'default') + ';">' +
+      '<span style="font-weight:700;font-size:0.9rem;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+      chevron + ' ' + esc(p.name) + '</span>' +
+      '<span style="font-size:0.72rem;font-weight:700;flex-shrink:0;color:' + statusColour(st) + ';">' +
+      st + (mgr ? ' · edit' : '') + '</span></button>';
 
     var body = '';
     if (open) {
       body =
-        '<div class="sf-person-body" style="text-align:center;padding:0 12px 14px;">' +
-        dialSvg(p.actual, scale > 0 ? scale : p.dailyTarget || 1, 130) +
-        '<div style="font-size:0.75rem;color:var(--muted,#8993ab);margin-top:4px;">' +
+        '<div class="sf-person-body" style="text-align:center;padding:0 10px 12px;">' +
+        dialSvg(p.actual, scale > 0 ? scale : p.dailyTarget || 1, 120) +
+        '<div style="font-size:0.72rem;color:var(--muted,#8993ab);margin-top:2px;">' +
         p.actual.toFixed(1) + ' / ' + (p.expected > 0 ? p.expected.toFixed(1) : '0') + ' m' +
-        (st === 'HALF' ? ' (half day)' : '') +
+        (st === 'HALF' ? ' (half)' : '') +
         '</div></div>';
-    } else {
-      body =
-        '<div class="sf-person-body" style="padding:0 14px 12px;font-size:0.8rem;color:var(--muted,#8993ab);">' +
-        'Not in — dial hidden' +
-        (mgr ? '. Tap name to mark In.' : '.') +
-        '</div>';
     }
 
     return '<div class="dial-card sf-person-card" data-name="' + esc(p.name) + '" style="' +
-      'text-align:left;background:var(--card-bg,#161d2e);border-radius:12px;' +
+      'align-self:start;height:auto;max-width:100%;text-align:left;' +
+      'background:var(--card-bg,#161d2e);border-radius:12px;' +
       'border:1px solid var(--card-border,#232c42);overflow:hidden;">' +
       head + body + '</div>';
   }).join('');
@@ -412,12 +409,7 @@ async function cyclePersonStatus(name) {
   var idx = order.indexOf(p.appStatus || 'OUT');
   var next = order[(idx + 1) % order.length];
 
-  var summary = document.getElementById('secondFixSummary');
   try {
-    if (summary) {
-      var note = summary.querySelector('.forecast-note');
-      // soft status line
-    }
     await saveAttendanceStatus(name, next);
     p.appStatus = next;
     p.status = next;
@@ -492,7 +484,6 @@ export async function loadSecondFix(force) {
     var totals = applyAttendance(people, attendMap);
     var sectionExpected = totals.sectionExpected;
     var sectionActual = totals.sectionActual;
-    // Fallback: if no app attendance rows yet, do not use old sheet expected (avoids attendance sheet dependency)
     var fullDaily = people.reduce(function (s, p) { return s + (p.dailyTarget || 0); }, 0);
     var dialExpected = sectionExpected > 0 ? sectionExpected : Math.max(fullDaily, 1);
 
@@ -539,13 +530,10 @@ function renderTv() {
   var gridH = H - barH - topH - pad * 4;
   var gridW = W - pad * 2;
 
-  // TV: only people marked In or Half (dial visible)
   var people = d.people.filter(function (p) {
     return p.appStatus === 'IN' || p.appStatus === 'HALF';
   }).slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
-  if (!people.length) {
-    people = d.people.slice();
-  }
+  if (!people.length) people = d.people.slice();
   var n = Math.max(people.length, 1);
   var best = { dial: 0, cols: 1, rows: n };
   for (var c = 1; c <= n; c++) {
