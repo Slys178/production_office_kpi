@@ -8,6 +8,10 @@ import { parseUKDate, sameDay, dayBucket } from "./utils.js";
 
 let jsonpCounter = 0;
 
+/** Slim query for the large replacement-parts sheet (avoids 1MB+ download on every load) */
+const RP_SLIM_QUERY =
+  "select C,E,F,G,I,J,K,M,N,O where K is not null";
+
 function cellToString(cell) {
   if (!cell) return "";
   if (cell.v !== undefined && cell.v !== null) {
@@ -20,6 +24,7 @@ function cellToString(cell) {
 }
 
 function tableToRows(table) {
+  if (!table || !table.cols) return [];
   const dataRows = (table.rows || []).map(function (r) {
     return table.cols.map(function (c, i) {
       const cell = r.c ? r.c[i] : null;
@@ -39,21 +44,36 @@ function tableToRows(table) {
  * Load a Google Sheet tab via GViz JSONP (works from browser).
  * @param {string} sheetId
  * @param {string|number} [gid]
- * @param {string} [query] optional Visualization API query, e.g. "select * where K is not null"
+ * @param {string} [query] optional Visualization API query
  */
 export function fetchGvizRows(sheetId, gid, query) {
   return new Promise(function (resolve, reject) {
+    // Never download the full 3,500-row RP sheet — it freezes Office KPI startup
+    var effectiveQuery = query;
+    try {
+      if (
+        !effectiveQuery &&
+        CONFIG.sheets &&
+        CONFIG.sheets.replacementParts &&
+        sheetId === CONFIG.sheets.replacementParts.id
+      ) {
+        effectiveQuery = RP_SLIM_QUERY;
+      }
+    } catch (_) {}
+
     jsonpCounter += 1;
     const callbackName = "__gvizCallback_" + jsonpCounter + "_" + Date.now();
     const script = document.createElement("script");
     let settled = false;
 
-    const timeoutMs = query ? 45000 : 30000;
+    const timeoutMs = 25000;
     const timeout = setTimeout(function () {
       if (settled) return;
       settled = true;
       cleanup();
-      reject(new Error("Timed out loading sheet (" + String(sheetId).slice(0, 8) + "…)"))
+      reject(
+        new Error("Timed out loading sheet (" + String(sheetId).slice(0, 8) + "…)")
+      );
     }, timeoutMs);
 
     function cleanup() {
@@ -91,23 +111,24 @@ export function fetchGvizRows(sheetId, gid, query) {
       cleanup();
       reject(
         new Error(
-          "Failed to load sheet. Share it as “Anyone with the link can view”."
+          "Failed to load sheet. Share it as Anyone with the link can view."
         )
       );
     };
 
-    let src =
+    // Match original working URL shape used by the rest of the app
+    var gidPart =
+      gid !== undefined && gid !== null && gid !== "" ? "&gid=" + gid : "";
+    var tqPart = effectiveQuery
+      ? "&tq=" + encodeURIComponent(effectiveQuery)
+      : "";
+    script.src =
       "https://docs.google.com/spreadsheets/d/" +
       sheetId +
       "/gviz/tq?tqx=out:json;responseHandler:" +
-      callbackName;
-    if (gid !== undefined && gid !== null && gid !== "") {
-      src += "&gid=" + gid;
-    }
-    if (query) {
-      src += "&tq=" + encodeURIComponent(query);
-    }
-    script.src = src;
+      callbackName +
+      gidPart +
+      tqPart;
     document.body.appendChild(script);
   });
 }
@@ -360,7 +381,6 @@ export function parseReplacementPartsRows(rows){
     const r = rows[i];
     if(r && r.length > 2) {
       const upper = r.map(c => (c||'').trim().toUpperCase());
-      // Full sheet has WEEK NO + SECTION; filtered query may only have DATE + SECTION
       if (
         upper.some(c => c.includes('SECTION')) &&
         (upper.some(c => c.includes('WEEK NO')) || upper.some(c => c.includes('DATE')))
