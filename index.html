@@ -84,11 +84,6 @@
       <div class="tile-label">2ND FIX</div>
       <div class="tile-sub">Section target · Actual · Dials</div>
     </div>
-    <div class="nav-tile" id="tileAreaReplacementParts" style="min-height:140px;">
-      <div class="tile-icon">🔧</div>
-      <div class="tile-label">REPLACEMENT PARTS</div>
-      <div class="tile-sub">By section · cost · reasons</div>
-    </div>
     <div class="nav-tile" id="tileAreaIncidents" style="min-height:140px;">
       <div class="tile-icon">🩹</div>
       <div class="tile-label">INCIDENTS</div>
@@ -136,6 +131,11 @@
       <div class="tile-icon">⚠️</div>
       <div class="tile-label">OFFICE ERRORS</div>
       <div class="tile-sub">By person · breakdown · 1:1 follow-ups</div>
+    </div>
+    <div class="nav-tile" id="tileReplacementParts">
+      <div class="tile-icon">🔧</div>
+      <div class="tile-label">REPLACEMENT PARTS</div>
+      <div class="tile-sub">Office-caused parts, cost & trends</div>
     </div>
   </div>
 </div>
@@ -253,7 +253,7 @@
 
 <div id="replacementPartsPage" class="page-view">
   <div class="page-header">
-    <button class="back-btn" id="backToLandingFromReplacementParts">← Areas</button>
+    <button class="back-btn" id="backToLandingFromReplacementParts">← Production Office</button>
     <h2>🔧 Replacement Parts</h2>
   </div>
   <div class="detail-stats" id="rpSummaryStats"></div>
@@ -351,15 +351,6 @@
     window.__showPage = showPage;
     window.showPage = showPage;
 
-    function openReplacementParts() {
-        showPage('replacementPartsPage');
-        if (window.enhanceReplacementPartsView) window.enhanceReplacementPartsView();
-        setTimeout(function () {
-            if (window.enhanceReplacementPartsView) window.enhanceReplacementPartsView();
-        }, 300);
-    }
-    window.__openReplacementParts = openReplacementParts;
-
     function openIncidents() {
         showPage('incidentsPage');
         if (window.renderIncidents) window.renderIncidents();
@@ -367,16 +358,13 @@
             if (window.renderIncidents) window.renderIncidents();
         }, 300);
     }
-    window.__openIncidents = openIncidents;
 
     function goAreaLanding() {
         var tileOffice = document.getElementById('tileAreaOffice');
         var tile2nd = document.getElementById('tileArea2ndFix');
-        var tileRp = document.getElementById('tileAreaReplacementParts');
         var tileInc = document.getElementById('tileAreaIncidents');
         if (tileOffice) tileOffice.style.display = canOffice ? '' : 'none';
         if (tile2nd) tile2nd.style.display = can2ndFix ? '' : 'none';
-        if (tileRp) tileRp.style.display = '';
         if (tileInc) tileInc.style.display = '';
         showPage('areaLandingPage');
     }
@@ -396,7 +384,7 @@
 
     window.addEventListener('load', function() {
         if (role === 'USER' && canOffice) {
-            ['tileErrors'].forEach(function(id) {
+            ['tileErrors', 'tileReplacementParts'].forEach(function(id) {
                 var el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
@@ -428,19 +416,9 @@
             });
         }
 
-        var tileRp = document.getElementById('tileAreaReplacementParts');
-        if (tileRp) {
-            tileRp.addEventListener('click', openReplacementParts);
-        }
-
         var tileInc = document.getElementById('tileAreaIncidents');
         if (tileInc) {
             tileInc.addEventListener('click', openIncidents);
-        }
-
-        var backRp = document.getElementById('backToLandingFromReplacementParts');
-        if (backRp) {
-            backRp.addEventListener('click', function () { goAreaLanding(); });
         }
 
         var backInc = document.getElementById('backToLandingFromIncidents');
