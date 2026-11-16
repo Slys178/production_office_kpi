@@ -1,12 +1,14 @@
 /**
- * Replacement Parts — section breakdown (column K),
- * click a section to list its replacements.
- * Overrides the CDN OFFICE-only summary when data is available.
+ * Replacement Parts — loads sheet itself (does not rely on CDN _rpEntries),
+ * groups by SECTION (column K), click section to list rows.
  */
-
+import { CONFIG } from "./config.js";
+import { fetchGvizRows, parseReplacementPartsRows } from "./data.js";
 import { fmtDate } from "./utils.js";
 
 let selectedSection = null;
+let loading = false;
+let lastError = null;
 
 function escapeHtml(s) {
   const el = document.createElement("div");
@@ -35,7 +37,7 @@ function groupBySection(entries) {
     .sort()
     .map(function (k) {
       map[k].entries.sort(function (a, b) {
-        return (b.date && a.date) ? b.date - a.date : 0;
+        return b.date && a.date ? b.date - a.date : 0;
       });
       return map[k];
     });
@@ -50,7 +52,7 @@ function ensureDom() {
     sectionHost = document.createElement("div");
     sectionHost.id = "rpSectionCards";
     sectionHost.className = "office-error-grid";
-    sectionHost.style.marginBottom = "16px";
+    sectionHost.style.margin = "16px 0";
     const summary = document.getElementById("rpSummaryStats");
     if (summary && summary.parentNode) {
       summary.parentNode.insertBefore(sectionHost, summary.nextSibling);
@@ -68,24 +70,29 @@ function ensureDom() {
     sectionHost.parentNode.insertBefore(detail, sectionHost.nextSibling);
   }
 
-  return { sectionHost: sectionHost, detail: detail };
+  return { page: page, sectionHost: sectionHost, detail: detail };
 }
 
 function hideLegacyLists() {
-  ["rpTopParts", "rpTopReasons", "rpRecentList"].forEach(function (id) {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
+  ["rpTopParts", "rpTopReasons", "rpRecentList", "rpCostTrend", "rpCountTrend"].forEach(
+    function (id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "none";
+    }
+  );
 }
 
-export function renderReplacementPartsBySection() {
-  const entries = window._rpEntries || [];
-  const today = window._today || new Date();
+function setSummaryMessage(html) {
+  const summary = document.getElementById("rpSummaryStats");
+  if (summary) summary.innerHTML = html;
+}
+
+function renderFromEntries(entries) {
   const dom = ensureDom();
   if (!dom) return;
-
   hideLegacyLists();
 
+  const today = new Date();
   const totalCost = entries.reduce(function (s, e) {
     return s + (Number(e.cost) || 0);
   }, 0);
@@ -100,10 +107,8 @@ export function renderReplacementPartsBySection() {
     return s + (Number(e.cost) || 0);
   }, 0);
 
-  const summary = document.getElementById("rpSummaryStats");
-  if (summary) {
-    summary.innerHTML =
-      '<div class="detail-stat-card"><div class="label">All sections</div><div class="value">' +
+  setSummaryMessage(
+    '<div class="detail-stat-card"><div class="label">All sections</div><div class="value">' +
       entries.length +
       "</div></div>" +
       '<div class="detail-stat-card"><div class="label">Total cost</div><div class="value negative">£' +
@@ -114,14 +119,16 @@ export function renderReplacementPartsBySection() {
       "</div></div>" +
       '<div class="detail-stat-card"><div class="label">This month cost</div><div class="value negative">£' +
       thisMonthCost.toFixed(2) +
-      "</div></div>";
-  }
+      "</div></div>"
+  );
 
   const groups = groupBySection(entries);
 
   if (!groups.length) {
     dom.sectionHost.innerHTML =
-      '<div class="parts-note">No replacement parts logged (check sheet share + SECTION column).</div>';
+      '<div class="parts-note" style="grid-column:1/-1;padding:16px;">' +
+      "No replacement parts found. Check the sheet is shared “Anyone with the link can view”, " +
+      "and that rows have a Date + SECTION (column K).</div>";
     dom.detail.style.display = "none";
     dom.detail.innerHTML = "";
     return;
@@ -147,8 +154,7 @@ export function renderReplacementPartsBySection() {
         g.count +
         " replacement" +
         (g.count === 1 ? "" : "s") +
-        "</div>" +
-        "</button>"
+        "</div></button>"
       );
     })
     .join("");
@@ -156,16 +162,17 @@ export function renderReplacementPartsBySection() {
   dom.sectionHost.querySelectorAll(".office-error-card").forEach(function (btn) {
     btn.addEventListener("click", function () {
       selectedSection = btn.getAttribute("data-section");
-      renderReplacementPartsBySection();
-      if (dom.detail) {
-        dom.detail.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      renderFromEntries(entries);
+      if (dom.detail) dom.detail.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
 
-  if (!selectedSection || !groups.some(function (g) {
-    return g.key === selectedSection;
-  })) {
+  if (
+    !selectedSection ||
+    !groups.some(function (g) {
+      return g.key === selectedSection;
+    })
+  ) {
     dom.detail.style.display = "none";
     dom.detail.innerHTML = "";
     return;
@@ -211,7 +218,7 @@ export function renderReplacementPartsBySection() {
     g.count +
     " replacement" +
     (g.count === 1 ? "" : "s") +
-    " · <strong class="negative">£" +
+    ' · <strong class="negative">£' +
     g.cost.toFixed(2) +
     "</strong></div></div>" +
     '<div class="oe-error-list">' +
@@ -222,20 +229,61 @@ export function renderReplacementPartsBySection() {
   if (back) {
     back.addEventListener("click", function () {
       selectedSection = null;
-      renderReplacementPartsBySection();
+      renderFromEntries(entries);
     });
   }
 }
 
-window.renderReplacementPartsBySection = renderReplacementPartsBySection;
+export async function loadAndRenderReplacementParts(force) {
+  const dom = ensureDom();
+  if (!dom) return;
+  if (loading && !force) return;
+  loading = true;
+  lastError = null;
 
-/** Hook after CDN render when tile is opened or data refreshes */
-export function enhanceReplacementPartsView() {
+  hideLegacyLists();
+  setSummaryMessage(
+    '<div class="parts-note" style="padding:12px;">Loading replacement parts…</div>'
+  );
+  if (dom.sectionHost) {
+    dom.sectionHost.innerHTML =
+      '<div class="parts-note" style="grid-column:1/-1;padding:12px;">Loading from Google Sheet…</div>';
+  }
+
   try {
-    renderReplacementPartsBySection();
-  } catch (e) {
-    console.warn("replacement parts sections", e);
+    const sheetId = CONFIG.sheets.replacementParts.id;
+    const gid = CONFIG.sheets.replacementParts.gid;
+    const rows = await fetchGvizRows(sheetId, gid);
+    const entries = parseReplacementPartsRows(rows);
+    window._rpEntries = entries;
+    window._today = window._today || new Date();
+    renderFromEntries(entries);
+  } catch (err) {
+    console.error("Replacement parts load failed", err);
+    lastError = err;
+    setSummaryMessage(
+      '<div class="parts-note" style="color:var(--red,#e74c3c);padding:12px;">' +
+        "Could not load replacement parts: " +
+        escapeHtml(err && err.message ? err.message : String(err)) +
+        ". Share the sheet as “Anyone with the link can view”.</div>"
+    );
+    if (dom.sectionHost) {
+      dom.sectionHost.innerHTML =
+        '<div class="parts-note" style="grid-column:1/-1;color:var(--red,#e74c3c);padding:12px;">' +
+        "Load failed. Check sheet sharing, then reopen this tab.</div>";
+    }
+  } finally {
+    loading = false;
   }
 }
 
+/** Called from nav / main.js */
+export function enhanceReplacementPartsView() {
+  loadAndRenderReplacementParts(false);
+}
+
+window.loadAndRenderReplacementParts = loadAndRenderReplacementParts;
 window.enhanceReplacementPartsView = enhanceReplacementPartsView;
+window.renderReplacementPartsBySection = function () {
+  loadAndRenderReplacementParts(false);
+};
