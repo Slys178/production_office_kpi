@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staircraft Incidents</title>
+<link rel="stylesheet" href="incidents.css">
+</head>
+<body>
+  <header class="inc-app-header">
+    <h1>🩹 Incidents</h1>
+  </header>
+  <div id="incidentsPageBody" style="padding:12px 16px 32px;"></div>
+
+  <!-- Must be served over http(s) (ES modules do not load from file://) -->
+  <script type="module">
+    import { renderIncidents } from "./incidents.js";
+    renderIncidents();
+  </script>
+</body>
+</html>
