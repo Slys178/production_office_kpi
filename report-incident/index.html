@@ -409,23 +409,11 @@
     <div class="pick">
       <button class="nm" onclick="choose('Near Miss')">
         <strong>Near Miss</strong>
-        <span>Something almost happened – no one was hurt</span>
+        <span>Nothing actually happened, but it nearly did or could have</span>
       </button>
-      <button class="nm" onclick="choose('Unsafe Condition / Hazard')">
-        <strong>Unsafe Condition / Hazard</strong>
-        <span>Something is wrong that could cause an incident</span>
-      </button>
-      <button class="inj" onclick="choose('Injury')">
-        <strong>Injury</strong>
-        <span>Someone was hurt</span>
-      </button>
-      <button class="nm" onclick="choose('Property / Equipment Damage')">
-        <strong>Property / Equipment Damage</strong>
-        <span>Tools, machines, vehicles or buildings damaged</span>
-      </button>
-      <button class="nm" onclick="choose('Environmental')">
-        <strong>Environmental</strong>
-        <span>Spill, leak or environmental issue</span>
+      <button class="inj" onclick="choose('Incident')">
+        <strong>Incident</strong>
+        <span>Something actually happened</span>
       </button>
     </div>
     <p class="hint">If someone needs urgent help, please contact a first-aider first. Report afterwards.</p>
@@ -469,24 +457,21 @@
         </div>
       </fieldset>
 
+      <!-- Was anyone hurt? (Incident only) -->
+      <fieldset class="step hide" id="st-hurt">
+        <legend>Was anyone hurt?</legend>
+        <label>Was anyone injured or hurt?</label>
+        <div class="yn">
+          <div><input type="radio" name="anyoneHurt" id="hurt1" value="Yes"><label for="hurt1">Yes</label></div>
+          <div><input type="radio" name="anyoneHurt" id="hurt0" value="No"><label for="hurt0">No</label></div>
+        </div>
+      </fieldset>
+
       <!-- About you -->
       <fieldset class="step hide" id="st-about">
-        <legend>About you</legend>
+        <legend>Your name</legend>
         <label for="name">Your name</label>
         <input id="name" maxlength="80" autocomplete="name" required>
-        <label for="company">Who do you work for?</label>
-        <select id="company">
-          <option>Staircraft</option>
-          <option>Agency</option>
-          <option>Contractor</option>
-          <option>Visitor</option>
-        </select>
-        <div id="coBox" class="hide">
-          <label for="companyName">What company do you work for?</label>
-          <input id="companyName" maxlength="80" autocomplete="organization">
-        </div>
-        <label for="contact">Phone or email <span class="hint">optional</span></label>
-        <input id="contact" maxlength="120" autocomplete="off">
       </fieldset>
 
       <!-- The injured person -->
@@ -515,7 +500,8 @@
 
         <label>Body part(s) <span class="hint">tap the diagram – you can select more than one</span></label>
         <div id="bodyMapWrap">
-          <svg id="bodyMap" viewBox="0 0 200 420" width="180" style="max-width:100%;height:auto;touch-action:manipulation;">
+          <svg id="bodyMap" viewBox="0 0 200 430" width="180" style="max-width:100%;height:auto;touch-action:manipulation;">
+            <!-- Head & face -->
             <ellipse class="bp" data-part="Head" cx="100" cy="42" rx="32" ry="38" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
             <ellipse class="bp" data-part="Left Eye" cx="88" cy="36" rx="7" ry="5" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
             <ellipse class="bp" data-part="Right Eye" cx="112" cy="36" rx="7" ry="5" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
@@ -523,54 +509,70 @@
             <ellipse class="bp" data-part="Mouth" cx="100" cy="62" rx="10" ry="5" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
             <ellipse class="bp" data-part="Left Ear" cx="68" cy="42" rx="6" ry="10" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
             <ellipse class="bp" data-part="Right Ear" cx="132" cy="42" rx="6" ry="10" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
+            <!-- Neck -->
             <rect class="bp" data-part="Neck" x="88" y="78" width="24" height="22" rx="4" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <!-- Shoulders / torso -->
             <path class="bp" data-part="Right Shoulder" d="M68,100 Q50,105 42,130 L58,145 Q70,120 85,115 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
             <path class="bp" data-part="Left Shoulder" d="M132,100 Q150,105 158,130 L142,145 Q130,120 115,115 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
             <rect class="bp" data-part="Chest" x="70" y="100" width="60" height="55" rx="6" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
             <rect class="bp" data-part="Abdomen" x="72" y="155" width="56" height="50" rx="6" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Right Arm" d="M42,130 L28,200 L42,210 L55,145 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Left Arm" d="M158,130 L172,200 L158,210 L145,145 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Right Hand" cx="32" cy="225" rx="16" ry="18" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Left Hand" cx="168" cy="225" rx="16" ry="18" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Right Leg" d="M78,205 L70,320 L90,325 L100,210 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Left Leg" d="M122,205 L130,320 L110,325 L100,210 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Right Foot" cx="78" cy="345" rx="22" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Left Foot" cx="122" cy="345" rx="22" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <!-- Arms split: Upper / Lower -->
+            <path class="bp" data-part="Right Upper Arm" d="M42,130 L34,175 L50,180 L58,145 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <path class="bp" data-part="Right Lower Arm" d="M34,175 L26,215 L42,222 L50,180 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <path class="bp" data-part="Left Upper Arm" d="M158,130 L166,175 L150,180 L142,145 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <path class="bp" data-part="Left Lower Arm" d="M166,175 L174,215 L158,222 L150,180 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <!-- Hands + Fingers -->
+            <ellipse class="bp" data-part="Right Hand" cx="32" cy="235" rx="14" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <ellipse class="bp" data-part="Right Fingers" cx="28" cy="252" rx="12" ry="10" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <ellipse class="bp" data-part="Left Hand" cx="168" cy="235" rx="14" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <ellipse class="bp" data-part="Left Fingers" cx="172" cy="252" rx="12" ry="10" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <!-- Legs split: Upper / Lower -->
+            <path class="bp" data-part="Right Upper Leg" d="M78,205 L72,270 L95,275 L100,210 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <path class="bp" data-part="Right Lower Leg" d="M72,270 L68,330 L90,335 L95,275 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <path class="bp" data-part="Left Upper Leg" d="M122,205 L128,270 L105,275 L100,210 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <path class="bp" data-part="Left Lower Leg" d="M128,270 L132,330 L110,335 L105,275 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <!-- Feet -->
+            <ellipse class="bp" data-part="Right Foot" cx="78" cy="355" rx="22" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
+            <ellipse class="bp" data-part="Left Foot" cx="122" cy="355" rx="22" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
           </svg>
           <div id="selectedParts" style="min-height:28px;margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
           <p class="hint" style="margin:8px 0 0;">Tap a body part to select / deselect</p>
         </div>
         <input type="hidden" id="bodyPart" value="">
-        <div id="firstAidBox" class="hide">
-          <strong style="display:block;margin-bottom:6px;">First aid reminders</strong>
-          <div id="faTips" style="font-size:15px;line-height:1.45;"></div>
-        </div>
       </fieldset>
 
       <!-- Treatment -->
       <fieldset class="step hide" id="st-treat">
         <legend>Treatment</legend>
-        <label>Taken to hospital?</label>
-        <div class="yn">
-          <div><input type="radio" name="hospital" id="h1" value="Yes"><label for="h1">Yes</label></div>
-          <div><input type="radio" name="hospital" id="h0" value="No"><label for="h0">No</label></div>
-        </div>
         <label>First aid given?</label>
         <div class="yn">
           <div><input type="radio" name="firstAid" id="a1" value="Yes"><label for="a1">Yes</label></div>
           <div><input type="radio" name="firstAid" id="a0" value="No"><label for="a0">No</label></div>
         </div>
         <div id="faWrap" class="hide">
-          <label for="firstAidWhat">What first aid was given?</label>
+          <label for="firstAidBy">Who gave first aid?</label>
+          <input id="firstAidBy" maxlength="80" autocomplete="off">
+          <label for="firstAidWhat">What was done?</label>
           <input id="firstAidWhat" maxlength="200" autocomplete="off">
+        </div>
+        <label>Taken to hospital?</label>
+        <div class="yn">
+          <div><input type="radio" name="hospital" id="h1" value="Yes"><label for="h1">Yes</label></div>
+          <div><input type="radio" name="hospital" id="h0" value="No"><label for="h0">No</label></div>
+        </div>
+        <label>Ambulance called?</label>
+        <div class="yn">
+          <div><input type="radio" name="ambulance" id="amb1" value="Yes"><label for="amb1">Yes</label></div>
+          <div><input type="radio" name="ambulance" id="amb0" value="No"><label for="amb0">No</label></div>
         </div>
       </fieldset>
 
       <!-- What happened + Photos -->
       <fieldset class="step hide" id="st-what">
         <legend>What happened</legend>
-        <label for="description">Describe it <span class="hint">what, where, how, and who was nearby</span></label>
-        <textarea id="description" maxlength="3000" required></textarea>
+        <label for="description">Describe it <span class="hint">what, where, how – keep it short</span></label>
+        <textarea id="description" maxlength="400" required placeholder="Example: Forklift nearly hit a pedestrian when reversing out of the racking aisle. No one was hurt."></textarea>
+        <div class="hint" id="descCount" style="text-align:right;margin-top:4px;">0 / 400</div>
 
         <label style="margin-top:18px;">Photos <span class="hint">optional – up to 4</span></label>
         <div class="photo-area">
@@ -605,23 +607,23 @@
 </main>
 
 <!-- Photo confirmation dialog -->
-<div id="photoConfirm" class="hide">
+<div id="photoConfirm">
   <div class="box">
-    <h3>No photos attached</h3>
-    <p>Please consider attaching a photo as this could help considerably.</p>
+    <h3>No photos added</h3>
+    <p>Photos help managers understand what happened. You can still send without them.</p>
     <div class="btns">
-      <button class="send" onclick="closePhotoConfirm(false)">Add photos</button>
-      <button class="ghost" onclick="closePhotoConfirm(true)">Send without photos</button>
+      <button class="send" type="button" onclick="closePhotoConfirm(true)">Send without photos</button>
+      <button class="ghost" type="button" onclick="closePhotoConfirm(false)">Go back and add photos</button>
     </div>
   </div>
 </div>
 
 <script>
+(function() {
   var TYPE = '', LOADED = Date.now(), DEPTS = {}, STEPS = [], IDX = 0;
-  var STANDARD = ['st-where', 'st-about', 'st-what'];
-  var INJURY   = ['st-where', 'st-about', 'st-person', 'st-treat', 'st-what'];
   var selectedBody = [];
   var photos = []; // {name, dataUrl, base64, mime}
+  var anyoneHurt = ''; // 'Yes' | 'No' | '' 
 
   var $ = function(i) { return document.getElementById(i); };
   function val(i) { return $(i).value.trim(); }
@@ -652,12 +654,6 @@
     $('deptBox').classList.toggle('hide', !list.length);
   });
 
-  $('company').addEventListener('change', function() {
-    var other = (this.value !== 'Staircraft');
-    $('coBox').classList.toggle('hide', !other);
-    if (other) $('companyName').focus();
-  });
-
   $('injuryType').addEventListener('change', function() {
     var o = (this.value === 'Other');
     $('injOtherBox').classList.toggle('hide', !o);
@@ -671,29 +667,6 @@
   });
 
   // Body map
-  var FA_TIPS = {
-    'Head': 'Check they are conscious and breathing. Look for bleeding or swelling. Do not move the head/neck if a serious injury is possible.',
-    'Left Eye': 'Do not rub the eye. Cover lightly if needed. Seek medical help for anything in the eye or vision problems.',
-    'Right Eye': 'Do not rub the eye. Cover lightly if needed. Seek medical help for anything in the eye or vision problems.',
-    'Nose': 'Pinch the soft part of the nose and lean forward if bleeding. Do not tilt the head back.',
-    'Mouth': 'Check for bleeding or broken teeth. Rinse with clean water if needed. Seek help for deep cuts or if the person is having trouble breathing.',
-    'Left Ear': 'Do not put anything in the ear. Cover lightly if bleeding. Seek medical help if there is hearing loss or fluid coming out.',
-    'Right Ear': 'Do not put anything in the ear. Cover lightly if bleeding. Seek medical help if there is hearing loss or fluid coming out.',
-    'Neck': 'Keep the head and neck still. Support the head if needed. Call for help if there is pain or numbness.',
-    'Right Shoulder': 'Support the arm. Apply a cold pack (wrapped) for swelling. Avoid moving the joint if very painful.',
-    'Left Shoulder': 'Support the arm. Apply a cold pack (wrapped) for swelling. Avoid moving the joint if very painful.',
-    'Chest': 'Help them sit upright if comfortable. Watch breathing. Seek urgent help if breathing is difficult or pain is severe.',
-    'Abdomen': 'Help them rest in a comfortable position. Do not give food or drink. Seek medical help if pain is severe.',
-    'Right Arm': 'Support the arm. Apply pressure to any bleeding. Elevate if possible.',
-    'Left Arm': 'Support the arm. Apply pressure to any bleeding. Elevate if possible.',
-    'Right Hand': 'Apply firm pressure to stop bleeding. Elevate the hand. Clean small cuts under running water.',
-    'Left Hand': 'Apply firm pressure to stop bleeding. Elevate the hand. Clean small cuts under running water.',
-    'Right Leg': 'Help them sit or lie down. Elevate the leg if possible. Apply pressure to bleeding.',
-    'Left Leg': 'Help them sit or lie down. Elevate the leg if possible. Apply pressure to bleeding.',
-    'Right Foot': 'Elevate the foot. Apply pressure to any bleeding. Remove footwear only if it is easy and does not cause more pain.',
-    'Left Foot': 'Elevate the foot. Apply pressure to any bleeding. Remove footwear only if it is easy and does not cause more pain.'
-  };
-
   document.querySelectorAll('#bodyMap .bp').forEach(function(el) {
     el.addEventListener('click', function() {
       var part = this.getAttribute('data-part');
@@ -726,17 +699,12 @@
       };
       box.appendChild(tag);
     });
-    var tips = [];
-    selectedBody.forEach(function(p) {
-      if (FA_TIPS[p]) tips.push('<div style="margin-bottom:6px;"><strong>' + p + ':</strong> ' + FA_TIPS[p] + '</div>');
-    });
-    if (tips.length) {
-      $('faTips').innerHTML = tips.join('');
-      $('firstAidBox').classList.remove('hide');
-    } else {
-      $('firstAidBox').classList.add('hide');
-    }
   }
+
+  // Description character count
+  $('description').addEventListener('input', function() {
+    $('descCount').textContent = this.value.length + ' / 400';
+  });
 
   // Photos
   $('photoInput').addEventListener('change', function(e) {
@@ -780,13 +748,18 @@
   // Steps
   function choose(t) {
     TYPE = t;
-    var isInjury = (t === 'Injury');
-    STEPS = isInjury ? INJURY : STANDARD;
+    anyoneHurt = '';
+    if (t === 'Near Miss') {
+      STEPS = ['st-where', 'st-about', 'st-what'];
+    } else {
+      // Incident – ask if anyone was hurt first
+      STEPS = ['st-where', 'st-hurt', 'st-about', 'st-what'];
+    }
     IDX = 0;
     $('s1').classList.add('hide');
     $('s2').classList.remove('hide');
     var bn = $('banner');
-    bn.className = 'banner' + (isInjury ? ' is-inj' : '');
+    bn.className = 'banner' + (t === 'Incident' ? ' is-inj' : '');
     bn.textContent = 'Reporting: ' + t;
     var n = new Date();
     $('date').value = n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
@@ -796,8 +769,18 @@
     render(true);
   }
 
+  function rebuildIncidentSteps() {
+    // Called after answering "Was anyone hurt?"
+    anyoneHurt = radio('anyoneHurt');
+    if (anyoneHurt === 'Yes') {
+      STEPS = ['st-where', 'st-hurt', 'st-person', 'st-treat', 'st-about', 'st-what'];
+    } else {
+      STEPS = ['st-where', 'st-hurt', 'st-about', 'st-what'];
+    }
+  }
+
   function render(toTop) {
-    ['st-where', 'st-about', 'st-person', 'st-treat', 'st-what'].forEach(function(id) {
+    ['st-where', 'st-hurt', 'st-about', 'st-person', 'st-treat', 'st-what'].forEach(function(id) {
       $(id).classList.add('hide');
     });
     $(STEPS[IDX]).classList.remove('hide');
@@ -831,9 +814,11 @@
       if (!val('date')) return ['date', 'Please enter the date.'];
       if (!val('time')) return ['time', 'Please enter the time.'];
     },
+    'st-hurt': function() {
+      if (!radio('anyoneHurt')) return ['hurt1', 'Please say whether anyone was hurt.'];
+    },
     'st-about': function() {
       if (!val('name')) return ['name', 'Please enter your name.'];
-      if ($('company').value !== 'Staircraft' && !val('companyName')) return ['companyName', 'Please enter the company you work for.'];
     },
     'st-person': function() {
       if (!val('injuredName')) return ['injuredName', 'Please enter the name of the injured person.'];
@@ -842,8 +827,13 @@
       if (!val('bodyPart')) return ['bodyMapWrap', 'Please select at least one body part on the diagram.'];
     },
     'st-treat': function() {
-      if (!radio('hospital')) return ['h1', 'Please say whether they were taken to hospital.'];
       if (!radio('firstAid')) return ['a1', 'Please say whether first aid was given.'];
+      if (radio('firstAid') === 'Yes') {
+        if (!val('firstAidBy')) return ['firstAidBy', 'Please say who gave first aid.'];
+        if (!val('firstAidWhat')) return ['firstAidWhat', 'Please say what first aid was given.'];
+      }
+      if (!radio('hospital')) return ['h1', 'Please say whether they were taken to hospital.'];
+      if (!radio('ambulance')) return ['amb1', 'Please say whether an ambulance was called.'];
     },
     'st-what': function() {
       if (!val('description')) return ['description', 'Please describe what happened.'];
@@ -869,6 +859,15 @@
   var r = CHECK[STEPS[IDX]]();
   if (r) {
     fail(r);
+    return false;
+  }
+
+  // After answering "Was anyone hurt?", rebuild the remaining steps
+  if (STEPS[IDX] === 'st-hurt') {
+    rebuildIncidentSteps();
+    // Find the new index of st-hurt and move to the next step
+    IDX = STEPS.indexOf('st-hurt') + 1;
+    render(true);
     return false;
   }
 
@@ -905,7 +904,7 @@
       }
     }
 
-    var inj = (TYPE === 'Injury');
+    var hurt = (TYPE === 'Incident' && anyoneHurt === 'Yes');
     var p = {
       type: TYPE,
       site: $('site').value,
@@ -914,25 +913,25 @@
       time: $('time').value,
       description: $('description').value,
       name: $('name').value,
-      company: $('company').value,
-      companyName: $('companyName').value,
-      contact: $('contact').value,
       website: $('website').value,
       elapsed: Date.now() - LOADED,
+      anyoneHurt: TYPE === 'Incident' ? anyoneHurt : '',
       photos: photos.map(function(ph) {
         return { name: ph.name, base64: ph.base64, mime: ph.mime };
       })
     };
 
-    if (inj) {
+    if (hurt) {
       p.injuredName = $('injuredName').value;
       p.lineManager = $('lineManager').value;
       p.injuryType = $('injuryType').value;
       p.injuryOther = $('injuryOther').value;
       p.bodyPart = $('bodyPart').value;
-      p.hospital = radio('hospital');
       p.firstAid = radio('firstAid');
+      p.firstAidBy = $('firstAidBy').value;
       p.firstAidWhat = $('firstAidWhat').value;
+      p.hospital = radio('hospital');
+      p.ambulance = radio('ambulance');
     }
 
     var b = $('btn'), bk = $('bBack');
@@ -965,6 +964,7 @@
 
     return false;
   }
+})();
 </script>
 </body>
 </html>
