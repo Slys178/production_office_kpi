@@ -12,6 +12,12 @@ It does **not** import anything from the main KPI app.
 | `config.js` | Sheet ID, tab name, `managers` list, editable columns, OAuth client + scopes |
 | `logo.jpg` | Header logo |
 
+## In the main app
+
+The Areas > Incidents tab hosts `incidents/index.html` in an iframe (see `incident-report.js` in the repo root),
+so changes made in this folder show up in the app. Delete that one file's contents and move this folder to
+Azure when you are ready to separate it.
+
 ## Run locally
 
     cd incidents && python3 -m http.server 8000
