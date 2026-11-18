@@ -352,8 +352,9 @@
                 auth: {
                     clientId: MSAL_CLIENT_ID,
                     authority: 'https://login.microsoftonline.com/' + MSAL_TENANT_ID,
-                    redirectUri: window.location.origin + '/login.html',
-                    postLogoutRedirectUri: window.location.origin + '/login.html',
+                    // Relative to where login.html actually is (works at a site root or under /repo-name/)
+                    redirectUri: new URL('login.html', window.location.href).href,
+                    postLogoutRedirectUri: new URL('login.html', window.location.href).href,
                     navigateToLoginRequestUrl: false
                 },
                 cache: {
