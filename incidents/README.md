@@ -1,30 +1,35 @@
-# Incidents (standalone)
+# Incident Log (standalone managers app)
 
-Self-contained copy of the Incidents tab, ready to move to Azure. It does **not** import
-anything from the main KPI app (`../config.js`, `../drive.js`, `../main.js`, etc.).
+The Apps Script "Incident Log" (Code.gs + Index.html), moved out so it can live on Azure.
+It does **not** import anything from the main KPI app.
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Page shell; mounts the module into `#incidentsPageBody` |
-| `incidents.js` | All incident logic: list, form, detail, photos, local backup, Sheet/Drive sync |
-| `incidents.css` | Styles **plus** the theme tokens it used to inherit from the main app |
-| `config.js` | Sheet ID, range, Drive folder, sites/types/body parts, Google OAuth client, storage key |
-| `google.js` | Google Identity Services token flow (Sheets append + Drive upload) |
-| `user.js` | The only place the current user is read from (swap for MSAL/Entra on Azure) |
+| `index.html` | The original Apps Script page, unchanged (logo moved to `logo.jpg`, plus a `<title>` and the shim `<script>`) |
+| `gas-shim.js` | Recreates `google.script.run` so the page runs outside Apps Script |
+| `backend.js` | Port of Code.gs: `getData`, `getPhoto`, `saveCloseOut` using the Sheets/Drive REST APIs |
+| `google.js` | Google sign-in screen + token handling |
+| `config.js` | Sheet ID, tab name, `managers` list, editable columns, OAuth client + scopes |
+| `logo.jpg` | Header logo |
 
 ## Run locally
 
     cd incidents && python3 -m http.server 8000
 
-## Things to do when moving to Azure
+(ES modules do not load from `file://`.) Add `http://localhost:8000` to the OAuth client's
+*Authorised JavaScript origins* to test.
 
-1. **Google OAuth origin** – add the Azure site URL to *Authorised JavaScript origins* on the OAuth client in `config.js`, otherwise Google sign-in is blocked.
-2. **User identity** – edit `user.js` to return `{ name, email }` from your Azure sign-in (MSAL).
-3. **Storage** – reports are stored in the Google Sheet (+ Drive photos) and backed up in `localStorage` (per browser/origin, so existing local-only reports on the old site will not appear on the new origin).
-4. **Longer term** – if you want to drop Google entirely, replace `appendIncidentRow` and `uploadPhotoToDrive` in `incidents.js` with calls to Azure (e.g. Functions + Blob Storage + Cosmos/SQL).
+## Differences from Apps Script
 
-## Original code
+- **Sign-in:** Apps Script used "Execute as: Me" / the domain session. Here the manager signs in with
+  Google on first load, and calls are made with *their* token, so they need access to the sheet and the
+  private photo folder.
+- **Manager check:** same `managers` list and same "no access" page, but it runs in the browser, so it is
+  a courtesy, not security. The real protection is Google's sharing on the sheet and photo folder.
+  Move the check server-side when this goes to Azure.
+- **No script lock:** close-out only writes the specific cells it changes (not the whole row).
 
-The original `incident-report.js` / `incident-report.css` and their wiring in `index.html` /
-`main.js` in the repo root are **unchanged**, so the live app keeps working until you cut over.
-Changes made in the root copy after this split are not mirrored here.
+## Moving to Azure
+
+1. Add the Azure URL to the Google OAuth client's authorised origins (or replace Google with Azure auth).
+2. Re-implement the three functions in `backend.js` against your own API; `index.html` and `gas-shim.js` stay as they are.

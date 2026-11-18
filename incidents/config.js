@@ -1,32 +1,27 @@
 /**
- * Incidents — standalone configuration.
- * Everything the incidents module needs lives here, so it can be moved to Azure
- * (Static Web App / App Service) without touching the main KPI app.
+ * Incident Log (managers app) — standalone configuration.
+ * Mirrors the constants at the top of the original Apps Script Code.gs.
  */
 export const CONFIG = {
-  incidents: {
-    // Google Sheet that incident rows are appended to
-    writeSheetId: "1DUpbMPbQFDFMSEZ4OiJDqy3mOd1WDAOZJgFyBQfH6B8",
-    writeRange: "Form responses 1!A:AB",
-    // Optional Drive folder for photo uploads ("" = My Drive root)
-    driveFolderId: "",
-    sites: ["Bayton Road", "Ansty", "Ibstock Road"],
-    types: ["Near Miss or Unsafe Event", "Injury"],
-    bodyParts: [
-      "Finger", "Hand", "Wrist", "Arm", "Shoulder", "Head", "Eye", "Face",
-      "Back", "Leg", "Knee", "Foot", "Toe", "Other",
-    ],
-  },
+  logSheetId: "1GlPcGP7ByU8SDv3XetsZn0oM33fnoUIrLLoEciBhaFg", // same ID as the report app
+  sheetName: "Incidents",
+  managers: ["simon.askew@staircraftgroup.com"], // add more managers here later
 
-  // Google OAuth (token flow). Only the scopes incidents actually uses.
-  // NOTE: when hosting on Azure, add the new site URL to "Authorised JavaScript
-  // origins" on this OAuth client in Google Cloud Console.
+  // Columns a manager may change from the close-out form
+  editable: [
+    "Status", "Actions Taken", "Investigation", "Assigned To",
+    "RIDDOR", "LTI", "Lost Days", "Corrective Action",
+  ],
+
+  // Google OAuth client (token flow). Replaces Apps Script's "Execute as: Me".
+  // NOTE: add the hosting URL (and http://localhost:8000 for testing) to
+  // "Authorised JavaScript origins" on this client in Google Cloud Console.
   google: {
     clientId: "965947227076-hrls555o1pv7coftc80qng6chgtf0sh7.apps.googleusercontent.com",
-    scopes:
-      "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets",
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets",     // read log + write close-out
+      "https://www.googleapis.com/auth/drive.readonly",   // read photos uploaded by the report app
+      "https://www.googleapis.com/auth/userinfo.email",   // who is signed in (manager check)
+    ].join(" "),
   },
-
-  // Local-device backup of reports (per browser / per origin)
-  localStorageKey: "po_incidents_v1",
 };

@@ -1,21 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Staircraft Incidents</title>
-<link rel="stylesheet" href="incidents.css">
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Log - Staircraft</title>
+<script src="gas-shim.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#14232B;--paper:#EEF1F2;--card:#fff;--line:#C9D2D6;--amber:#F2B100;--red:#C2301E;--ok:#1E7A4C;--muted:#566872}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 'Barlow',system-ui,sans-serif}
+  .logo{background:#fff;text-align:center;padding:4px 16px;border-bottom:1px solid var(--line)}
+  .logo img{display:block;margin:0 auto;width:100%;max-width:240px;height:auto}
+  header{background:var(--ink);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  header h1{margin:0;font:700 26px/1.1 'Barlow Condensed',sans-serif}
+  header small{color:#B9C7CD;display:block;font-size:13px}
+  header button{background:none;border:2px solid #fff;color:#fff;border-radius:8px;padding:8px 14px;font:600 15px 'Barlow',sans-serif;cursor:pointer}
+  nav{display:flex;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  nav button{flex:1;border:0;background:none;padding:14px;font:700 20px 'Barlow Condensed',sans-serif;color:var(--muted);cursor:pointer;border-bottom:4px solid transparent}
+  nav button.on{color:var(--ink);border-color:var(--ink)}
+  main{max-width:900px;margin:0 auto;padding:14px}
+  .hide{display:none!important}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #2B7FFF;outline-offset:1px}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+  @media(min-width:640px){.stats{grid-template-columns:repeat(4,1fr)}}
+  .stat{background:var(--card);border-radius:10px;padding:12px 14px;border-left:8px solid var(--ink)}
+  .stat b{display:block;font:700 34px/1 'Barlow Condensed',sans-serif}
+  .stat span{font-size:14px;color:var(--muted)}
+  .stat.good{border-color:var(--ok)} .stat.bad{border-color:var(--red)} .stat.warn{border-color:var(--amber)}
+  .panel{background:var(--card);border-radius:10px;padding:14px;margin-bottom:14px}
+  .panel h2{margin:0 0 8px;font:700 21px 'Barlow Condensed',sans-serif}
+  .grid2{display:grid;gap:14px}
+  @media(min-width:760px){.grid2{grid-template-columns:1fr 1fr}}
+  .bar{display:grid;grid-template-columns:96px 1fr 28px;gap:8px;align-items:center;margin:5px 0;font-size:14px}
+  .bar .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .track{background:#E6EBED;border-radius:5px;height:18px;display:flex;overflow:hidden}
+  .seg-i{background:var(--red)} .seg-o{background:var(--amber)} .seg-n{background:var(--ink)}
+  .legend{font-size:13px;color:var(--muted);margin-top:6px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin:0 4px 0 10px;vertical-align:-1px}
+  .none{color:var(--muted);font-size:14px;margin:4px 0}
+  .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .filters input{grid-column:1/-1}
+  input,select,textarea{width:100%;font:inherit;padding:10px;border:2px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:46px}
+  textarea{min-height:90px;resize:vertical}
+  .item{background:var(--card);border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:8px solid var(--amber);cursor:pointer;display:block;width:100%;text-align:left;border-top:0;border-right:0;border-bottom:0;font:inherit;color:inherit}
+  .item.inj{border-color:var(--red)}
+  .item .top{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+  .item .meta{font-size:14px;color:var(--muted)}
+  .item .txt{margin-top:4px;font-size:15px}
+  .badge{display:inline-block;border-radius:20px;padding:1px 10px;font-size:13px;font-weight:700;border:2px solid var(--ink)}
+  .badge.closed{background:var(--ok);border-color:var(--ok);color:#fff}
+  #detail{position:fixed;inset:0;background:var(--paper);overflow:auto;z-index:20}
+  #detail .in{max-width:760px;margin:0 auto;padding:14px}
+  .back{background:none;border:0;font:700 17px 'Barlow',sans-serif;padding:8px 0;cursor:pointer;color:var(--ink);text-decoration:underline}
+  dl{margin:0;display:grid;grid-template-columns:130px 1fr;gap:6px 10px}
+  dt{color:var(--muted);font-size:14px} dd{margin:0;white-space:pre-wrap;word-break:break-word}
+  label{display:block;font-weight:600;margin:12px 0 4px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{width:100%;border:0;border-radius:10px;background:var(--ink);color:#fff;font:700 22px 'Barlow Condensed',sans-serif;padding:15px;cursor:pointer;margin-top:12px}
+  .btn[disabled]{opacity:.6}
+  .msg{border-radius:8px;padding:10px 12px;margin-top:10px;font-weight:600}
+  .msg.ok{background:#DDF1E6;color:#14502F} .msg.err{background:#FBE3DF;color:#7A1B0F}
+  .photos{display:flex;flex-wrap:wrap;gap:8px}
+  .photos button{width:96px;height:96px;border:2px solid var(--line);border-radius:8px;background:#E6EBED;padding:0;overflow:hidden;cursor:pointer}
+  .photos img{width:100%;height:100%;object-fit:cover;display:block}
+  #lb{position:fixed;inset:0;background:rgba(20,35,43,.92);z-index:30;display:flex;align-items:center;justify-content:center;padding:14px}
+  #lb img{max-width:100%;max-height:100%;border-radius:6px}
+  #lb button{position:absolute;top:10px;right:10px;background:#fff;border:0;border-radius:8px;font:700 18px 'Barlow',sans-serif;padding:8px 14px;cursor:pointer}
+</style>
 </head>
 <body>
-  <header class="inc-app-header">
-    <h1>🩹 Incidents</h1>
-  </header>
-  <div id="incidentsPageBody" style="padding:12px 16px 32px;"></div>
+<div class="logo"><img alt="Staircraft" src="logo.jpg"></div>
+<header>
+  <div><h1>Incident Log</h1><small id="who"></small></div>
+  <button onclick="load()">Refresh</button>
+</header>
+<nav>
+  <button id="tOv" class="on" onclick="tab('ov')">Overview</button>
+  <button id="tLog" onclick="tab('log')">Log</button>
+</nav>
+<main>
+  <div id="loading" class="panel">Loading...</div>
+  <div id="ov" class="hide"></div>
+  <div id="log" class="hide">
+    <div class="filters">
+      <input id="q" placeholder="Search description, name, reference..." oninput="drawLog()">
+      <select id="fType" onchange="drawLog()"><option value="">All types</option></select>
+      <select id="fSite" onchange="drawLog()"><option value="">All sites</option></select>
+      <select id="fStatus" onchange="drawLog()"><option value="">Open and closed</option><option>Open</option><option>Closed</option></select>
+      <select id="fMonth" onchange="drawLog()"><option value="">All dates</option></select>
+    </div>
+    <div id="list"></div>
+  </div>
+</main>
 
-  <!-- Must be served over http(s) (ES modules do not load from file://) -->
-  <script type="module">
-    import { renderIncidents } from "./incidents.js";
-    renderIncidents();
-  </script>
+<div id="detail" class="hide"><div class="in" id="detailIn"></div></div>
+<div id="lb" class="hide"><button onclick="$('lb').classList.add('hide')">Close</button><img id="lbImg" alt="Photo"></div>
+
+<script>
+  var DATA=[], CUR=null;
+  var $=function(i){return document.getElementById(i)};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function fmtD(s){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?m[3]+'/'+m[2]+'/'+m[1]:(s||'')}
+  function isInj(r){return r['Type']==='Injury'}
+
+  function load(){
+    $('loading').classList.remove('hide');
+    google.script.run.withSuccessHandler(function(r){
+      DATA=r.rows||[]; $('who').textContent=r.me; $('loading').classList.add('hide');
+      fillFilters(); drawOv(); drawLog();
+      if($('ov').classList.contains('hide') && $('log').classList.contains('hide')) tab('ov');
+    }).withFailureHandler(function(e){
+      $('loading').textContent='Could not load the log. '+(e&&e.message?e.message:'');
+    }).getData();
+  }
+  function tab(t){
+    $('ov').classList.toggle('hide',t!=='ov'); $('log').classList.toggle('hide',t!=='log');
+    $('tOv').classList.toggle('on',t==='ov'); $('tLog').classList.toggle('on',t==='log');
+  }
+  function uniq(k){var s={};DATA.forEach(function(r){if(r[k])s[r[k]]=1});return Object.keys(s).sort()}
+  function fillSel(id,vals,first){var sel=$(id),cur=sel.value;sel.innerHTML='<option value="">'+first+'</option>'+vals.map(function(v){return '<option>'+esc(v)+'</option>'}).join('');sel.value=cur}
+  function fillFilters(){
+    fillSel('fType',uniq('Type'),'All types'); fillSel('fSite',uniq('Site'),'All sites');
+    var m={};DATA.forEach(function(r){if(r['Date'])m[String(r['Date']).slice(0,7)]=1});
+    fillSel('fMonth',Object.keys(m).sort().reverse(),'All dates');
+  }
+
+  // ---------- Overview ----------
+  function stat(l,v,c){return '<div class="stat '+(c||'')+'"><b>'+v+'</b><span>'+l+'</span></div>'}
+  function bars(rows,mode){
+    if(!rows.length) return '<p class="none">Nothing to show yet.</p>';
+    var max=Math.max.apply(null,rows.map(function(r){return r.i+r.o}))||1;
+    return rows.map(function(r){
+      var seg=mode==='split'?'<div class="seg-i" style="width:'+(r.i/max*100)+'%"></div><div class="seg-o" style="width:'+(r.o/max*100)+'%"></div>'
+                            :'<div class="seg-n" style="width:'+((r.i+r.o)/max*100)+'%"></div>';
+      return '<div class="bar"><div class="l" title="'+esc(r.l)+'">'+esc(r.l)+'</div><div class="track">'+seg+'</div><div>'+(r.i+r.o)+'</div></div>';
+    }).join('');
+  }
+  function tally(keyFn,onlyInj){
+    var m={};
+    DATA.forEach(function(r){
+      if(onlyInj&&!isInj(r)) return;
+      [].concat(keyFn(r)).forEach(function(k){ if(!k) return; m[k]=m[k]||{l:k,i:0,o:0}; if(isInj(r)) m[k].i++; else m[k].o++; });
+    });
+    return Object.keys(m).map(function(k){return m[k]});
+  }
+  function drawOv(){
+    var now=new Date(), ym=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2);
+    var inj=DATA.filter(isInj), thisM=DATA.filter(function(r){return String(r['Date']).slice(0,7)===ym});
+    var open=DATA.filter(function(r){return r['Status']!=='Closed'}).length;
+    var last=inj.map(function(r){return r['Date']}).sort().pop(), days='-', cls='';
+    if(last){var d=new Date(last+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);days=Math.max(0,Math.round((t-d)/864e5));cls=days>=30?'good':(days<7?'bad':'warn')}
+    var months=[];for(var k=11;k>=0;k--){var d2=new Date(now.getFullYear(),now.getMonth()-k,1);months.push(d2.getFullYear()+'-'+('0'+(d2.getMonth()+1)).slice(-2))}
+    var mm=months.map(function(m){var x={l:m.slice(5)+'/'+m.slice(2,4),i:0,o:0};DATA.forEach(function(r){if(String(r['Date']).slice(0,7)===m){if(isInj(r))x.i++;else x.o++}});return x});
+    var by=function(a,b){return (b.i+b.o)-(a.i+a.o)};
+    var parts=tally(function(r){return String(r['Body Parts']||'').split(',').map(function(s){return s.trim()})},true).sort(by).slice(0,8);
+    $('ov').innerHTML=
+      '<div class="stats">'+stat('days since last injury',days,cls)+stat('incidents this month',thisM.length)+stat('injuries this month',thisM.filter(isInj).length,thisM.filter(isInj).length?'bad':'good')+stat('open items',open,open?'warn':'good')+'</div>'+
+      (DATA.length?'':'<div class="panel"><h2>No incidents yet</h2><p class="none">New reports appear here as soon as they are sent.</p></div>')+
+      '<div class="panel"><h2>Last 12 months</h2>'+bars(mm,'split')+'<div class="legend"><i style="background:var(--red)"></i>Injuries<i style="background:var(--amber)"></i>Everything else</div></div>'+
+      '<div class="grid2"><div class="panel"><h2>By site</h2>'+bars(tally(function(r){return r['Site']}).sort(by),'split')+'</div>'+
+      '<div class="panel"><h2>By department</h2>'+bars(tally(function(r){return r['Department']}).sort(by),'split')+'</div>'+
+      '<div class="panel"><h2>By type</h2>'+bars(tally(function(r){return r['Type']}).sort(by),'one')+'</div>'+
+      '<div class="panel"><h2>Injuries by body part</h2>'+bars(parts,'one')+'</div></div>';
+  }
+
+  // ---------- Log ----------
+  function drawLog(){
+    var q=$('q').value.trim().toLowerCase(),ft=$('fType').value,fs=$('fSite').value,fst=$('fStatus').value,fm=$('fMonth').value;
+    var rows=DATA.filter(function(r){
+      if(ft&&r['Type']!==ft)return false; if(fs&&r['Site']!==fs)return false;
+      if(fst&&(r['Status']==='Closed'?'Closed':'Open')!==fst)return false;
+      if(fm&&String(r['Date']).slice(0,7)!==fm)return false;
+      if(q){var hay=[r['Ref'],r['Description'],r['Reporter'],r['Injured Person'],r['Department'],r['Company']].join(' ').toLowerCase();if(hay.indexOf(q)<0)return false}
+      return true;
+    }).sort(function(a,b){return Number(b['Ref'])-Number(a['Ref'])});
+    $('list').innerHTML=rows.length?rows.map(function(r){
+      var closed=r['Status']==='Closed',d=String(r['Description']||'');
+      return '<button class="item '+(isInj(r)?'inj':'')+'" onclick="openItem('+Number(r['Ref'])+')"><div class="top"><span>#'+esc(r['Ref'])+' - '+esc(r['Type'])+'</span><span class="badge '+(closed?'closed':'')+'">'+(closed?'Closed':'Open')+'</span></div>'+
+        '<div class="meta">'+fmtD(r['Date'])+' - '+esc(r['Site'])+' / '+esc(r['Department'])+' - '+esc(r['Reporter'])+'</div><div class="txt">'+esc(d.length>140?d.slice(0,140)+'...':d)+'</div></button>';
+    }).join(''):'<p class="none">'+(DATA.length?'No incidents match those filters.':'No incidents yet. Reports will appear here as soon as they are sent.')+'</p>';
+  }
+
+  // ---------- Detail + close-out ----------
+  function dl(pairs){return '<dl>'+pairs.filter(function(p){return p[1]!==''&&p[1]!=null}).map(function(p){return '<dt>'+p[0]+'</dt><dd>'+esc(p[1])+'</dd>'}).join('')+'</dl>'}
+  function opts(list,v){return list.map(function(o){return '<option value="'+esc(o)+'"'+(String(v||'')===o?' selected':'')+'>'+(o||'-')+'</option>'}).join('')}
+  function openItem(ref){
+    var r=DATA.filter(function(x){return Number(x['Ref'])===ref})[0]; if(!r)return; CUR=r;
+    var ids=String(r['Photos']||'').split('\n').filter(String);
+    var info=[['Date',fmtD(r['Date'])+' '+(r['Time']||'')],['Site',r['Site']+' / '+r['Department']],['Reported by',r['Reporter']+' ('+r['Company']+')'],['Contact',r['Contact']],['Reported',fmtD(String(r['Reported']).slice(0,10))+' '+String(r['Reported']).slice(11)]];
+    if(isInj(r)) info=info.concat([['Injured person',r['Injured Person']],['Line manager',r['Line Manager']],['Injury',r['Injury Type']],['Body parts',r['Body Parts']],['Hospital',r['Hospital']],['First aid',r['First Aid']+(r['First Aid Details']?' - '+r['First Aid Details']:'')]]);
+    $('detailIn').innerHTML=
+      '<button class="back" onclick="closeItem()">Back to log</button>'+
+      '<div class="panel" style="border-left:8px solid '+(isInj(r)?'var(--red)':'var(--amber)')+'"><h2>#'+esc(r['Ref'])+' - '+esc(r['Type'])+'</h2>'+dl(info)+'</div>'+
+      '<div class="panel"><h2>What happened</h2><p style="white-space:pre-wrap;margin:0">'+esc(r['Description'])+'</p></div>'+
+      '<div class="panel"><h2>Photos</h2>'+(ids.length?'<div class="photos" id="ph"></div><div id="phErr" class="none"></div>':'<p class="none">No photos were attached to this report.</p>')+'</div>'+
+      '<div class="panel"><h2>Manager close-out</h2>'+
+      '<label for="cStatus">Status</label><select id="cStatus">'+opts(['Open','Closed'],r['Status']||'Open')+'</select>'+
+      '<label for="cActions">Actions taken / comments</label><textarea id="cActions">'+esc(r['Actions Taken'])+'</textarea>'+
+      '<div class="row"><div><label for="cInv">Investigation</label><select id="cInv">'+opts(['','Required','In progress','Complete','Not required'],r['Investigation'])+'</select></div>'+
+      '<div><label for="cAssign">Actions assigned to</label><input id="cAssign" maxlength="200" value="'+esc(r['Assigned To'])+'"></div></div>'+
+      (isInj(r)?'<div class="row"><div><label for="cRid">RIDDOR reportable</label><select id="cRid">'+opts(['','Yes','No'],r['RIDDOR'])+'</select></div>'+
+      '<div><label for="cLti">Lost time injury (LTI)</label><select id="cLti" onchange="ltiToggle()">'+opts(['','Yes','No'],r['LTI'])+'</select></div></div>'+
+      '<div id="ldBox" class="'+(r['LTI']==='Yes'?'':'hide')+'"><label for="cLost">Lost days</label><input id="cLost" type="number" min="0" value="'+esc(r['Lost Days'])+'"></div>':'')+
+      '<label for="cCorr">Corrective action taken</label><textarea id="cCorr">'+esc(r['Corrective Action'])+'</textarea>'+
+      (r['Closed Date']?'<p class="none">Closed on '+fmtD(r['Closed Date'])+(r['Updated By']?' - last updated by '+esc(r['Updated By']):'')+'</p>':'')+
+      '<div id="saveMsg"></div><button class="btn" id="saveBtn" onclick="save()">Save</button></div>';
+    $('detail').classList.remove('hide'); $('detail').scrollTop=0;
+    ids.forEach(function(id){
+      var b=document.createElement('button');b.type='button';b.setAttribute('aria-label','Open photo');$('ph').appendChild(b);
+      google.script.run.withSuccessHandler(function(u){b.innerHTML='<img alt="Photo" src="'+u+'">';b.onclick=function(){bigPhoto(id,u)}}).withFailureHandler(function(e){b.textContent='!';$('phErr').textContent='Could not load a photo: '+(e&&e.message?e.message:'unknown error')}).getPhoto(id,false);
+    });
+  }
+  function ltiToggle(){var c=$('ldBox');if(c)c.classList.toggle('hide',$('cLti').value!=='Yes')}
+  function closeItem(){$('detail').classList.add('hide');CUR=null}
+  function bigPhoto(id,thumb){
+    $('lbImg').src=thumb;$('lb').classList.remove('hide');
+    google.script.run.withSuccessHandler(function(u){$('lbImg').src=u}).getPhoto(id,true);
+  }
+  function save(){
+    var r=CUR,btn=$('saveBtn');
+    var f={'Status':$('cStatus').value,'Actions Taken':$('cActions').value,'Investigation':$('cInv').value,'Assigned To':$('cAssign').value,
+      'RIDDOR':$('cRid')?$('cRid').value:(r['RIDDOR']||''),'LTI':$('cLti')?$('cLti').value:(r['LTI']||''),
+      'Lost Days':$('cLost')&&$('cLti').value==='Yes'?$('cLost').value:'','Corrective Action':$('cCorr').value};
+    btn.disabled=true;btn.textContent='Saving...';
+    google.script.run.withSuccessHandler(function(res){
+      btn.disabled=false;btn.textContent='Save';
+      if(res&&res.ok){
+        Object.keys(f).forEach(function(k){r[k]=f[k]});
+        if(f['Status']==='Closed'&&!r['Closed Date']) r['Closed Date']=new Date().toISOString().slice(0,10);
+        if(f['Status']==='Open') r['Closed Date']='';
+        $('saveMsg').innerHTML='<div class="msg ok">Saved.</div>'; drawOv(); drawLog();
+      } else $('saveMsg').innerHTML='<div class="msg err">'+esc((res&&res.error)||'Could not save.')+'</div>';
+    }).withFailureHandler(function(){btn.disabled=false;btn.textContent='Save';$('saveMsg').innerHTML='<div class="msg err">Could not save. Please try again.</div>'}).saveCloseOut(r['Ref'],f);
+  }
+  load();
+</script>
 </body>
 </html>
