@@ -86,8 +86,8 @@
     </div>
     <div class="nav-tile" id="tileAreaIncidents" style="min-height:140px;">
       <div class="tile-icon">🩹</div>
-      <div class="tile-label">INCIDENTS</div>
-      <div class="tile-sub">Report · photos · near miss & injury</div>
+      <div class="tile-label">INCIDENT LOG</div>
+      <div class="tile-sub">Managers · overview · close-out</div>
     </div>
   </div>
 </div>
@@ -267,7 +267,7 @@
 <div id="incidentsPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToLandingFromIncidents">← Areas</button>
-    <h2>🩹 Incidents</h2>
+    <h2>🩹 Incident Log</h2>
   </div>
   <div id="incidentsPageBody" class="page-body" style="padding:12px 16px 32px;"></div>
 </div>
@@ -298,6 +298,7 @@
 
 <script type="module" src="app.js"></script>
 <script type="module" src="second-fix.js"></script>
+<script type="module" src="report-incident-tab.js"></script>
 <script>
 (function() {
     const email = localStorage.getItem('userEmail');
