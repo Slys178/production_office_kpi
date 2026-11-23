@@ -33,41 +33,37 @@
   .panel h2{margin:0 0 8px;font:700 21px 'Barlow Condensed',sans-serif}
   .grid2{display:grid;gap:14px}
   @media(min-width:760px){.grid2{grid-template-columns:1fr 1fr}}
-  .bar{display:grid;grid-template-columns:96px 1fr 28px;gap:8px;align-items:center;margin:5px 0;font-size:14px}
+  .bar{display:grid;grid-template-columns:100px 1fr 36px;gap:8px;align-items:center;margin:6px 0;font-size:14px}
   .bar .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .track{background:#E6EBED;border-radius:5px;height:18px;display:flex;overflow:hidden}
+  .track{height:14px;background:var(--line);border-radius:8px;overflow:hidden;display:flex}
   .seg-i{background:var(--red)} .seg-o{background:var(--amber)} .seg-n{background:var(--ink)}
-  .legend{font-size:13px;color:var(--muted);margin-top:6px}
-  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin:0 4px 0 10px;vertical-align:-1px}
-  .none{color:var(--muted);font-size:14px;margin:4px 0}
-  .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-  .filters input{grid-column:1/-1}
-  input,select,textarea{width:100%;font:inherit;padding:10px;border:2px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:46px}
-  textarea{min-height:90px;resize:vertical}
-  .item{background:var(--card);border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:8px solid var(--amber);cursor:pointer;display:block;width:100%;text-align:left;border-top:0;border-right:0;border-bottom:0;font:inherit;color:inherit}
-  .item.inj{border-color:var(--red)}
-  .item .top{display:flex;justify-content:space-between;gap:8px;font-weight:700}
-  .item .meta{font-size:14px;color:var(--muted)}
-  .item .txt{margin-top:4px;font-size:15px}
-  .badge{display:inline-block;border-radius:20px;padding:1px 10px;font-size:13px;font-weight:700;border:2px solid var(--ink)}
-  .badge.closed{background:var(--ok);border-color:var(--ok);color:#fff}
+  .filters{display:grid;gap:8px;margin-bottom:12px}
+  @media(min-width:640px){.filters{grid-template-columns:2fr 1fr 1fr 1fr 1fr}}
+  .filters input,.filters select{width:100%;font:inherit;padding:10px;border:2px solid var(--line);border-radius:8px;background:#fff}
+  .card{background:var(--card);border-radius:10px;padding:12px 14px;margin-bottom:10px;border-left:8px solid var(--ink);cursor:pointer}
+  .card.inj{border-color:var(--red)} .card.nm{border-color:var(--amber)}
+  .card h3{margin:0 0 4px;font:700 18px 'Barlow Condensed',sans-serif}
+  .card .meta{font-size:13px;color:var(--muted)}
+  .none{color:var(--muted);font-size:14px}
   #detail{position:fixed;inset:0;background:var(--paper);overflow:auto;z-index:20}
-  #detail .in{max-width:760px;margin:0 auto;padding:14px}
-  .back{background:none;border:0;font:700 17px 'Barlow',sans-serif;padding:8px 0;cursor:pointer;color:var(--ink);text-decoration:underline}
-  dl{margin:0;display:grid;grid-template-columns:130px 1fr;gap:6px 10px}
-  dt{color:var(--muted);font-size:14px} dd{margin:0;white-space:pre-wrap;word-break:break-word}
+  #detail .in{max-width:720px;margin:0 auto;padding:14px}
+  .back{border:2px solid var(--ink);background:#fff;border-radius:8px;padding:10px 14px;font:600 15px 'Barlow',sans-serif;cursor:pointer;margin-bottom:12px}
   label{display:block;font-weight:600;margin:12px 0 4px}
+  input,select,textarea{width:100%;font:inherit;padding:10px;border:2px solid var(--line);border-radius:8px;background:#fff}
+  textarea{min-height:90px;resize:vertical}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .btn{width:100%;border:0;border-radius:10px;background:var(--ink);color:#fff;font:700 22px 'Barlow Condensed',sans-serif;padding:15px;cursor:pointer;margin-top:12px}
+  .btn{width:100%;border:0;border-radius:10px;background:var(--ink);color:#fff;font:700 20px 'Barlow Condensed',sans-serif;padding:14px;cursor:pointer;margin-top:12px}
   .btn[disabled]{opacity:.6}
-  .msg{border-radius:8px;padding:10px 12px;margin-top:10px;font-weight:600}
-  .msg.ok{background:#DDF1E6;color:#14502F} .msg.err{background:#FBE3DF;color:#7A1B0F}
+  .msg{padding:10px;border-radius:8px;margin:10px 0;font-weight:600}
+  .msg.ok{background:#e6f4ec;color:var(--ok)} .msg.err{background:#FBE3DF;color:#7A1B0F}
   .photos{display:flex;flex-wrap:wrap;gap:8px}
-  .photos button{width:96px;height:96px;border:2px solid var(--line);border-radius:8px;background:#E6EBED;padding:0;overflow:hidden;cursor:pointer}
-  .photos img{width:100%;height:100%;object-fit:cover;display:block}
-  #lb{position:fixed;inset:0;background:rgba(20,35,43,.92);z-index:30;display:flex;align-items:center;justify-content:center;padding:14px}
-  #lb img{max-width:100%;max-height:100%;border-radius:6px}
-  #lb button{position:absolute;top:10px;right:10px;background:#fff;border:0;border-radius:8px;font:700 18px 'Barlow',sans-serif;padding:8px 14px;cursor:pointer}
+  .photos button{border:0;padding:0;background:none;cursor:pointer}
+  .photos img{width:88px;height:88px;object-fit:cover;border-radius:8px;border:2px solid var(--line)}
+  #lb{position:fixed;inset:0;background:rgba(20,35,43,.85);display:flex;align-items:center;justify-content:center;z-index:30;padding:20px}
+  #lb img{max-width:100%;max-height:90vh;border-radius:8px}
+  #lb button{position:absolute;top:12px;right:12px;border:0;background:#fff;border-radius:8px;padding:8px 12px;font:600 14px 'Barlow',sans-serif;cursor:pointer}
+  dl{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;margin:0;font-size:15px}
+  dt{color:var(--muted);font-weight:600} dd{margin:0}
 </style>
 </head>
 <body>
@@ -103,7 +99,9 @@
   var $=function(i){return document.getElementById(i)};
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function fmtD(s){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?m[3]+'/'+m[2]+'/'+m[1]:(s||'')}
-  function isInj(r){return r['Type']==='Injury'}
+  function isInj(r){return r['Type']==='Injury'||r['Type']==='Incident'}
+  function dl(rows){return '<dl>'+rows.map(function(x){return '<dt>'+esc(x[0])+'</dt><dd>'+esc(x[1]||'—')+'</dd>'}).join('')+'</dl>'}
+  function opts(list,cur){return list.map(function(v){return '<option'+(v===cur?' selected':'')+'>'+esc(v)+'</option>'}).join('')}
 
   function load(){
     $('loading').classList.remove('hide');
@@ -127,7 +125,6 @@
     fillSel('fMonth',Object.keys(m).sort().reverse(),'All dates');
   }
 
-  // ---------- Overview ----------
   function stat(l,v,c){return '<div class="stat '+(c||'')+'"><b>'+v+'</b><span>'+l+'</span></div>'}
   function bars(rows,mode){
     if(!rows.length) return '<p class="none">Nothing to show yet.</p>';
@@ -149,68 +146,101 @@
   function drawOv(){
     var now=new Date(), ym=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2);
     var inj=DATA.filter(isInj), thisM=DATA.filter(function(r){return String(r['Date']).slice(0,7)===ym});
-    var open=DATA.filter(function(r){return r['Status']!=='Closed'}).length;
-    var last=inj.map(function(r){return r['Date']}).sort().pop(), days='-', cls='';
-    if(last){var d=new Date(last+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);days=Math.max(0,Math.round((t-d)/864e5));cls=days>=30?'good':(days<7?'bad':'warn')}
-    var months=[];for(var k=11;k>=0;k--){var d2=new Date(now.getFullYear(),now.getMonth()-k,1);months.push(d2.getFullYear()+'-'+('0'+(d2.getMonth()+1)).slice(-2))}
-    var mm=months.map(function(m){var x={l:m.slice(5)+'/'+m.slice(2,4),i:0,o:0};DATA.forEach(function(r){if(String(r['Date']).slice(0,7)===m){if(isInj(r))x.i++;else x.o++}});return x});
-    var by=function(a,b){return (b.i+b.o)-(a.i+a.o)};
-    var parts=tally(function(r){return String(r['Body Parts']||'').split(',').map(function(s){return s.trim()})},true).sort(by).slice(0,8);
+    var open=DATA.filter(function(r){return r['Status']!=='Closed'});
     $('ov').innerHTML=
-      '<div class="stats">'+stat('days since last injury',days,cls)+stat('incidents this month',thisM.length)+stat('injuries this month',thisM.filter(isInj).length,thisM.filter(isInj).length?'bad':'good')+stat('open items',open,open?'warn':'good')+'</div>'+
-      (DATA.length?'':'<div class="panel"><h2>No incidents yet</h2><p class="none">New reports appear here as soon as they are sent.</p></div>')+
-      '<div class="panel"><h2>Last 12 months</h2>'+bars(mm,'split')+'<div class="legend"><i style="background:var(--red)"></i>Injuries<i style="background:var(--amber)"></i>Everything else</div></div>'+
-      '<div class="grid2"><div class="panel"><h2>By site</h2>'+bars(tally(function(r){return r['Site']}).sort(by),'split')+'</div>'+
-      '<div class="panel"><h2>By department</h2>'+bars(tally(function(r){return r['Department']}).sort(by),'split')+'</div>'+
-      '<div class="panel"><h2>By type</h2>'+bars(tally(function(r){return r['Type']}).sort(by),'one')+'</div>'+
-      '<div class="panel"><h2>Injuries by body part</h2>'+bars(parts,'one')+'</div></div>';
+      '<div class="stats">'+stat('Total',DATA.length)+stat('This month',thisM.length)+stat('Open',open.length,'warn')+stat('Injuries / incidents',inj.length,'bad')+'</div>'+
+      '<div class="grid2"><div class="panel"><h2>By site</h2>'+bars(tally(function(r){return r['Site']}),'split')+'</div>'+
+      '<div class="panel"><h2>By type</h2>'+bars(tally(function(r){return r['Type']}),'split')+'</div></div>';
   }
-
-  // ---------- Log ----------
   function drawLog(){
-    var q=$('q').value.trim().toLowerCase(),ft=$('fType').value,fs=$('fSite').value,fst=$('fStatus').value,fm=$('fMonth').value;
+    var q=($('q').value||'').toLowerCase(), t=$('fType').value, s=$('fSite').value, st=$('fStatus').value, m=$('fMonth').value;
     var rows=DATA.filter(function(r){
-      if(ft&&r['Type']!==ft)return false; if(fs&&r['Site']!==fs)return false;
-      if(fst&&(r['Status']==='Closed'?'Closed':'Open')!==fst)return false;
-      if(fm&&String(r['Date']).slice(0,7)!==fm)return false;
-      if(q){var hay=[r['Ref'],r['Description'],r['Reporter'],r['Injured Person'],r['Department'],r['Company']].join(' ').toLowerCase();if(hay.indexOf(q)<0)return false}
+      if(t&&r['Type']!==t) return false;
+      if(s&&r['Site']!==s) return false;
+      if(st==='Open'&&r['Status']==='Closed') return false;
+      if(st==='Closed'&&r['Status']!=='Closed') return false;
+      if(m&&String(r['Date']).slice(0,7)!==m) return false;
+      if(q){
+        var blob=[r['Ref'],r['Title'],r['Description'],r['Reporter'],r['Name'],r['Injured Person'],r['Site']].join(' ').toLowerCase();
+        if(blob.indexOf(q)<0) return false;
+      }
       return true;
-    }).sort(function(a,b){return Number(b['Ref'])-Number(a['Ref'])});
-    $('list').innerHTML=rows.length?rows.map(function(r){
-      var closed=r['Status']==='Closed',d=String(r['Description']||'');
-      return '<button class="item '+(isInj(r)?'inj':'')+'" onclick="openItem('+Number(r['Ref'])+')"><div class="top"><span>#'+esc(r['Ref'])+' - '+esc(r['Type'])+'</span><span class="badge '+(closed?'closed':'')+'">'+(closed?'Closed':'Open')+'</span></div>'+
-        '<div class="meta">'+fmtD(r['Date'])+' - '+esc(r['Site'])+' / '+esc(r['Department'])+' - '+esc(r['Reporter'])+'</div><div class="txt">'+esc(d.length>140?d.slice(0,140)+'...':d)+'</div></button>';
-    }).join(''):'<p class="none">'+(DATA.length?'No incidents match those filters.':'No incidents yet. Reports will appear here as soon as they are sent.')+'</p>';
+    }).slice().sort(function(a,b){return String(b['Date']).localeCompare(String(a['Date']))});
+    if(!rows.length){$('list').innerHTML='<p class="none">No matching reports.</p>';return;}
+    $('list').innerHTML=rows.map(function(r){
+      var hurt=isInj(r);
+      var title=r['Title']||r['Description']||'';
+      if(title.length>80) title=title.slice(0,80)+'…';
+      return '<div class="card '+(hurt?'inj':'nm')+'" onclick="openItem('+Number(r['Ref'])+')">'+'
+        <h3>#'+esc(r['Ref'])+' — '+esc(r['Type']||'')+' <span class="meta">'+(r['Status']||'Open')+'</span></h3>'+
+        '<div class="meta">'+esc(fmtD(r['Date']))+' · '+esc(r['Site']||'')+(r['Department']?' / '+esc(r['Department']):'')+'</div>'+
+        '<div>'+esc(title)+'</div></div>';
+    }).join('');
   }
 
-  // ---------- Detail + close-out ----------
-  function dl(pairs){return '<dl>'+pairs.filter(function(p){return p[1]!==''&&p[1]!=null}).map(function(p){return '<dt>'+p[0]+'</dt><dd>'+esc(p[1])+'</dd>'}).join('')+'</dl>'}
-  function opts(list,v){return list.map(function(o){return '<option value="'+esc(o)+'"'+(String(v||'')===o?' selected':'')+'>'+(o||'-')+'</option>'}).join('')}
   function openItem(ref){
     var r=DATA.filter(function(x){return Number(x['Ref'])===ref})[0]; if(!r)return; CUR=r;
     var ids=String(r['Photos']||'').split('\n').filter(String);
-    var info=[['Date',fmtD(r['Date'])+' '+(r['Time']||'')],['Site',r['Site']+' / '+r['Department']],['Reported by',r['Reporter']+' ('+r['Company']+')'],['Contact',r['Contact']],['Reported',fmtD(String(r['Reported']).slice(0,10))+' '+String(r['Reported']).slice(11)]];
-    if(isInj(r)) info=info.concat([['Injured person',r['Injured Person']],['Line manager',r['Line Manager']],['Injury',r['Injury Type']],['Body parts',r['Body Parts']],['Hospital',r['Hospital']],['First aid',r['First Aid']+(r['First Aid Details']?' - '+r['First Aid Details']:'')]]);
+    var isNear=String(r['Type']||'').toLowerCase().indexOf('near')>=0;
+    var hurt=isInj(r)||r['Anyone Hurt']==='Yes'||r['Injured Person'];
+    var info=[['Date',fmtD(r['Date'])+' '+(r['Time']||'')],['Site',r['Site']+' / '+(r['Department']||'')],['Reported by',(r['Reporter']||r['Name']||'')+(r['Company']?' ('+r['Company']+')':'')],['Contact',r['Contact']||''],['Reported',fmtD(String(r['Reported']||'').slice(0,10))+' '+String(r['Reported']||'').slice(11)]];
+    if(hurt) info=info.concat([['Injured person',r['Injured Person']],['Line manager',r['Line Manager']],['Injury',r['Injury Type']],['Body parts',r['Body Parts']],['Hospital',r['Hospital']],['First aid',r['First Aid']+(r['First Aid Details']?' - '+r['First Aid Details']:'')]]);
+
+    var subTypes=['','Injury','Occupational health or ill health','Unsafe condition','Unsafe Act','Property Damage','Environmental','Vehicle or FLT'];
+    var severities=['','Low','Medium','High','Critical'];
+    var invLevels=['','None required','Local review','Standard Investigation'];
+    var personTypes=['','Employee','Contractor','Agency worker','Visitor','Member of the public'];
+    var riddorOpts=['','Not assessed','Not reportable','Potentially reportable','Reported','Yes','No'];
+
     $('detailIn').innerHTML=
       '<button class="back" onclick="closeItem()">Back to log</button>'+
-      '<div class="panel" style="border-left:8px solid '+(isInj(r)?'var(--red)':'var(--amber)')+'"><h2>#'+esc(r['Ref'])+' - '+esc(r['Type'])+'</h2>'+dl(info)+'</div>'+
-      '<div class="panel"><h2>What happened</h2><p style="white-space:pre-wrap;margin:0">'+esc(r['Description'])+'</p></div>'+
+      '<div class="panel" style="border-left:8px solid '+(hurt&&!isNear?'var(--red)':'var(--amber)')+'">'+'
+        <h2>#'+esc(r['Ref'])+' — '+esc(r['Type']||'')+(r['Title']?' — '+esc(r['Title']):'')+'</h2>'+dl(info)+
+      '</div>'+
+      '<div class="panel"><h2>What happened (from report)</h2><p style="white-space:pre-wrap;margin:0">'+esc(r['Description'])+'</p></div>'+
       '<div class="panel"><h2>Photos</h2>'+(ids.length?'<div class="photos" id="ph"></div><div id="phErr" class="none"></div>':'<p class="none">No photos were attached to this report.</p>')+'</div>'+
-      '<div class="panel"><h2>Manager close-out</h2>'+
-      '<label for="cStatus">Status</label><select id="cStatus">'+opts(['Open','Closed'],r['Status']||'Open')+'</select>'+
-      '<label for="cActions">Actions taken / comments</label><textarea id="cActions">'+esc(r['Actions Taken'])+'</textarea>'+
-      '<div class="row"><div><label for="cInv">Investigation</label><select id="cInv">'+opts(['','Required','In progress','Complete','Not required'],r['Investigation'])+'</select></div>'+
-      '<div><label for="cAssign">Actions assigned to</label><input id="cAssign" maxlength="200" value="'+esc(r['Assigned To'])+'"></div></div>'+
-      (isInj(r)?'<div class="row"><div><label for="cRid">RIDDOR reportable</label><select id="cRid">'+opts(['','Yes','No'],r['RIDDOR'])+'</select></div>'+
-      '<div><label for="cLti">Lost time injury (LTI)</label><select id="cLti" onchange="ltiToggle()">'+opts(['','Yes','No'],r['LTI'])+'</select></div></div>'+
-      '<div id="ldBox" class="'+(r['LTI']==='Yes'?'':'hide')+'"><label for="cLost">Lost days</label><input id="cLost" type="number" min="0" value="'+esc(r['Lost Days'])+'"></div>':'')+
-      '<label for="cCorr">Corrective action taken</label><textarea id="cCorr">'+esc(r['Corrective Action'])+'</textarea>'+
-      (r['Closed Date']?'<p class="none">Closed on '+fmtD(r['Closed Date'])+(r['Updated By']?' - last updated by '+esc(r['Updated By']):'')+'</p>':'')+
-      '<div id="saveMsg"></div><button class="btn" id="saveBtn" onclick="save()">Save</button></div>';
+      '<div class="panel"><h2>Case details</h2>'+
+        '<p class="none" style="margin-top:0">Filled in by investigator — not on the shop-floor app.</p>'+
+        '<label for="cTitle">Title <span style="font-weight:400;color:var(--muted)">(short name for finding this case)</span></label>'+
+        '<input id="cTitle" maxlength="200" value="'+esc(r['Title']||'')+'" placeholder="e.g. Fire on CNC machine in 1st Fix">'+
+        '<label for="cSpecLoc">Specific location</label>'+
+        '<input id="cSpecLoc" maxlength="200" value="'+esc(r['Specific Location']||'')+'" placeholder="e.g. Bay 3, paintline">'+
+        '<div class="row">'+
+          '<div><label for="cSub">Sub type</label><select id="cSub">'+opts(subTypes,r['Sub Type']||'')+'</select></div>'+
+          '<div><label for="cSev">Potential severity</label><select id="cSev">'+opts(severities,r['Potential Severity']||'')+'</select></div>'+
+        '</div>'+
+        '<div class="row">'+
+          '<div><label for="cPerson">Person type</label><select id="cPerson">'+opts(personTypes,r['Person Type']||'')+'</select></div>'+
+          '<div><label for="cInvLevel">Investigation level</label><select id="cInvLevel">'+opts(invLevels,r['Investigation Level']||'')+'</select></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="panel"><h2>RIDDOR & injury follow-up</h2>'+
+        '<div class="row">'+
+          '<div><label for="cRid">RIDDOR status</label><select id="cRid">'+opts(riddorOpts,r['RIDDOR']||'')+'</select></div>'+
+          '<div><label for="cRidDate">Date reported to HSE</label><input id="cRidDate" type="date" value="'+esc(String(r['RIDDOR Date']||'').slice(0,10))+'"></div>'+
+        '</div>'+
+        (hurt?
+          '<div class="row"><div><label for="cLti">Lost time injury (LTI)</label><select id="cLti" onchange="ltiToggle()">'+opts(['','Yes','No'],r['LTI']||'')+'</select></div>'+
+          '<div id="ldBox" class="'+(r['LTI']==='Yes'?'':'hide')+'"><label for="cLost">Lost days</label><input id="cLost" type="number" min="0" value="'+esc(r['Lost Days']||'')+'"></div></div>'
+        :'')+
+      '</div>'+
+      '<div class="panel"><h2>Investigation & actions</h2>'+
+        '<div class="row">'+
+          '<div><label for="cInv">Investigation status</label><select id="cInv">'+opts(['','Required','In progress','Complete','Not required'],r['Investigation']||'')+'</select></div>'+
+          '<div><label for="cStatus">Case status</label><select id="cStatus">'+opts(['Open','Closed'],r['Status']||'Open')+'</select></div>'+
+        '</div>'+
+        '<label for="cAssign">Assigned to</label><input id="cAssign" maxlength="200" value="'+esc(r['Assigned To']||'')+'">'+
+        '<label for="cActions">Actions taken / comments</label><textarea id="cActions">'+esc(r['Actions Taken']||'')+'</textarea>'+
+        '<label for="cCorr">Corrective action</label><textarea id="cCorr">'+esc(r['Corrective Action']||'')+'</textarea>'+
+        (r['Closed Date']?'<p class="none">Closed on '+fmtD(r['Closed Date'])+(r['Updated By']?' — last updated by '+esc(r['Updated By']):'')+'</p>':'')+
+        '<div id="saveMsg"></div><button class="btn" id="saveBtn" onclick="save()">Save</button>'+
+      '</div>';
+
     $('detail').classList.remove('hide'); $('detail').scrollTop=0;
     ids.forEach(function(id){
-      var b=document.createElement('button');b.type='button';b.setAttribute('aria-label','Open photo');$('ph').appendChild(b);
-      google.script.run.withSuccessHandler(function(u){b.innerHTML='<img alt="Photo" src="'+u+'">';b.onclick=function(){bigPhoto(id,u)}}).withFailureHandler(function(e){b.textContent='!';$('phErr').textContent='Could not load a photo: '+(e&&e.message?e.message:'unknown error')}).getPhoto(id,false);
+      var b=document.createElement('button');b.type='button';b.setAttribute('aria-label','Open photo');
+      if($('ph')) $('ph').appendChild(b);
+      google.script.run.withSuccessHandler(function(u){b.innerHTML='<img alt="Photo" src="'+u+'">';b.onclick=function(){bigPhoto(id,u)}}).withFailureHandler(function(e){b.textContent='!';if($('phErr'))$('phErr').textContent='Could not load a photo: '+(e&&e.message?e.message:'unknown error')}).getPhoto(id,false);
     });
   }
   function ltiToggle(){var c=$('ldBox');if(c)c.classList.toggle('hide',$('cLti').value!=='Yes')}
@@ -221,9 +251,23 @@
   }
   function save(){
     var r=CUR,btn=$('saveBtn');
-    var f={'Status':$('cStatus').value,'Actions Taken':$('cActions').value,'Investigation':$('cInv').value,'Assigned To':$('cAssign').value,
-      'RIDDOR':$('cRid')?$('cRid').value:(r['RIDDOR']||''),'LTI':$('cLti')?$('cLti').value:(r['LTI']||''),
-      'Lost Days':$('cLost')&&$('cLti').value==='Yes'?$('cLost').value:'','Corrective Action':$('cCorr').value};
+    var f={
+      'Status':$('cStatus')?$('cStatus').value:(r['Status']||'Open'),
+      'Title':$('cTitle')?$('cTitle').value:'',
+      'Specific Location':$('cSpecLoc')?$('cSpecLoc').value:'',
+      'Sub Type':$('cSub')?$('cSub').value:'',
+      'Potential Severity':$('cSev')?$('cSev').value:'',
+      'Investigation Level':$('cInvLevel')?$('cInvLevel').value:'',
+      'Person Type':$('cPerson')?$('cPerson').value:'',
+      'Investigation':$('cInv')?$('cInv').value:'',
+      'Assigned To':$('cAssign')?$('cAssign').value:'',
+      'RIDDOR':$('cRid')?$('cRid').value:(r['RIDDOR']||''),
+      'RIDDOR Date':$('cRidDate')?$('cRidDate').value:'',
+      'LTI':$('cLti')?$('cLti').value:(r['LTI']||''),
+      'Lost Days':($('cLost')&&$('cLti')&&$('cLti').value==='Yes')?$('cLost').value:'',
+      'Actions Taken':$('cActions')?$('cActions').value:'',
+      'Corrective Action':$('cCorr')?$('cCorr').value:''
+    };
     btn.disabled=true;btn.textContent='Saving...';
     google.script.run.withSuccessHandler(function(res){
       btn.disabled=false;btn.textContent='Save';
