@@ -1,10 +1,7 @@
 /**
- * Backend for the Incident Log — a line-for-line port of the Apps Script Code.gs
- * (getData / getPhoto / saveCloseOut) onto the Google Sheets + Drive REST APIs,
- * using the signed-in manager's own Google token instead of "Execute as: Me".
- *
- * On Azure, replace these three functions with calls to your own API; the page
- * (index.html) and gas-shim.js do not need to change.
+ * Backend for the Incident Log — port of Apps Script Code.gs
+ * (getData / getPhoto / saveCloseOut) onto Sheets + Drive REST APIs.
+ * On Azure, replace these three functions with your own API.
  */
 import { CONFIG } from "./config.js";
 import { getToken, clearToken, getUserEmail } from "./google.js";
@@ -14,7 +11,6 @@ const DRIVE = "https://www.googleapis.com/drive/v3/files/";
 const NO_ACCESS_HTML =
   '<div style="font:18px sans-serif;padding:48px 20px;text-align:center">You do not have access to the incident log.<br>Please speak to Simon Askew.</div>';
 
-// ---------- access (Code.gs: me_ / isManager_ / need_) ----------
 let accessPromise = null;
 function need() {
   if (!accessPromise) {
@@ -23,10 +19,9 @@ function need() {
       const me = await getUserEmail();
       const ok = !!me && CONFIG.managers.some((m) => m.toLowerCase() === me);
       if (!ok) {
-        // same page doGet() served to non-managers
         document.title = "Incident Log";
         document.body.innerHTML = NO_ACCESS_HTML;
-        return new Promise(function () {}); // never resolves: nothing else may run
+        return new Promise(function () {});
       }
       return me;
     })().catch(function (e) {
@@ -37,13 +32,12 @@ function need() {
   return accessPromise;
 }
 
-// ---------- Google API helpers ----------
 async function gfetch(url, init, retry) {
   const token = await getToken();
   const headers = Object.assign({}, init && init.headers, { Authorization: "Bearer " + token });
   const res = await fetch(url, Object.assign({}, init, { headers: headers }));
   if (res.status === 401 && retry !== false) {
-    clearToken(); // expired: ask the person to sign in again, then retry once
+    clearToken();
     return gfetch(url, init, false);
   }
   return res;
@@ -85,20 +79,30 @@ function colLetter(i) {
   return s;
 }
 
-// Sheets returns date cells as serial numbers; Apps Script returned Date objects
-// that Code.gs formatted as yyyy-MM-dd (yyyy-MM-dd HH:mm for "Reported").
 const pad = (n) => ("0" + n).slice(-2);
 function fmtSerial(s, withTime) {
   const ms = withTime
     ? Math.round(((s - 25569) * 864e5) / 6e4) * 6e4
     : Math.floor(s - 25569) * 864e5;
-  const d = new Date(ms); // read with UTC getters: serial is already sheet wall-clock time
+  const d = new Date(ms);
   const day = d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate());
   return withTime ? day + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) : day;
 }
-const DATE_COLS = { Date: false, "Closed Date": false, Reported: true };
+const DATE_COLS = { Date: false, "Closed Date": false, Reported: true, "RIDDOR Date": false };
 
-// ---------- getData ----------
+function clean(v, max) {
+  let s = String(v == null ? "" : v)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .trim()
+    .slice(0, max);
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  return s;
+}
+function todaySerial() {
+  const n = new Date();
+  return Math.floor((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) - Date.UTC(1899, 11, 30)) / 864e5);
+}
+
 export async function getData() {
   const me = await need();
   const v = await readSheet();
@@ -124,51 +128,13 @@ export async function getData() {
   return { rows: rows, me: me };
 }
 
-// ---------- getPhoto ----------
-function blobToDataUrl(blob, type) {
-  return new Promise(function (resolve, reject) {
-    const fr = new FileReader();
-    fr.onload = function () {
-      const s = String(fr.result);
-      resolve(type && s.indexOf("data:;") === 0 ? "data:" + type + s.slice(5) : s);
-    };
-    fr.onerror = function () { reject(new Error("Could not read photo")); };
-    fr.readAsDataURL(blob);
-  });
-}
 export async function getPhoto(id, full) {
   await need();
-  id = String(id);
-  const meta = await gjson(DRIVE + encodeURIComponent(id) + "?fields=mimeType,thumbnailLink&supportsAllDrives=true");
-  let blob = null;
-  if (!full && meta.thumbnailLink) {
-    try {
-      const t = await fetch(meta.thumbnailLink.replace(/=s\d+$/, "=s400"));
-      if (t.ok) blob = await t.blob();
-    } catch (_) { blob = null; }
-  }
-  if (!blob) {
-    const res = await gfetch(DRIVE + encodeURIComponent(id) + "?alt=media&supportsAllDrives=true");
-    if (!res.ok) throw new Error("Could not load photo (" + res.status + ")");
-    blob = await res.blob();
-  }
-  const type = String(blob.type || meta.mimeType || "image/jpeg");
-  if (type.indexOf("image/") !== 0) throw new Error("Not an image (" + type + ")");
-  return blobToDataUrl(blob, type);
-}
-
-// ---------- saveCloseOut ----------
-function clean(v, max) {
-  let s = String(v == null ? "" : v)
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
-    .trim()
-    .slice(0, max);
-  if (/^[=+\-@]/.test(s)) s = "'" + s;
-  return s;
-}
-function todaySerial() {
-  const n = new Date();
-  return Math.floor((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) - Date.UTC(1899, 11, 30)) / 864e5);
+  const fields = full ? "thumbnailLink,webContentLink" : "thumbnailLink";
+  const j = await gjson(DRIVE + encodeURIComponent(id) + "?fields=" + fields + "&supportsAllDrives=true");
+  if (full && j.webContentLink) return j.webContentLink;
+  if (j.thumbnailLink) return j.thumbnailLink.replace(/=s\d+$/, full ? "=s1200" : "=s400");
+  throw new Error("Photo not available");
 }
 
 export async function saveCloseOut(ref, f) {
@@ -184,19 +150,24 @@ export async function saveCloseOut(ref, f) {
   if (rowIdx < 0) return { ok: false, error: "Incident not found." };
 
   const out = {};
-  EDITABLE.forEach(function (k) {
-    out[k] = clean(f[k], k === "Actions Taken" || k === "Corrective Action" ? 2000 : 200);
+  const present = EDITABLE.filter(function (k) { return h.indexOf(k) >= 0; });
+  const longText = { "Actions Taken": 1, "Corrective Action": 1, Title: 1 };
+  present.forEach(function (k) {
+    out[k] = clean(f[k], longText[k] ? 2000 : 200);
   });
-  if (["Open", "Closed"].indexOf(out["Status"]) < 0) return { ok: false, error: "Please choose a status." };
-  if (["", "Yes", "No"].indexOf(out["RIDDOR"]) < 0 || ["", "Yes", "No"].indexOf(out["LTI"]) < 0)
-    return { ok: false, error: "Please check RIDDOR / LTI." };
-  if (out["Lost Days"] !== "") {
+  if (out["Status"] != null && ["Open", "Closed"].indexOf(out["Status"]) < 0)
+    return { ok: false, error: "Please choose a status." };
+  const RIDDOR_OK = ["", "Yes", "No", "Not assessed", "Not reportable", "Potentially reportable", "Reported"];
+  if (out["RIDDOR"] != null && RIDDOR_OK.indexOf(out["RIDDOR"]) < 0)
+    return { ok: false, error: "Please check RIDDOR status." };
+  if (out["LTI"] != null && ["", "Yes", "No"].indexOf(out["LTI"]) < 0)
+    return { ok: false, error: "Please check LTI." };
+  if (out["Lost Days"] != null && out["Lost Days"] !== "") {
     const n = Number(out["Lost Days"]);
     if (isNaN(n) || n < 0 || n > 3650) return { ok: false, error: "Lost days must be a number." };
     out["Lost Days"] = n;
   }
-
-  EDITABLE.concat(["Closed Date", "Updated By"]).forEach(function (k) {
+  ["Closed Date", "Updated By"].forEach(function (k) {
     if (h.indexOf(k) < 0) throw new Error("Column not found: " + k);
   });
 
@@ -204,8 +175,7 @@ export async function saveCloseOut(ref, f) {
   const r = rowIdx + 1;
   const cell = (k) => tabRef(colLetter(h.indexOf(k)) + r);
 
-  const data = EDITABLE.map(function (k) { return { range: cell(k), values: [[out[k]]] }; });
-  const closing = out["Status"] === "Closed" && !wasClosed;
+  const data = present.map(function (k) { return { range: cell(k), values: [[out[k]]] }; });
   if (out["Status"] === "Open") data.push({ range: cell("Closed Date"), values: [[""]] });
   data.push({ range: cell("Updated By"), values: [[me]] });
 
@@ -215,32 +185,13 @@ export async function saveCloseOut(ref, f) {
     body: JSON.stringify({ valueInputOption: "USER_ENTERED", data: data }),
   });
 
-  if (closing) {
-    const meta = await gjson(SHEETS + CONFIG.logSheetId + "?fields=sheets.properties(sheetId,title)");
-    const sh = (meta.sheets || []).filter(function (s) { return s.properties.title === CONFIG.sheetName; })[0];
-    if (!sh) throw new Error("Incidents tab not found");
-    await gjson(SHEETS + CONFIG.logSheetId + ":batchUpdate", {
+  if (out["Status"] === "Closed" && !wasClosed) {
+    await gjson(SHEETS + CONFIG.logSheetId + "/values:batchUpdate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        requests: [
-          {
-            updateCells: {
-              start: { sheetId: sh.properties.sheetId, rowIndex: rowIdx, columnIndex: h.indexOf("Closed Date") },
-              rows: [
-                {
-                  values: [
-                    {
-                      userEnteredValue: { numberValue: todaySerial() },
-                      userEnteredFormat: { numberFormat: { type: "DATE", pattern: "dd/mm/yyyy" } },
-                    },
-                  ],
-                },
-              ],
-              fields: "userEnteredValue,userEnteredFormat.numberFormat",
-            },
-          },
-        ],
+        valueInputOption: "USER_ENTERED",
+        data: [{ range: cell("Closed Date"), values: [[new Date().toISOString().slice(0, 10)]] }],
       }),
     });
   }
