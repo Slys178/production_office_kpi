@@ -7,10 +7,24 @@ export const CONFIG = {
   sheetName: "Incidents",
   managers: ["simon.askew@staircraftgroup.com"], // add more managers here later
 
-  // Columns a manager may change from the close-out form
+  // Columns a manager may change from the case form (must exist as sheet headers).
+  // Phase 1 = Corin investigation fields that sit on the LOG, not the shop-floor app.
   editable: [
-    "Status", "Actions Taken", "Investigation", "Assigned To",
-    "RIDDOR", "LTI", "Lost Days", "Corrective Action",
+    "Status",
+    "Title",
+    "Specific Location",
+    "Sub Type",
+    "Potential Severity",
+    "Investigation Level",
+    "Person Type",
+    "Investigation",
+    "Assigned To",
+    "RIDDOR",
+    "RIDDOR Date",
+    "LTI",
+    "Lost Days",
+    "Actions Taken",
+    "Corrective Action",
   ],
 
   // Google OAuth client (token flow). Replaces Apps Script's "Execute as: Me".
