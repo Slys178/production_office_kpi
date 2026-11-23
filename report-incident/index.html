@@ -32,7 +32,6 @@
       padding: 10px 16px;
       border-bottom: 1px solid var(--line);
     }
-
     .logo img {
       display: block;
       margin: 0 auto;
@@ -40,7 +39,6 @@
       width: 100%;
       height: auto;
     }
-    
     header {
       background: var(--ink);
       color: #fff;
@@ -246,19 +244,9 @@
       cursor: pointer;
     }
     .hide { display: none; }
-
     .bp { cursor: pointer; transition: fill .15s; }
     .bp:hover { fill: #a8c8d8; }
     .bp.selected { fill: #F2B100; }
-    .bp[data-part="Left Eye"],
-    .bp[data-part="Right Eye"],
-    .bp[data-part="Nose"],
-    .bp[data-part="Mouth"],
-    .bp[data-part="Left Ear"],
-    .bp[data-part="Right Ear"] {
-      fill: #b8d4e0;
-      stroke-width: 2;
-    }
     .part-tag {
       background: var(--ink);
       color: #fff;
@@ -287,14 +275,6 @@
       text-align: center;
       margin: 8px 0 12px;
     }
-    #firstAidBox {
-      background: #fff8e6;
-      border-left: 6px solid var(--amber);
-      border-radius: 8px;
-      padding: 12px 14px;
-      margin: 10px 0 6px;
-    }
-
     .photo-area {
       border: 2px dashed var(--line);
       border-radius: 12px;
@@ -352,7 +332,6 @@
       color: var(--muted);
       margin-top: 8px;
     }
-
 #photoConfirm {
   position: fixed;
   inset: 0;
@@ -432,6 +411,9 @@
         <label for="site">Site</label>
         <select id="site" required>
           <option value="">Choose site</option>
+          <option value="Bayton Road">Bayton Road</option>
+          <option value="Ansty">Ansty</option>
+          <option value="Ibstock Road">Ibstock Road</option>
         </select>
         <div id="deptBox" class="hide">
           <label for="department">Site Department</label>
@@ -488,45 +470,58 @@
           <label for="injuryOther">Please describe the injury</label>
           <input id="injuryOther" maxlength="100" autocomplete="off">
         </div>
-
-        <label>Body part(s) <span class="hint">tap the diagram – you can select more than one</span></label>
+        <label>Body part(s) <span class="hint">tap the diagram</span></label>
         <div id="bodyMapWrap">
-          <svg id="bodyMap" viewBox="0 0 200 430" width="180" style="max-width:100%;height:auto;touch-action:manipulation;">
-            <ellipse class="bp" data-part="Head" cx="100" cy="42" rx="32" ry="38" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Left Eye" cx="88" cy="36" rx="7" ry="5" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
-            <ellipse class="bp" data-part="Right Eye" cx="112" cy="36" rx="7" ry="5" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
-            <ellipse class="bp" data-part="Nose" cx="100" cy="48" rx="5" ry="7" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
-            <ellipse class="bp" data-part="Mouth" cx="100" cy="62" rx="10" ry="5" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
-            <ellipse class="bp" data-part="Left Ear" cx="68" cy="42" rx="6" ry="10" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
-            <ellipse class="bp" data-part="Right Ear" cx="132" cy="42" rx="6" ry="10" fill="#b8d4e0" stroke="#14232B" stroke-width="1.5"/>
-            <rect class="bp" data-part="Neck" x="88" y="78" width="24" height="22" rx="4" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Right Shoulder" d="M68,100 Q50,105 42,130 L58,145 Q70,120 85,115 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Left Shoulder" d="M132,100 Q150,105 158,130 L142,145 Q130,120 115,115 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <rect class="bp" data-part="Chest" x="70" y="100" width="60" height="55" rx="6" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <rect class="bp" data-part="Abdomen" x="72" y="155" width="56" height="50" rx="6" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Right Upper Arm" d="M42,130 L34,175 L50,180 L58,145 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Right Lower Arm" d="M34,175 L26,215 L42,222 L50,180 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Left Upper Arm" d="M158,130 L166,175 L150,180 L142,145 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Left Lower Arm" d="M166,175 L174,215 L158,222 L150,180 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Right Hand" cx="32" cy="235" rx="14" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Right Fingers" cx="28" cy="252" rx="12" ry="10" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Left Hand" cx="168" cy="235" rx="14" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Left Fingers" cx="172" cy="252" rx="12" ry="10" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Right Upper Leg" d="M78,205 L72,270 L95,275 L100,210 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Right Lower Leg" d="M72,270 L68,330 L90,335 L95,275 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Left Upper Leg" d="M122,205 L128,270 L105,275 L100,210 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <path class="bp" data-part="Left Lower Leg" d="M128,270 L132,330 L110,335 L105,275 Z" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Right Foot" cx="78" cy="355" rx="22" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-            <ellipse class="bp" data-part="Left Foot" cx="122" cy="355" rx="22" ry="14" fill="#d4e4ec" stroke="#14232B" stroke-width="2"/>
-          </svg>
-          <div id="selectedParts" style="min-height:28px;margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
-          <p class="hint" style="margin:8px 0 0;">Tap a body part to select / deselect</p>
+          <p class="hint">Body map loads with full form</p>
+          <div id="selectedParts"></div>
         </div>
         <input type="hidden" id="bodyPart" value="">
       </fieldset>
 
-      <!-- PLACEHOLDER_REST_OF_FORM -->
+      <fieldset class="step hide" id="st-treat">
+        <legend>Treatment</legend>
+        <label>First aid given?</label>
+        <div class="yn">
+          <div><input type="radio" name="firstAid" id="a1" value="Yes"><label for="a1">Yes</label></div>
+          <div><input type="radio" name="firstAid" id="a0" value="No"><label for="a0">No</label></div>
+        </div>
+        <div id="faWrap" class="hide">
+          <label for="firstAidBy">Who gave first aid?</label>
+          <input id="firstAidBy" maxlength="80">
+          <label for="firstAidWhat">What did they do?</label>
+          <input id="firstAidWhat" maxlength="200">
+        </div>
+        <label>Went to hospital?</label>
+        <div class="yn">
+          <div><input type="radio" name="hospital" id="h1" value="Yes"><label for="h1">Yes</label></div>
+          <div><input type="radio" name="hospital" id="h0" value="No"><label for="h0">No</label></div>
+        </div>
+        <label>Ambulance called?</label>
+        <div class="yn">
+          <div><input type="radio" name="ambulance" id="am1" value="Yes"><label for="am1">Yes</label></div>
+          <div><input type="radio" name="ambulance" id="am0" value="No"><label for="am0">No</label></div>
+        </div>
+      </fieldset>
 
+      <fieldset class="step hide" id="st-what">
+        <legend>What happened</legend>
+        <label for="description">Describe it <span class="hint">what, where, how – keep it short</span></label>
+        <textarea id="description" maxlength="400" required placeholder="Example: Forklift nearly hit a pedestrian when reversing out of bay 3"></textarea>
+        <div class="photo-count" id="descCount">0 / 400</div>
+        <label>Photos <span class="hint">optional, up to 4</span></label>
+        <div class="photo-area">
+          <button type="button" class="photo-btn" onclick="document.getElementById('photoInput').click()">Add photo</button>
+          <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+          <div class="photo-previews" id="photoPreviews"></div>
+          <div class="photo-count" id="photoCount">0 of 4 photos</div>
+        </div>
+        <input type="text" id="website" class="hp" tabindex="-1" autocomplete="off">
+      </fieldset>
+
+      <div class="nav">
+        <button class="ghost" id="bBack" type="button" onclick="prev()">Back</button>
+        <button class="send" id="btn" type="submit">Next</button>
+      </div>
     </form>
   </section>
 
@@ -560,34 +555,20 @@
   var anyoneHurt = '';
 
   var $ = function(i) { return document.getElementById(i); };
-  function val(i) { return $(i).value.trim(); }
+  function val(i) { var e=$(i); return e ? e.value.trim() : ''; }
   function radio(n) {
     var r = document.querySelector('input[name=' + n + ']:checked');
     return r ? r.value : '';
   }
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
-  // Load factories (sites) from report-config.js via the gas shim
-  (function loadSites() {
-    function fill(c) {
-      DEPTS = (c && c.departments) || (window.REPORT_CONFIG && window.REPORT_CONFIG.departments) || {};
-      var sites = (c && c.sites) || (window.REPORT_CONFIG && window.REPORT_CONFIG.sites) || [];
-      var sel = $('site');
-      if (!sel) return;
-      while (sel.options.length > 1) sel.remove(1);
-      sites.forEach(function(s) {
-        var o = document.createElement('option');
-        o.textContent = s; o.value = s;
-        sel.appendChild(o);
-      });
-    }
-    if (window.google && google.script && google.script.run) {
-      google.script.run.withSuccessHandler(fill).withFailureHandler(function() {
-        fill(window.REPORT_CONFIG || {});
-      }).getConfig();
-    } else {
-      fill(window.REPORT_CONFIG || {});
-    }
+  // Sites + departments from report-config.js
+  DEPTS = (window.REPORT_CONFIG && window.REPORT_CONFIG.departments) || {};
+  (function() {
+    var sites = (window.REPORT_CONFIG && window.REPORT_CONFIG.sites) || ['Bayton Road','Ansty','Ibstock Road'];
+    var sel = $('site');
+    if (!sel) return;
+    // options already in HTML; ensure departments wired
   })();
 
   if ($('site')) {
@@ -604,6 +585,65 @@
     });
   }
 
+  if ($('injuryType')) {
+    $('injuryType').addEventListener('change', function() {
+      var o = (this.value === 'Other');
+      if ($('injOtherBox')) $('injOtherBox').classList.toggle('hide', !o);
+    });
+  }
+
+  document.querySelectorAll('input[name=firstAid]').forEach(function(r) {
+    r.addEventListener('change', function() {
+      if ($('faWrap')) $('faWrap').classList.toggle('hide', radio('firstAid') !== 'Yes');
+    });
+  });
+
+  if ($('description')) {
+    $('description').addEventListener('input', function() {
+      if ($('descCount')) $('descCount').textContent = this.value.length + ' / 400';
+    });
+  }
+
+  if ($('photoInput')) {
+    $('photoInput').addEventListener('change', function(e) {
+      var files = Array.from(e.target.files || []);
+      files.forEach(function(file) {
+        if (photos.length >= 4) return;
+        if (!file.type.startsWith('image/')) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          var dataUrl = ev.target.result;
+          photos.push({
+            name: file.name || ('photo_' + Date.now() + '.jpg'),
+            dataUrl: dataUrl,
+            base64: dataUrl.split(',')[1],
+            mime: file.type
+          });
+          renderPhotos();
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    });
+  }
+
+  function renderPhotos() {
+    var box = $('photoPreviews');
+    if (!box) return;
+    box.innerHTML = '';
+    photos.forEach(function(p, i) {
+      var div = document.createElement('div');
+      div.className = 'photo-thumb';
+      div.innerHTML = '<img src="' + p.dataUrl + '" alt="Photo"><button type="button" aria-label="Remove">&times;</button>';
+      div.querySelector('button').onclick = function() {
+        photos.splice(i, 1);
+        renderPhotos();
+      };
+      box.appendChild(div);
+    });
+    if ($('photoCount')) $('photoCount').textContent = photos.length + ' of 4 photos';
+  }
+
   function choose(t) {
     TYPE = t;
     anyoneHurt = '';
@@ -616,8 +656,10 @@
     $('s1').classList.add('hide');
     $('s2').classList.remove('hide');
     var bn = $('banner');
-    bn.className = 'banner' + (t === 'Incident' ? ' is-inj' : '');
-    bn.textContent = 'Reporting: ' + t;
+    if (bn) {
+      bn.className = 'banner' + (t === 'Incident' ? ' is-inj' : '');
+      bn.textContent = 'Reporting: ' + t;
+    }
     var n = new Date();
     if ($('date')) {
       $('date').value = n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
@@ -625,12 +667,35 @@
     }
     if ($('time')) $('time').value = pad(n.getHours()) + ':' + pad(n.getMinutes());
     LOADED = Date.now();
-    if (typeof render === 'function') render(true);
+    render(true);
   }
 
-  function onSubmit(ev) {
-    if (ev && ev.preventDefault) ev.preventDefault();
-    return false;
+  function rebuildIncidentSteps() {
+    anyoneHurt = radio('anyoneHurt');
+    if (anyoneHurt === 'Yes') {
+      STEPS = ['st-where', 'st-hurt', 'st-person', 'st-treat', 'st-about', 'st-what'];
+    } else {
+      STEPS = ['st-where', 'st-hurt', 'st-about', 'st-what'];
+    }
+  }
+
+  function render(toTop) {
+    ['st-where', 'st-hurt', 'st-about', 'st-person', 'st-treat', 'st-what'].forEach(function(id) {
+      var el = $(id);
+      if (el) el.classList.add('hide');
+    });
+    if (STEPS[IDX] && $(STEPS[IDX])) $(STEPS[IDX]).classList.remove('hide');
+    var total = STEPS.length + 1, cur = IDX + 2;
+    if ($('ptext')) $('ptext').textContent = 'Step ' + cur + ' of ' + total;
+    if ($('pfill')) $('pfill').style.width = Math.round(cur / total * 100) + '%';
+    if ($('ptrack')) {
+      $('ptrack').setAttribute('aria-valuenow', cur);
+      $('ptrack').setAttribute('aria-valuemax', total);
+    }
+    var last = (IDX === STEPS.length - 1);
+    if ($('btn')) $('btn').textContent = last ? 'Send report' : 'Next';
+    if ($('err')) $('err').classList.add('hide');
+    if (toTop) { window.scrollTo(0, 0); if ($('ptext')) $('ptext').focus(); }
   }
 
   function prev() {
@@ -641,24 +706,136 @@
       return;
     }
     IDX--;
-    if (typeof render === 'function') render(true);
+    render(true);
+  }
+
+  function showErr(m) {
+    var e = $('err');
+    if (!e) return;
+    e.textContent = m;
+    e.classList.remove('hide');
+  }
+
+  var CHECK = {
+    'st-where': function() {
+      if (!val('site')) return 'Please choose the site.';
+      if ($('deptBox') && !$('deptBox').classList.contains('hide') && !val('department')) return 'Please choose the site department.';
+      if (!val('date')) return 'Please enter the date.';
+      if (!val('time')) return 'Please enter the time.';
+    },
+    'st-hurt': function() {
+      if (!radio('anyoneHurt')) return 'Please say whether anyone was hurt.';
+    },
+    'st-about': function() {
+      if (!val('name')) return 'Please enter your name.';
+    },
+    'st-person': function() {
+      if (!val('injuredName')) return 'Please enter the injured person\'s name.';
+    },
+    'st-treat': function() {
+      if (!radio('firstAid')) return 'Please say if first aid was given.';
+    },
+    'st-what': function() {
+      if (!val('description')) return 'Please describe what happened.';
+    }
+  };
+
+  function onSubmit(ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    var check = CHECK[STEPS[IDX]];
+    var msg = check && check();
+    if (msg) { showErr(msg); return false; }
+
+    if (STEPS[IDX] === 'st-hurt') {
+      rebuildIncidentSteps();
+      IDX = STEPS.indexOf('st-hurt') + 1;
+      render(true);
+      return false;
+    }
+
+    if (IDX < STEPS.length - 1) {
+      IDX++;
+      render(true);
+      return false;
+    }
+
+    // Last step – send
+    if (photos.length === 0 && $('photoConfirm')) {
+      $('photoConfirm').classList.add('show');
+      return false;
+    }
+    return send();
   }
 
   function closePhotoConfirm(proceed) {
-    var el = $('photoConfirm');
-    if (el) el.classList.remove('show');
+    if ($('photoConfirm')) $('photoConfirm').classList.remove('show');
+    if (proceed) send();
   }
 
-  function render(toTop) {
-    ['st-where', 'st-hurt', 'st-about', 'st-person', 'st-treat', 'st-what'].forEach(function(id) {
-      var el = $(id);
-      if (el) el.classList.add('hide');
-    });
-    if (STEPS[IDX] && $(STEPS[IDX])) $(STEPS[IDX]).classList.remove('hide');
-    if (toTop) window.scrollTo(0, 0);
+  function send() {
+    var hurt = (TYPE === 'Incident' && anyoneHurt === 'Yes');
+    var p = {
+      type: TYPE,
+      site: val('site'),
+      department: val('department'),
+      date: val('date'),
+      time: val('time'),
+      description: val('description'),
+      name: val('name'),
+      website: val('website'),
+      elapsed: Date.now() - LOADED,
+      anyoneHurt: TYPE === 'Incident' ? anyoneHurt : '',
+      photos: photos.map(function(ph) {
+        return { name: ph.name, base64: ph.base64, mime: ph.mime };
+      })
+    };
+    if (hurt) {
+      p.injuredName = val('injuredName');
+      p.lineManager = val('lineManager');
+      p.injuryType = val('injuryType');
+      p.injuryOther = val('injuryOther');
+      p.bodyPart = val('bodyPart');
+      p.firstAid = radio('firstAid');
+      p.firstAidBy = val('firstAidBy');
+      p.firstAidWhat = val('firstAidWhat');
+      p.hospital = radio('hospital');
+      p.ambulance = radio('ambulance');
+    }
+
+    var b = $('btn'), bk = $('bBack');
+    if (b) { b.disabled = true; b.textContent = 'Sending...'; }
+    if (bk) bk.disabled = true;
+
+    function reset(m) {
+      if (b) { b.disabled = false; b.textContent = 'Send report'; }
+      if (bk) bk.disabled = false;
+      showErr(m || 'Could not send. Please try again.');
+    }
+
+    if (!window.google || !google.script || !google.script.run) {
+      reset('Reporting is not connected yet.');
+      return false;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(r) {
+        if (r && r.ok) {
+          $('s2').classList.add('hide');
+          $('s3').classList.remove('hide');
+          if ($('ref')) $('ref').textContent = '#' + r.ref;
+          window.scrollTo(0, 0);
+        } else {
+          reset((r && r.error) || 'Could not send. Please try again.');
+        }
+      })
+      .withFailureHandler(function() {
+        reset('Could not send. Check your signal and try again.');
+      })
+      .submitReport(p);
+
+    return false;
   }
 
-  // Expose handlers used by inline onclick/onsubmit
   window.choose = choose;
   window.onSubmit = onSubmit;
   window.prev = prev;
