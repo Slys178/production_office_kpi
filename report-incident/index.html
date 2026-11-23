@@ -567,6 +567,43 @@
   }
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
+  // Load factories (sites) from report-config.js via the gas shim
+  (function loadSites() {
+    function fill(c) {
+      DEPTS = (c && c.departments) || (window.REPORT_CONFIG && window.REPORT_CONFIG.departments) || {};
+      var sites = (c && c.sites) || (window.REPORT_CONFIG && window.REPORT_CONFIG.sites) || [];
+      var sel = $('site');
+      if (!sel) return;
+      while (sel.options.length > 1) sel.remove(1);
+      sites.forEach(function(s) {
+        var o = document.createElement('option');
+        o.textContent = s; o.value = s;
+        sel.appendChild(o);
+      });
+    }
+    if (window.google && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(fill).withFailureHandler(function() {
+        fill(window.REPORT_CONFIG || {});
+      }).getConfig();
+    } else {
+      fill(window.REPORT_CONFIG || {});
+    }
+  })();
+
+  if ($('site')) {
+    $('site').addEventListener('change', function() {
+      var list = DEPTS[this.value] || [], d = $('department');
+      if (!d) return;
+      d.innerHTML = '<option value="">Choose department</option>';
+      list.forEach(function(s) {
+        var o = document.createElement('option');
+        o.textContent = s; o.value = s;
+        d.appendChild(o);
+      });
+      if ($('deptBox')) $('deptBox').classList.toggle('hide', !list.length);
+    });
+  }
+
   function choose(t) {
     TYPE = t;
     anyoneHurt = '';
