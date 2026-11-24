@@ -12,7 +12,7 @@ export const CONFIG = {
     },
     holidays: {
       id: "1Mnbpg062XWXI3aUIakErWTb94BgZ-wwUSLtNoWNXpDw",  // Staircraft Ops App – LIVE
-      gid: "1374280210",  // Office Holidays tab
+      gid: "1374280210",  // Production Office Holidays 2026
     },
     errors: {
       id: "1D5UT_gjWHN3LHHa0E1RfaWHuHB6badAVk80tB5tawns",
@@ -25,9 +25,9 @@ export const CONFIG = {
     secondFix: {
       id: "1Mnbpg062XWXI3aUIakErWTb94BgZ-wwUSLtNoWNXpDw",  // Staircraft Ops App – LIVE
       gidDaily: "1668712970",  // 2nd Fix Daily Figures
-      rosterTab: "Roster",  // must match tab name exactly — change if you renamed it
+      rosterTab: "2nd Fix Roster",
       // Managers mark In/Half/Out in the app; stored here so the TV sees the same state
-      attendanceTab: "AppInToday",  // must match tab name exactly — change if you renamed it
+      attendanceTab: "2nd Fix AppInToday",
     },
     incidents: {
       id: "1DUpbMPbQFDFMSEZ4OiJDqy3mOd1WDAOZJgFyBQfH6B8",
