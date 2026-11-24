@@ -21,7 +21,7 @@ const ATTEND_TAB = (CONFIG.sheets && CONFIG.sheets.secondFix && CONFIG.sheets.se
 function sheetRange(tabName, a1) {
   var needQuote = /[^A-Za-z0-9_]/.test(tabName);
   var sheet = needQuote ? "'" + String(tabName).replace(/'/g, "''") + "'" : tabName;
-  return sheet + '!' + a1;
+  return sheet + "!" + a1;
 }
 
 function gvizUrl(sheetId, gid, tabName) {
@@ -46,43 +46,4 @@ async function fetchGviz(sheetId, gid, tabName) {
       return '';
     });
   });
-}
-
-function parseNum(s) {
-  if (s == null || s === '') return 0;
-  const n = parseFloat(String(s).replace(/[,%m\s]/gi, ''));
-  return isNaN(n) ? 0 : n;
-}
-
-function normName(s) {
-  return String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
-}
-
-function esc(t) {
-  return String(t == null ? '' : t)
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"');
-}
-
-function shiftDateISO() {
-  var now = new Date();
-  var d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (now.getHours() < 6 || (now.getHours() === 6 && now.getMinutes() < 30)) {
-    d.setDate(d.getDate() - 1);
-  }
-  var y = d.getFullYear();
-  var m = String(d.getMonth() + 1).padStart(2, '0');
-  var day = String(d.getDate()).padStart(2, '0');
-  return y + '-' + m + '-' + day;
-}
-
-function isManager() {
-  var role = (localStorage.getItem('userRole') || '').toUpperCase();
-  var roleText = (localStorage.getItem('userRoleText') || '').toUpperCase();
-  var blob = role + ' ' + roleText;
-  if (/ADMIN|MANAGER|SUPER|WRITE|EDIT|BOTH/.test(blob)) return true;
-  if (/VIEW|TV|READ\s*ONLY|READONLY/.test(blob)) return false;
-  return false;
 }
