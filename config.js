@@ -23,11 +23,11 @@ export const CONFIG = {
       gid: "0",
     },
     secondFix: {
-      id: "1Bm_7Zeo2d2ZG3oDM-9F6fZ5X3QWvWmgkU4DumHfusb4",
-      gidDaily: "0",
-      rosterTab: "Roster",
+      id: "1Mnbpg062XWXI3aUIakErWTb94BgZ-wwUSLtNoWNXpDw",  // Staircraft Ops App – LIVE
+      gidDaily: "1668712970",  // 2nd Fix Daily Figures
+      rosterTab: "Roster",  // must match tab name exactly — change if you renamed it
       // Managers mark In/Half/Out in the app; stored here so the TV sees the same state
-      attendanceTab: "AppInToday",
+      attendanceTab: "AppInToday",  // must match tab name exactly — change if you renamed it
     },
     incidents: {
       id: "1DUpbMPbQFDFMSEZ4OiJDqy3mOd1WDAOZJgFyBQfH6B8",
