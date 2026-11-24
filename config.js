@@ -11,8 +11,8 @@ export const CONFIG = {
       gid: "1766737074",
     },
     holidays: {
-      id: "1NYHtbL_-mepijGGXT7LRetqhEttLyaMYzOcKHzPzvB8",
-      gid: "1781913538",
+      id: "1Mnbpg062XWXI3aUIakErWTb94BgZ-wwUSLtNoWNXpDw",  // Staircraft Ops App – LIVE
+      gid: "1374280210",  // Office Holidays tab
     },
     errors: {
       id: "1D5UT_gjWHN3LHHa0E1RfaWHuHB6badAVk80tB5tawns",
