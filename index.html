@@ -20,7 +20,7 @@
     padding:10px 14px;
     background:var(--section-bg, rgba(137,147,171,0.08));
     border-radius:10px;
-    line-height:1.4;
+    line-height:1.5;
   }
 </style>
 <script type="importmap">
@@ -75,9 +75,14 @@
   </div>
   <div class="tile-grid" style="max-width:720px;margin:0 auto;">
     <div class="nav-tile" id="tileAreaOffice" style="min-height:140px;">
-      <div class="tile-icon">🏭</div>
-      <div class="tile-label">1ST FIX / PRODUCTION OFFICE</div>
+      <div class="tile-icon">📊</div>
+      <div class="tile-label">PRODUCTION OFFICE</div>
       <div class="tile-sub">Office KPI · Loads · Holidays · Forecast</div>
+    </div>
+    <div class="nav-tile" id="tileArea1stFix" style="min-height:140px;">
+      <div class="tile-icon">🏭</div>
+      <div class="tile-label">1ST FIX</div>
+      <div class="tile-sub">Section dials · coming soon</div>
     </div>
     <div class="nav-tile" id="tileArea2ndFix" style="min-height:140px;">
       <div class="tile-icon">🔩</div>
@@ -272,6 +277,20 @@
   <div id="incidentsPageBody" class="page-body" style="padding:12px 16px 32px;"></div>
 </div>
 
+<div id="firstFixPage" class="page-view">
+  <div class="page-header">
+    <button class="back-btn" id="backToAreaFrom1stFix">← Areas</button>
+    <h2>🏭 1st Fix</h2>
+  </div>
+  <div class="landing-title" style="padding:40px 20px;">
+    <h1>1st Fix</h1>
+    <p style="max-width:420px;margin:12px auto;color:var(--muted);line-height:1.5;">
+      Dials and section targets for 1st Fix will appear here — same idea as 2nd Fix.
+      Nothing is connected yet; this area is ready for when the data source is set up.
+    </p>
+  </div>
+</div>
+
 <div id="secondFixPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToAreaFrom2ndFix">← Areas</button>
@@ -362,9 +381,11 @@
 
     function goAreaLanding() {
         var tileOffice = document.getElementById('tileAreaOffice');
+        var tile1st = document.getElementById('tileArea1stFix');
         var tile2nd = document.getElementById('tileArea2ndFix');
         var tileInc = document.getElementById('tileAreaIncidents');
         if (tileOffice) tileOffice.style.display = canOffice ? '' : 'none';
+        if (tile1st) tile1st.style.display = (canOffice || can2ndFix) ? '' : 'none';
         if (tile2nd) tile2nd.style.display = can2ndFix ? '' : 'none';
         if (tileInc) tileInc.style.display = '';
         showPage('areaLandingPage');
@@ -405,6 +426,16 @@
             tileAreaOffice.addEventListener('click', guardOfficeAccess(function() {
                 showPage('landingPage');
             }));
+        }
+        var tileArea1stFix = document.getElementById('tileArea1stFix');
+        if (tileArea1stFix) {
+            tileArea1stFix.addEventListener('click', function() {
+                showPage('firstFixPage');
+            });
+        }
+        var back1st = document.getElementById('backToAreaFrom1stFix');
+        if (back1st) {
+            back1st.addEventListener('click', function() { goAreaLanding(); });
         }
         if (tileArea2ndFix) {
             tileArea2ndFix.addEventListener('click', function() {
