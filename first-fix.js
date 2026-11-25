@@ -6,6 +6,7 @@
  * Strings/Winders/Posts/Treads WIP: that stage done, assembly not done.
  * Assembled bullnose WIP: bullnose done, dispatch not done.
  * Under each dial: last ticked load delivery date, load no, "X of Y" that date.
+ * Click a dial to show it full screen (for a wall monitor); it re-reads the sheet every 5 minutes.
  */
 import { CONFIG } from './config.js';
 
@@ -391,7 +392,7 @@ function statusCard(title, info) {
 function dialCard(def, value, info) {
   var band = def.band ? (' ' + def.band) : '';
   return (
-    '<div class="ff-dial-card">' +
+    '<div class="ff-dial-card ff-clickable" data-key="' + def.key + '" role="button" tabindex="0" title="Click for full screen">' +
       '<div class="ff-dial-title">' + esc(def.title) + esc(band) + '</div>' +
       '<div class="ff-dial-svg">' + gaugeSvg(value, def.greenMin, def.greenMax) + '</div>' +
       '<div class="ff-under">' +
@@ -402,10 +403,116 @@ function dialCard(def, value, info) {
   );
 }
 
+var REFRESH_MS = 5 * 60 * 1000;
+var latest = null;      // last data read from the sheet
+var latestAt = null;    // when it was read
+var zoomKey = null;     // dial currently shown full screen
+var zoomTimer = null;
+var wakeLock = null;
+
+function injectZoomStyles() {
+  if (document.getElementById('ffZoomStyles')) return;
+  var css =
+    '.ff-clickable{cursor:pointer}' +
+    '.ff-clickable:hover,.ff-clickable:focus-visible{outline:3px solid #3498db;outline-offset:-3px}' +
+    '#ffZoom{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;text-align:center;' +
+      'padding:2vh 2vw;box-sizing:border-box;background:var(--card,#fff);color:var(--text,#1a1a1a)}' +
+    '#ffZoom .ff-zoom-title{font-size:min(5vw,7vh);font-weight:700;padding:0 8vw}' +
+    '#ffZoom .ff-zoom-svg{flex:1;min-height:0;position:relative}' +
+    '#ffZoom .ff-zoom-svg svg{position:absolute;inset:0;width:100%;height:100%}' +
+    '#ffZoom .ff-zoom-under{font-size:min(3vw,4vh);line-height:1.35}' +
+    '#ffZoom .ff-zoom-updated{font-size:min(2vw,2.2vh);color:var(--muted,#8a94a6);margin-top:1vh}' +
+    '#ffZoom button{position:absolute;top:2vh;right:2vw;border:0;background:transparent;cursor:pointer;' +
+      'font-size:2rem;line-height:1;color:var(--muted,#8a94a6)}';
+  var el = document.createElement('style');
+  el.id = 'ffZoomStyles';
+  el.textContent = css;
+  document.head.appendChild(el);
+}
+
+function timeText(d) {
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function drawZoom(failed) {
+  var box = document.getElementById('ffZoom');
+  var def = DIALS.filter(function (d) { return d.key === zoomKey; })[0];
+  if (!box || !def || !latest) return;
+  var info = latest.last[def.key] || { dateStr: '—', load: '—', tickCount: '—' };
+  box.querySelector('.ff-zoom-title').textContent = def.title + ' ' + def.band;
+  box.querySelector('.ff-zoom-svg').innerHTML = gaugeSvg(latest.wip[def.key] || 0, def.greenMin, def.greenMax);
+  box.querySelector('.ff-zoom-under').innerHTML =
+    '<div>' + esc(info.dateStr) + '</div><div>' + esc(info.load) + ' · ' + esc(info.tickCount) + '</div>';
+  var note = box.querySelector('.ff-zoom-updated');
+  note.textContent = 'Updated ' + timeText(latestAt) + (failed ? ' · latest refresh failed, will retry' : '');
+  note.style.color = failed ? '#c0392b' : '';
+}
+
+function keepAwake() {
+  if (!zoomKey || !navigator.wakeLock || document.visibilityState !== 'visible') return;
+  navigator.wakeLock.request('screen').then(function (lock) {
+    if (zoomKey) wakeLock = lock; else lock.release();
+  }).catch(function () { /* the monitor's own power settings apply */ });
+}
+
+function onZoomKey(e) {
+  if (e.key === 'Escape') closeZoom();
+}
+
+function onFullscreenChange() {
+  if (!document.fullscreenElement) closeZoom();
+}
+
+function openZoom(key) {
+  if (zoomKey || !latest) return;
+  zoomKey = key;
+  injectZoomStyles();
+  var box = document.createElement('div');
+  box.id = 'ffZoom';
+  box.innerHTML =
+    '<button type="button" aria-label="Close full screen">✕</button>' +
+    '<div class="ff-zoom-title"></div><div class="ff-zoom-svg"></div>' +
+    '<div class="ff-zoom-under"></div><div class="ff-zoom-updated"></div>';
+  box.querySelector('button').addEventListener('click', closeZoom);
+  document.body.appendChild(box);
+  drawZoom();
+  document.addEventListener('keydown', onZoomKey);
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('visibilitychange', keepAwake);
+  if (box.requestFullscreen) box.requestFullscreen().catch(function () { /* overlay still fills the window */ });
+  keepAwake();
+  zoomTimer = setInterval(function () { loadFirstFix(false, true); }, REFRESH_MS);
+  loadFirstFix(false, true);
+}
+
+function closeZoom() {
+  if (!zoomKey) return;
+  zoomKey = null;
+  clearInterval(zoomTimer);
+  document.removeEventListener('keydown', onZoomKey);
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
+  document.removeEventListener('visibilitychange', keepAwake);
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+  if (document.fullscreenElement) document.exitFullscreen();
+  var box = document.getElementById('ffZoom');
+  if (box) box.remove();
+}
+
+function bindZoom(root) {
+  root.querySelectorAll('.ff-clickable').forEach(function (card) {
+    var key = card.getAttribute('data-key');
+    card.addEventListener('click', function () { openZoom(key); });
+    card.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openZoom(key); }
+    });
+  });
+}
+
 function render(payload) {
   var root = document.getElementById('firstFixBody');
   if (!root) return;
   injectStyles();
+  injectZoomStyles();
   var wip = payload.wip, last = payload.last;
   var html = DIALS.map(function (d) {
     if (d.kind === 'status') return statusCard(d.title, last[d.key] || { dateStr: '—', load: '—', tickCount: '—' });
@@ -416,16 +523,18 @@ function render(payload) {
     'Office→CNC only clears when posts, winders and strings are all ticked. Under each dial: last load completed for that stage.</p>' +
     '<div class="ff-dial-grid">' + html + '</div>' +
     (payload.source ? '<p class="ff-intro ff-source" style="opacity:.55;font-size:12px;">Source: ' + esc(payload.source) + '</p>' : '');
+  bindZoom(root);
 }
 
 var loading = false;
 
-export async function loadFirstFix() {
+/** quiet = background refresh: no "Loading" flash, and old figures stay up if it fails. */
+export async function loadFirstFix(force, quiet) {
   var root = document.getElementById('firstFixBody');
   if (!root) return;
   if (loading) return;
   loading = true;
-  root.innerHTML = '<p class="ff-intro">Loading Project Tracking…</p>';
+  if (!quiet) root.innerHTML = '<p class="ff-intro">Loading Project Tracking…</p>';
   try {
     var payload = null;
     try {
@@ -454,9 +563,13 @@ export async function loadFirstFix() {
         source: 'recalculated from 2026 tab',
       };
     }
+    latest = payload;
+    latestAt = new Date();
     render(payload);
+    drawZoom();
   } catch (e) {
     console.error(e);
+    if (quiet) { drawZoom(true); return; }
     root.innerHTML = '<p class="ff-intro" style="color:#c0392b;">Could not load Project Tracking. ' +
       esc(e && e.message ? e.message : e) + '</p>';
   } finally {
