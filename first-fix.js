@@ -1,5 +1,6 @@
 /**
  * 1st Fix WIP dials — matches Looker F1 report logic.
+ * Reads the 'Looker Source Data' tab (same cells as the Looker report); falls back to recalculating.
  *
  * Office→CNC WIP: programs completed (D) but posts+winders+strings not all done.
  * Strings/Winders/Posts/Treads WIP: that stage done, assembly not done.
@@ -24,12 +25,19 @@ const DIALS = [
   { key: 'dispatch', title: 'DISPATCH', kind: 'status' },
 ];
 
-function gvizUrl(sheetId, gid) {
+const LOOKER_TAB = (CONFIG.sheets && CONFIG.sheets.projectTracking && CONFIG.sheets.projectTracking.lookerTab)
+  || 'Looker Source Data';
+
+function gvizUrl(sheetId, gid, tabName) {
+  if (tabName) {
+    return 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json&headers=1&sheet=' +
+      encodeURIComponent(tabName);
+  }
   return 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json&gid=' + gid;
 }
 
-async function fetchGviz(sheetId, gid) {
-  const res = await fetch(gvizUrl(sheetId, gid));
+async function fetchGviz(sheetId, gid, tabName) {
+  const res = await fetch(gvizUrl(sheetId, gid, tabName));
   const text = await res.text();
   const json = JSON.parse(text.substring(47, text.length - 2));
   if (json.status === 'error') {
@@ -69,6 +77,11 @@ function findCol(labels, parts) {
   return -1;
 }
 
+function exactCol(labels, name) {
+  var up = labels.map(normHeader);
+  return up.indexOf(name);
+}
+
 function colMap(labels) {
   return {
     stairs: findCol(labels, ['NUMBER OF STAIRS']) >= 0
@@ -81,7 +94,10 @@ function colMap(labels) {
     winders: findCol(labels, ['WINDERS', 'COMPLETED']),
     strings: findCol(labels, ['STRINGS', 'COMPLETED']),
     treads: findCol(labels, ['TREADS']) >= 0 ? findCol(labels, ['TREADS']) : findCol(labels, ['RISERS']),
-    bullnose: findCol(labels, ['BULLNOSE']),
+    // Tick column is headed exactly "BULLNOSE" (not "No OF ASSEMBLED BULLNOSE")
+    bullnose: exactCol(labels, 'BULLNOSE') >= 0 ? exactCol(labels, 'BULLNOSE') : findCol(labels, ['BULLNOSE']),
+    postCount: findCol(labels, ['NO OF POSTS']),
+    winderCount: findCol(labels, ['NO OF WINDERS']),
     assembly: findCol(labels, ['IN', 'ASSEMBLY']) >= 0
       ? findCol(labels, ['IN', 'ASSEMBLY'])
       : findCol(labels, ['ASSEMBLY']),
@@ -92,6 +108,13 @@ function colMap(labels) {
 
 function stairsOf(row, cols) {
   var g = row[cols.stairs];
+  var n = typeof g === 'number' ? g : parseFloat(String(g || '').replace(/,/g, ''));
+  return (!n || isNaN(n) || n <= 0) ? 0 : n;
+}
+
+function numAt(row, idx) {
+  if (idx < 0) return 0;
+  var g = row[idx];
   var n = typeof g === 'number' ? g : parseFloat(String(g || '').replace(/,/g, ''));
   return (!n || isNaN(n) || n <= 0) ? 0 : n;
 }
@@ -153,32 +176,109 @@ function lastTickInfo(rows, cols, checkCol) {
   return { dateStr: dateStr, load: load, tickCount: totalSame > 0 ? (tickedSame + ' of ' + totalSame) : '—' };
 }
 
+/** Sum of `stairs` between the last assembly tick and the last tick of this stage. */
+function gapToAssembly(rows, cols, stageCol) {
+  if (stageCol < 0 || cols.assembly < 0) return 0;
+  var lastStage = -1, lastAsm = -1;
+  for (var i = rows.length - 1; i >= 0 && (lastStage < 0 || lastAsm < 0); i--) {
+    if (lastStage < 0 && truthy(rows[i][stageCol])) lastStage = i;
+    if (lastAsm < 0 && truthy(rows[i][cols.assembly])) lastAsm = i;
+  }
+  if (lastStage <= lastAsm) return 0;
+  var total = 0;
+  for (var j = lastAsm + 1; j <= lastStage; j++) total += stairsOf(rows[j], cols);
+  return total;
+}
+
+/**
+ * Fallback calculation (used only if the Looker Source Data tab can't be read):
+ *  Office→CNC : stairs with PROGRAMS ticked  − stairs with posts+winders+strings all ticked
+ *  Strings    : stairs with STRINGS ticked   − stairs with IN ASSEMBLY ticked
+ *  Posts      : No OF POSTS with POSTS ticked − No OF POSTS with IN ASSEMBLY ticked
+ *  Winders    : No OF WINDERS with WINDERS ticked − No OF WINDERS with IN ASSEMBLY ticked
+ *  Treads / Bullnose: stairs between the last tick of that stage and the last IN ASSEMBLY tick
+ */
 function computeWip(rows, cols) {
-  var wip = { officeCnc: 0, strings: 0, winders: 0, posts: 0, treads: 0, bullnose: 0 };
+  var office = 0, cncDone = 0;
+  var strT = 0, strA = 0, postT = 0, postA = 0, winT = 0, winA = 0;
   rows.forEach(function (row) {
     var s = stairsOf(row, cols);
-    if (!s) return;
-    var office = truthy(row[cols.office]);
     var posts = truthy(row[cols.posts]);
     var winders = truthy(row[cols.winders]);
     var strings = truthy(row[cols.strings]);
-    var treads = truthy(row[cols.treads]);
-    var bull = truthy(row[cols.bullnose]);
     var assembly = truthy(row[cols.assembly]);
-    var dispatch = truthy(row[cols.dispatch]);
-    var cncDone = posts && winders && strings;
-    if (office && !cncDone) wip.officeCnc += s;
-    if (strings && !assembly) wip.strings += s;
-    if (winders && !assembly) wip.winders += s;
-    if (posts && !assembly) wip.posts += s;
-    if (treads && !assembly) wip.treads += s;
-    if (bull && !dispatch) wip.bullnose += s;
+    if (truthy(row[cols.office])) office += s;
+    if (posts && winders && strings) cncDone += s;
+    if (strings) strT += s;
+    if (assembly) strA += s;
+    var np = numAt(row, cols.postCount), nw = numAt(row, cols.winderCount);
+    if (posts) postT += np;
+    if (assembly) postA += np;
+    if (winders) winT += nw;
+    if (assembly) winA += nw;
   });
-  return wip;
+  return {
+    officeCnc: Math.max(office - cncDone, 0),
+    strings: Math.max(strT - strA, 0),
+    posts: Math.max(postT - postA, 0),
+    winders: Math.max(winT - winA, 0),
+    treads: gapToAssembly(rows, cols, cols.treads),
+    bullnose: gapToAssembly(rows, cols, cols.bullnose),
+  };
+}
+
+/** Preferred source: the same "Looker Source Data" tab the Looker report reads. */
+function fromLookerTab(table) {
+  if (!table || !table.rows || !table.rows.length) return null;
+  var up = table.labels.map(normHeader);
+  var row = table.rows[0];
+  function get(label) {
+    var i = up.indexOf(label);
+    return i < 0 ? null : row[i];
+  }
+  function num(label) {
+    var v = get(label);
+    var n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/,/g, ''));
+    return isNaN(n) ? null : n;
+  }
+  function txt(label) {
+    var v = get(label);
+    if (v == null || v === '') return '—';
+    if (typeof v === 'string' && v.indexOf('Date(') === 0) {
+      var d = formatDelivery(v);
+      return d ? formatDateLong(d) : v;
+    }
+    return String(v).trim();
+  }
+  var wip = {
+    officeCnc: num('OFFICE TO CNC'),
+    strings: num('STRINGS'),
+    winders: num('WINDERS'),
+    posts: num('POSTS'),
+    treads: num('TREADS & RISERS'),
+    bullnose: num('ASSEMBLED BULLNOSE'),
+  };
+  for (var k in wip) { if (wip[k] === null) return null; }
+  function info(prefix) {
+    return { dateStr: txt(prefix + ' DATE'), load: txt(prefix + ' I.D'), tickCount: txt(prefix + ' NO') };
+  }
+  return {
+    wip: wip,
+    last: {
+      officeCnc: info('OFFICE'),
+      strings: info('STRINGS'),
+      winders: info('WINDERS'),
+      posts: info('POSTS'),
+      treads: info('TREADS & RISERS'),
+      bullnose: info('BULLNOSE'),
+      stacked: info('STACKED'),
+      dispatch: info('DISPATCH'),
+    },
+  };
 }
 
 function esc(t) {
-  return String(t == null ? '' : t).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+  return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function fmt(n) {
@@ -260,7 +360,8 @@ function render(payload) {
   root.innerHTML =
     '<p class="ff-intro">WIP buffers between departments (stairs). Green band = healthy work ahead so the next area does not run out. ' +
     'Office→CNC only clears when posts, winders and strings are all ticked. Under each dial: last load completed for that stage.</p>' +
-    '<div class="ff-dial-grid">' + html + '</div>';
+    '<div class="ff-dial-grid">' + html + '</div>' +
+    (payload.source ? '<p class="ff-intro" style="opacity:.55;font-size:12px;">Source: ' + esc(payload.source) + '</p>' : '');
 }
 
 var loading = false;
@@ -272,22 +373,34 @@ export async function loadFirstFix() {
   loading = true;
   root.innerHTML = '<p class="ff-intro">Loading Project Tracking…</p>';
   try {
-    var table = await fetchGviz(SHEET_ID, GID);
-    var cols = colMap(table.labels);
-    if (cols.stairs < 0) throw new Error('Stairs column not found');
-    if (cols.office < 0) throw new Error('PROGRAMS COMPLETED column not found');
-    var wip = computeWip(table.rows, cols);
-    var last = {
-      officeCnc: lastTickInfo(table.rows, cols, cols.office),
-      strings: lastTickInfo(table.rows, cols, cols.strings),
-      winders: lastTickInfo(table.rows, cols, cols.winders),
-      posts: lastTickInfo(table.rows, cols, cols.posts),
-      treads: lastTickInfo(table.rows, cols, cols.treads),
-      bullnose: lastTickInfo(table.rows, cols, cols.bullnose),
-      stacked: lastTickInfo(table.rows, cols, cols.stacked),
-      dispatch: lastTickInfo(table.rows, cols, cols.dispatch),
-    };
-    render({ wip: wip, last: last });
+    var payload = null;
+    try {
+      payload = fromLookerTab(await fetchGviz(SHEET_ID, null, LOOKER_TAB));
+      if (payload) payload.source = 'Looker Source Data tab';
+    } catch (e) {
+      console.warn('1st Fix: Looker Source Data tab not available, recalculating', e);
+    }
+    if (!payload) {
+      var table = await fetchGviz(SHEET_ID, GID);
+      var cols = colMap(table.labels);
+      if (cols.stairs < 0) throw new Error('Stairs column not found');
+      if (cols.office < 0) throw new Error('PROGRAMS COMPLETED column not found');
+      payload = {
+        wip: computeWip(table.rows, cols),
+        last: {
+          officeCnc: lastTickInfo(table.rows, cols, cols.office),
+          strings: lastTickInfo(table.rows, cols, cols.strings),
+          winders: lastTickInfo(table.rows, cols, cols.winders),
+          posts: lastTickInfo(table.rows, cols, cols.posts),
+          treads: lastTickInfo(table.rows, cols, cols.treads),
+          bullnose: lastTickInfo(table.rows, cols, cols.bullnose),
+          stacked: lastTickInfo(table.rows, cols, cols.stacked),
+          dispatch: lastTickInfo(table.rows, cols, cols.dispatch),
+        },
+        source: 'recalculated from 2026 tab',
+      };
+    }
+    render(payload);
   } catch (e) {
     console.error(e);
     root.innerHTML = '<p class="ff-intro" style="color:#c0392b;">Could not load Project Tracking. ' +
