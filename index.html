@@ -22,6 +22,30 @@
     border-radius:10px;
     line-height:1.5;
   }
+  .ff-intro{font-size:0.9rem;color:var(--muted);margin:0 0 16px;line-height:1.45;max-width:640px}
+  .ff-h3{font:700 18px/1.2 system-ui,sans-serif;margin:20px 0 10px}
+  .ff-note{font-size:0.8rem;color:var(--muted);margin:16px 0 8px}
+  .ff-pairs{display:grid;gap:12px;margin-bottom:8px}
+  @media(min-width:720px){.ff-pairs{grid-template-columns:repeat(3,1fr)}}
+  .ff-pair{background:var(--card, #fff);border:1px solid var(--card-border, #c9d2d6);border-radius:12px;padding:14px}
+  .ff-pair-title{font-weight:700;margin-bottom:8px}
+  .ff-pair-nums{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:0.95rem}
+  .ff-arrow{color:var(--muted)}
+  .ff-pair-diff{margin-top:8px;font-size:0.9rem}
+  .ff-grid{display:grid;gap:12px}
+  @media(min-width:640px){.ff-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:960px){.ff-grid{grid-template-columns:repeat(4,1fr)}}
+  .ff-card{background:var(--card, #fff);border:1px solid var(--card-border, #c9d2d6);border-radius:12px;padding:14px}
+  .ff-card-top{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+  .ff-step{width:28px;height:28px;border-radius:50%;background:var(--ink, #14232B);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0}
+  .ff-title{font-weight:700}
+  .ff-sub{font-size:0.8rem;color:var(--muted)}
+  .ff-done{font-size:1.05rem;margin-bottom:6px}
+  .ff-done b{font:700 22px/1 system-ui,sans-serif}
+  .ff-gap{display:flex;justify-content:space-between;gap:8px;font-size:0.85rem;padding:8px 10px;border-radius:8px;margin-top:6px}
+  .ff-gap-warn{background:rgba(242,177,0,0.15);color:#8a6d00}
+  .ff-gap-ok{background:rgba(30,122,76,0.12);color:#1e7a4c}
+  .ff-gap-val{font-weight:700}
 </style>
 <script type="importmap">
 {
@@ -82,7 +106,7 @@
     <div class="nav-tile" id="tileArea1stFix" style="min-height:140px;">
       <div class="tile-icon">🏭</div>
       <div class="tile-label">1ST FIX</div>
-      <div class="tile-sub">Section dials · coming soon</div>
+      <div class="tile-sub">Stair gaps · Office → CNC → Assembly</div>
     </div>
     <div class="nav-tile" id="tileArea2ndFix" style="min-height:140px;">
       <div class="tile-icon">🔩</div>
@@ -280,14 +304,11 @@
 <div id="firstFixPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToAreaFrom1stFix">← Areas</button>
-    <h2>🏭 1st Fix</h2>
+    <h2>🏭 1st Fix — Stair flow</h2>
+    <button class="back-btn" id="refresh1stFixBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
   </div>
-  <div class="landing-title" style="padding:40px 20px;">
-    <h1>1st Fix</h1>
-    <p style="max-width:420px;margin:12px auto;color:var(--muted);line-height:1.5;">
-      Dials and section targets for 1st Fix will appear here — same idea as 2nd Fix.
-      Nothing is connected yet; this area is ready for when the data source is set up.
-    </p>
+  <div id="firstFixBody" style="padding:12px 16px 32px;max-width:1100px;margin:0 auto;">
+    <p class="ff-intro">Loading…</p>
   </div>
 </div>
 
@@ -317,6 +338,7 @@
 
 <script type="module" src="app.js"></script>
 <script type="module" src="https://cdn.jsdelivr.net/gh/Slys178/production_office_kpi@08b3205ebd982ea274bb614e6336063c252c0b7a/second-fix.js"></script>
+<script type="module" src="first-fix.js"></script>
 <script type="module" src="report-incident-tab.js"></script>
 <script>
 (function() {
@@ -431,11 +453,18 @@
         if (tileArea1stFix) {
             tileArea1stFix.addEventListener('click', function() {
                 showPage('firstFixPage');
+                if (window.loadFirstFix) window.loadFirstFix();
             });
         }
         var back1st = document.getElementById('backToAreaFrom1stFix');
         if (back1st) {
             back1st.addEventListener('click', function() { goAreaLanding(); });
+        }
+        var refresh1st = document.getElementById('refresh1stFixBtn');
+        if (refresh1st) {
+            refresh1st.addEventListener('click', function() {
+                if (window.loadFirstFix) window.loadFirstFix(true);
+            });
         }
         if (tileArea2ndFix) {
             tileArea2ndFix.addEventListener('click', function() {
