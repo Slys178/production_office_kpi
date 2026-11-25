@@ -22,30 +22,16 @@
     border-radius:10px;
     line-height:1.5;
   }
-  .ff-intro{font-size:0.9rem;color:var(--muted);margin:0 0 16px;line-height:1.45;max-width:640px}
-  .ff-h3{font:700 18px/1.2 system-ui,sans-serif;margin:20px 0 10px}
-  .ff-note{font-size:0.8rem;color:var(--muted);margin:16px 0 8px}
-  .ff-pairs{display:grid;gap:12px;margin-bottom:8px}
-  @media(min-width:720px){.ff-pairs{grid-template-columns:repeat(3,1fr)}}
-  .ff-pair{background:var(--card, #fff);border:1px solid var(--card-border, #c9d2d6);border-radius:12px;padding:14px}
-  .ff-pair-title{font-weight:700;margin-bottom:8px}
-  .ff-pair-nums{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:0.95rem}
-  .ff-arrow{color:var(--muted)}
-  .ff-pair-diff{margin-top:8px;font-size:0.9rem}
-  .ff-grid{display:grid;gap:12px}
-  @media(min-width:640px){.ff-grid{grid-template-columns:repeat(2,1fr)}}
-  @media(min-width:960px){.ff-grid{grid-template-columns:repeat(4,1fr)}}
-  .ff-card{background:var(--card, #fff);border:1px solid var(--card-border, #c9d2d6);border-radius:12px;padding:14px}
-  .ff-card-top{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
-  .ff-step{width:28px;height:28px;border-radius:50%;background:var(--ink, #14232B);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0}
-  .ff-title{font-weight:700}
-  .ff-sub{font-size:0.8rem;color:var(--muted)}
-  .ff-done{font-size:1.05rem;margin-bottom:6px}
-  .ff-done b{font:700 22px/1 system-ui,sans-serif}
-  .ff-gap{display:flex;justify-content:space-between;gap:8px;font-size:0.85rem;padding:8px 10px;border-radius:8px;margin-top:6px}
-  .ff-gap-warn{background:rgba(242,177,0,0.15);color:#8a6d00}
-  .ff-gap-ok{background:rgba(30,122,76,0.12);color:#1e7a4c}
-  .ff-gap-val{font-weight:700}
+  .ff-intro{font-size:0.9rem;color:var(--muted);margin:0 0 16px;line-height:1.45;max-width:720px}
+  .ff-dial-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  .ff-dial-card{background:var(--card,#fff);border:1px solid var(--card-border,#c9d2d6);border-radius:14px;padding:12px 10px 14px;text-align:center}
+  .ff-dial-title{font-size:0.72rem;font-weight:700;letter-spacing:0.03em;margin-bottom:4px;color:var(--text)}
+  .ff-dial-svg{display:flex;justify-content:center}
+  .ff-under{font-size:0.78rem;color:var(--muted);line-height:1.35;margin-top:4px}
+  .ff-status-body{padding:28px 8px;min-height:140px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+  .ff-status-date{font-weight:600;font-size:0.95rem;color:var(--text)}
+  .ff-status-load{font-size:0.9rem}
+  .ff-status-xy{font-size:0.85rem;color:var(--muted)}
 </style>
 <script type="importmap">
 {
@@ -106,7 +92,7 @@
     <div class="nav-tile" id="tileArea1stFix" style="min-height:140px;">
       <div class="tile-icon">🏭</div>
       <div class="tile-label">1ST FIX</div>
-      <div class="tile-sub">Stair gaps · Office → CNC → Assembly</div>
+      <div class="tile-sub">WIP dials · Office → CNC → Assembly</div>
     </div>
     <div class="nav-tile" id="tileArea2ndFix" style="min-height:140px;">
       <div class="tile-icon">🔩</div>
@@ -289,7 +275,6 @@
   <div id="rpCostTrend"></div>
   <div id="rpCountTrend"></div>
   <div id="rpTopParts"></div>
-  <div id="rpTopReasons"></div>
   <div id="rpRecentList"></div>
 </div>
 
@@ -304,7 +289,7 @@
 <div id="firstFixPage" class="page-view">
   <div class="page-header">
     <button class="back-btn" id="backToAreaFrom1stFix">← Areas</button>
-    <h2>🏭 1st Fix — Stair flow</h2>
+    <h2>🏭 1st Fix — WIP report</h2>
     <button class="back-btn" id="refresh1stFixBtn" style="background:var(--blue);color:#fff;">🔄 Refresh</button>
   </div>
   <div id="firstFixBody" style="padding:12px 16px 32px;max-width:1100px;margin:0 auto;">
