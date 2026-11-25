@@ -285,11 +285,21 @@ function fmt(n) {
   return Math.round(n).toLocaleString('en-GB');
 }
 
-function gaugeSvg(value, greenMin, greenMax, scaleMax) {
-  var size = 180, cx = 90, cy = 100, r = 70, stroke = 14;
-  scaleMax = Math.max(scaleMax || greenMax * 1.6, greenMax * 1.1, value * 1.05, 1);
+/**
+ * Gauge with the GREEN band always centred at 12 o'clock (same layout as the Looker dials):
+ * scale = green midpoint ± 2.5 × green width; amber = one green-width either side; red beyond.
+ * The scale never moves with the value - the needle just stops at the end of the dial.
+ */
+function gaugeSvg(value, greenMin, greenMax) {
+  var cx = 90, cy = 100, r = 70, stroke = 14;
+  var mid = (greenMin + greenMax) / 2;
+  var w = greenMax - greenMin;
+  var sMin = mid - 2.5 * w;
+  var sMax = mid + 2.5 * w;
+  var b1 = mid - 1.5 * w, b4 = mid + 1.5 * w;
+
   function ang(v) {
-    var t = Math.min(Math.max(v / scaleMax, 0), 1);
+    var t = Math.min(Math.max((v - sMin) / (sMax - sMin), 0), 1);
     return -210 + t * 240;
   }
   function polar(aDeg, rad) {
@@ -302,24 +312,67 @@ function gaugeSvg(value, greenMin, greenMax, scaleMax) {
     return 'M ' + p0.x.toFixed(2) + ' ' + p0.y.toFixed(2) +
       ' A ' + rad + ' ' + rad + ' 0 ' + large + ' 1 ' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2);
   }
-  var aMin = ang(0), aG0 = ang(greenMin), aG1 = ang(greenMax), aMax = ang(scaleMax);
-  var aA0 = ang(greenMin * 0.55);
-  var aA1 = ang(Math.min(greenMax + (scaleMax - greenMax) * 0.35, scaleMax));
-  var needle = polar(ang(value), r - 8);
+  function band(v0, v1, colour) {
+    return '<path d="' + arcPath(ang(v0), ang(v1), r) + '" fill="none" stroke="' + colour +
+      '" stroke-width="' + stroke + '"/>';
+  }
+  function tick(v) {
+    var p = polar(ang(v), r - 17);
+    return '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 3).toFixed(1) +
+      '" text-anchor="middle" font-size="8.5" fill="var(--muted,#8a94a6)">' + Math.round(v) + '</text>';
+  }
+  var needle = polar(ang(value), r - 6);
+
   return (
-    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
-      '<path d="' + arcPath(aMin, aA0, r) + '" fill="none" stroke="#c0392b" stroke-width="' + stroke + '"/>' +
-      '<path d="' + arcPath(aA0, aG0, r) + '" fill="none" stroke="#e67e22" stroke-width="' + stroke + '"/>' +
-      '<path d="' + arcPath(aG0, aG1, r) + '" fill="none" stroke="#27ae60" stroke-width="' + stroke + '"/>' +
-      '<path d="' + arcPath(aG1, aA1, r) + '" fill="none" stroke="#e67e22" stroke-width="' + stroke + '"/>' +
-      '<path d="' + arcPath(aA1, aMax, r) + '" fill="none" stroke="#c0392b" stroke-width="' + stroke + '"/>' +
+    '<svg viewBox="0 16 180 134" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">' +
+      band(sMin, b1, '#c0392b') +
+      band(b1, greenMin, '#e67e22') +
+      band(greenMin, greenMax, '#27ae60') +
+      band(greenMax, b4, '#e67e22') +
+      band(b4, sMax, '#c0392b') +
+      tick(sMin) + tick(b1) + tick(greenMin) + tick(greenMax) + tick(b4) + tick(sMax) +
       '<line x1="' + cx + '" y1="' + cy + '" x2="' + needle.x.toFixed(2) + '" y2="' + needle.y.toFixed(2) +
-        '" stroke="#2c3e50" stroke-width="3" stroke-linecap="round"/>' +
+        '" stroke="var(--text,#2c3e50)" stroke-width="3.5" stroke-linecap="round"/>' +
       '<circle cx="' + cx + '" cy="' + cy + '" r="8" fill="#3498db"/>' +
-      '<text x="' + cx + '" y="' + (cy + 36) + '" text-anchor="middle" font-size="22" font-weight="700" fill="var(--text,#1a1a1a)">' +
+      '<text x="' + cx + '" y="' + (cy + 38) + '" text-anchor="middle" font-size="24" font-weight="700" fill="var(--text,#1a1a1a)">' +
         fmt(value) + '</text>' +
     '</svg>'
   );
+}
+
+/** Responsive layout: phone = 2 columns, tablet = 3, PC/TV = 4 and (on big screens) fills the screen with no scrolling. */
+function injectStyles() {
+  if (document.getElementById('ffResponsiveStyles')) return;
+  var css =
+    '#firstFixBody{max-width:none!important;padding:12px clamp(8px,1.5vw,48px) 28px!important}' +
+    '.ff-dial-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:clamp(8px,1vw,26px)!important}' +
+    '.ff-dial-card{display:flex;flex-direction:column;min-width:0;padding:clamp(8px,.8vw,22px) clamp(6px,.6vw,18px)!important}' +
+    '.ff-dial-title{font-size:clamp(.68rem,2.6vw,1.1rem)!important;margin-bottom:clamp(2px,.4vw,10px)!important}' +
+    '.ff-dial-svg{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}' +
+    '.ff-dial-svg svg{display:block;width:100%;height:auto;max-width:340px}' +
+    '.ff-under{font-size:clamp(.7rem,2.4vw,.95rem)!important;margin-top:clamp(2px,.4vw,10px)!important}' +
+    '.ff-status-body{flex:1;justify-content:center;min-height:120px!important}' +
+    '.ff-status-date{font-size:clamp(.8rem,2.6vw,1.1rem)!important}' +
+    '.ff-status-load,.ff-status-xy{font-size:clamp(.78rem,2.4vw,1rem)!important}' +
+    '@media (min-width:640px){.ff-dial-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}' +
+    '@media (min-width:1000px){' +
+      '.ff-dial-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}' +
+      '.ff-dial-title{font-size:clamp(.8rem,1.15vw,2.6rem)!important}' +
+      '.ff-under,.ff-status-load,.ff-status-xy{font-size:clamp(.78rem,1vw,2.2rem)!important}' +
+      '.ff-status-date{font-size:clamp(.9rem,1.15vw,2.4rem)!important}' +
+    '}' +
+    /* PC / TV: fit everything on one screen, no scrolling */
+    '@media (min-width:1400px) and (min-height:680px){' +
+      '#firstFixBody{padding-bottom:12px!important}' +
+      '.ff-intro,.ff-source{display:none!important}' +
+      '.ff-dial-grid{height:calc(100vh - 96px);grid-template-rows:repeat(2,minmax(0,1fr))}' +
+      '.ff-dial-svg{position:relative}' +
+      '.ff-dial-svg svg{position:absolute;inset:0;width:100%;height:100%;max-width:none}' +
+    '}';
+  var el = document.createElement('style');
+  el.id = 'ffResponsiveStyles';
+  el.textContent = css;
+  document.head.appendChild(el);
 }
 
 function statusCard(title, info) {
@@ -340,7 +393,7 @@ function dialCard(def, value, info) {
   return (
     '<div class="ff-dial-card">' +
       '<div class="ff-dial-title">' + esc(def.title) + esc(band) + '</div>' +
-      '<div class="ff-dial-svg">' + gaugeSvg(value, def.greenMin, def.greenMax, def.scaleMax) + '</div>' +
+      '<div class="ff-dial-svg">' + gaugeSvg(value, def.greenMin, def.greenMax) + '</div>' +
       '<div class="ff-under">' +
         '<div>' + esc(info.dateStr) + '</div>' +
         '<div>' + esc(info.load) + ' · ' + esc(info.tickCount) + '</div>' +
@@ -352,6 +405,7 @@ function dialCard(def, value, info) {
 function render(payload) {
   var root = document.getElementById('firstFixBody');
   if (!root) return;
+  injectStyles();
   var wip = payload.wip, last = payload.last;
   var html = DIALS.map(function (d) {
     if (d.kind === 'status') return statusCard(d.title, last[d.key] || { dateStr: '—', load: '—', tickCount: '—' });
@@ -361,7 +415,7 @@ function render(payload) {
     '<p class="ff-intro">WIP buffers between departments (stairs). Green band = healthy work ahead so the next area does not run out. ' +
     'Office→CNC only clears when posts, winders and strings are all ticked. Under each dial: last load completed for that stage.</p>' +
     '<div class="ff-dial-grid">' + html + '</div>' +
-    (payload.source ? '<p class="ff-intro" style="opacity:.55;font-size:12px;">Source: ' + esc(payload.source) + '</p>' : '');
+    (payload.source ? '<p class="ff-intro ff-source" style="opacity:.55;font-size:12px;">Source: ' + esc(payload.source) + '</p>' : '');
 }
 
 var loading = false;
