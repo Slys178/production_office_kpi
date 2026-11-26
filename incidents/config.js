@@ -9,7 +9,7 @@ export const CONFIG = {
 
   // Restricted Google Drive folder for uploaded documents: the part of its web address
   // after /folders/. Leave empty until it is set up (uploads then say so).
-  uploadFolderId: "",
+  uploadFolderId: "19Z3qIe-C_NdLPIa05GINCp167OdenWWG",
 
   // Columns the case form writes. Missing headers are added to the sheet on first save.
   editable: [
