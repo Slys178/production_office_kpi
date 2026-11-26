@@ -171,8 +171,8 @@
       var hurt=isInj(r);
       var title=r['Title']||r['Description']||'';
       if(title.length>80) title=title.slice(0,80)+'…';
-      return '<div class="card '+(hurt?'inj':'nm')+'" onclick="openItem('+Number(r['Ref'])+')">'+'
-        <h3>#'+esc(r['Ref'])+' — '+esc(r['Type']||'')+' <span class="meta">'+(r['Status']||'Open')+'</span></h3>'+
+      return '<div class="card '+(hurt?'inj':'nm')+'" onclick="openItem('+Number(r['Ref'])+')">'+
+        '<h3>#'+esc(r['Ref'])+' — '+esc(r['Type']||'')+' <span class="meta">'+(r['Status']||'Open')+'</span></h3>'+
         '<div class="meta">'+esc(fmtD(r['Date']))+' · '+esc(r['Site']||'')+(r['Department']?' / '+esc(r['Department']):'')+'</div>'+
         '<div>'+esc(title)+'</div></div>';
     }).join('');
@@ -194,8 +194,8 @@
 
     $('detailIn').innerHTML=
       '<button class="back" onclick="closeItem()">Back to log</button>'+
-      '<div class="panel" style="border-left:8px solid '+(hurt&&!isNear?'var(--red)':'var(--amber)')+'">'+'
-        <h2>#'+esc(r['Ref'])+' — '+esc(r['Type']||'')+(r['Title']?' — '+esc(r['Title']):'')+'</h2>'+dl(info)+
+      '<div class="panel" style="border-left:8px solid '+(hurt&&!isNear?'var(--red)':'var(--amber)')+'">'+
+        '<h2>#'+esc(r['Ref'])+' — '+esc(r['Type']||'')+(r['Title']?' — '+esc(r['Title']):'')+'</h2>'+dl(info)+
       '</div>'+
       '<div class="panel"><h2>What happened (from report)</h2><p style="white-space:pre-wrap;margin:0">'+esc(r['Description'])+'</p></div>'+
       '<div class="panel"><h2>Photos</h2>'+(ids.length?'<div class="photos" id="ph"></div><div id="phErr" class="none"></div>':'<p class="none">No photos were attached to this report.</p>')+'</div>'+
