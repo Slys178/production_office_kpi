@@ -28,7 +28,7 @@ Keep secrets in Key Vault where policy requires it.
 
 1. In `api/`: `npm install`, `npm test`, then `func azure functionapp publish <app-name>`.
 2. Function App > CORS: allow the address the report form is served from (origin only).
-3. Put `https://<app-name>.azurewebsites.net/api/report` in `../report-incident/report-config.js` -> `endpoint`.
+3. Put `https://<app-name>.azurewebsites.net/api/report` in `../report/report-config.js` -> `endpoint`.
 4. Send a test Near Miss and a test with "ambulance = Yes"; check the table, photos and both emails.
 
 ## To decide before go-live

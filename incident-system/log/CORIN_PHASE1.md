@@ -2,7 +2,7 @@
 
 ## Split of work
 
-| Shop-floor **reporting app** (`report-incident/`) | Managers’ **incident log** (`incidents/`) |
+| Shop-floor **reporting app** (`report/`) | Managers’ **incident log** (`log/`) |
 |---|---|
 | Near Miss / Incident, site, description, photos | Title, specific location, sub type, severity |
 | Body part, first aid, hospital (if hurt) | RIDDOR status, investigation level, person type |
@@ -39,4 +39,4 @@ The log **only writes columns that exist** on the sheet, so you can add headers 
 
 ## Azure
 
-Replace `incidents/backend.js` and the report `endpoint` with your API. Keep the same field names where possible so the UI does not need a rewrite. See folder READMEs.
+Replace `log/backend.js` and the report `endpoint` with your API. Keep the same field names where possible so the UI does not need a rewrite. See folder READMEs.

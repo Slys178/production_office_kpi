@@ -1,14 +1,14 @@
 /**
  * Incidents tab — shows the Incident Log (the Apps Script managers app, converted).
  *
- * The app itself lives in ./incidents/ and is fully self-contained so it can be
+ * The app itself lives in ../log/ and is fully self-contained so it can be
  * moved to Azure later. Here it is simply hosted inside the tab, so edits made in
- * incidents/ show up straight away when you open Areas > Incidents.
+ * ../log/ show up straight away when you open Areas > Incidents.
  *
  * (The previous in-app reporting form is still in this file's git history.)
  */
 const FRAME_ID = "incidentsFrame";
-const SRC = "incidents/index.html";
+const SRC = "incident-system/log/index.html";
 
 export function renderIncidents() {
   const root = document.getElementById("incidentsPageBody");

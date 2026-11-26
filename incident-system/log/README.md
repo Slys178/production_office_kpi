@@ -15,7 +15,7 @@ It does **not** import anything from the main KPI app.
 
 ## In the main app
 
-The Areas > Incidents tab hosts `incidents/index.html` in an iframe (see `incident-report.js` in the repo root),
+The Areas > Incidents tab hosts `incidents/index.html` in an iframe (see `../kpi-app-link/log-tab.js`),
 so changes made in this folder show up in the app. Delete that one file's contents and move this folder to
 Azure when you are ready to separate it.
 

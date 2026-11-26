@@ -99,7 +99,7 @@ import("./loads-by-person.js")
 import("./admin-targets.js")
   .catch(function (e) { console.warn("admin-targets module failed", e); });
 
-import("./incident-report.js")
+import("./incident-system/kpi-app-link/log-tab.js")
   .then(function () { callIncidents(); })
   .catch(function (e) { console.warn("incident-report module failed", e); });
 
@@ -196,12 +196,6 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
       const back = document.getElementById("backToLandingFromIncidents");
       if (back) back.textContent = "← Areas";
-    }
-    if (!document.querySelector('link[href="incident-report.css"]')) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "incident-report.css";
-      document.head.appendChild(link);
     }
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);

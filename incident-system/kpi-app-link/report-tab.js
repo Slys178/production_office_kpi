@@ -1,15 +1,15 @@
 /**
  * "Report an incident" tile + page for the landing screen.
  *
- * The form itself lives in ./report-incident/ (self-contained, so I.T. can lift it out
+ * The form itself lives in ../report/ (self-contained, so I.T. can lift it out
  * later). This file only adds the tile, a page to hold it, and the open/back wiring.
- * It sits beside the existing "Incident Log" tile (managers' log, ./incidents/).
+ * It sits beside the existing "Incident Log" tile (managers' log, ../log/).
  */
 const TILE_ID = "tileAreaReport";
 const PAGE_ID = "reportIncidentPage";
 const BACK_ID = "backToLandingFromReport";
 const FRAME_ID = "reportIncidentFrame";
-const SRC = "report-incident/index.html";
+const SRC = "incident-system/report/index.html";
 
 function addTile() {
   const grid = document.querySelector("#areaLandingPage .tile-grid");

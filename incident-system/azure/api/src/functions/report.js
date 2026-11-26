@@ -1,4 +1,4 @@
-/** POST /api/report - open to anyone (no sign-in), used by report-incident/. */
+/** POST /api/report - open to anyone (no sign-in), used by ../report/. */
 const { app } = require("@azure/functions");
 const { submitReport } = require("../report");
 const { azureStore, azureMail } = require("../azure-adapters");
