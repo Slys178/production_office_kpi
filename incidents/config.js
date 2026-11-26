@@ -7,10 +7,14 @@ export const CONFIG = {
   sheetName: "Incidents",
   managers: ["simon.askew@staircraftgroup.com"], // add more managers here later
 
-  // Columns a manager may change from the case form (must exist as sheet headers).
-  // Phase 1 = Corin investigation fields that sit on the LOG, not the shop-floor app.
+  // Restricted Google Drive folder for uploaded documents: the part of its web address
+  // after /folders/. Leave empty until it is set up (uploads then say so).
+  uploadFolderId: "",
+
+  // Columns the case form writes. Missing headers are added to the sheet on first save.
   editable: [
     "Status",
+    "Site",
     "Title",
     "Specific Location",
     "Sub Type",
@@ -39,3 +43,6 @@ export const CONFIG = {
     ].join(" "),
   },
 };
+
+// Writing into the upload folder needs Drive access; only asked for once the folder is set.
+if (CONFIG.uploadFolderId) CONFIG.google.scopes += " https://www.googleapis.com/auth/drive";

@@ -12,7 +12,7 @@
       withSuccessHandler: function (f) { return runner(f, fail); },
       withFailureHandler: function (f) { return runner(ok, f); },
     };
-    ["getData", "getPhoto", "saveCloseOut"].forEach(function (name) {
+    ["getData", "getPhoto", "saveCase", "saveSignature", "uploadFile"].forEach(function (name) {
       r[name] = function () {
         var args = [].slice.call(arguments);
         import("./backend.js")

@@ -137,63 +137,117 @@ export async function getPhoto(id, full) {
   throw new Error("Photo not available");
 }
 
-export async function saveCloseOut(ref, f) {
-  const me = await need();
-  const EDITABLE = CONFIG.editable;
-  const v = await readSheet();
-  if (!v.length) return { ok: false, error: "Incident not found." };
-  const h = v[0];
-  let rowIdx = -1;
-  for (let i = 1; i < v.length; i++) {
-    if (String(v[i][0]) === String(ref)) { rowIdx = i; break; }
-  }
-  if (rowIdx < 0) return { ok: false, error: "Incident not found." };
+/* ---------- saving ---------- */
 
-  const out = {};
-  const present = EDITABLE.filter(function (k) { return h.indexOf(k) >= 0; });
-  const longText = { "Actions Taken": 1, "Corrective Action": 1, Title: 1 };
-  present.forEach(function (k) {
-    out[k] = clean(f[k], longText[k] ? 2000 : 200);
-  });
-  if (out["Status"] != null && ["Open", "Closed"].indexOf(out["Status"]) < 0)
-    return { ok: false, error: "Please choose a status." };
-  const RIDDOR_OK = ["", "Yes", "No", "Not assessed", "Not reportable", "Potentially reportable", "Reported"];
-  if (out["RIDDOR"] != null && RIDDOR_OK.indexOf(out["RIDDOR"]) < 0)
-    return { ok: false, error: "Please check RIDDOR status." };
-  if (out["LTI"] != null && ["", "Yes", "No"].indexOf(out["LTI"]) < 0)
-    return { ok: false, error: "Please check LTI." };
-  if (out["Lost Days"] != null && out["Lost Days"] !== "") {
-    const n = Number(out["Lost Days"]);
-    if (isNaN(n) || n < 0 || n > 3650) return { ok: false, error: "Lost days must be a number." };
-    out["Lost Days"] = n;
-  }
-  ["Closed Date", "Updated By"].forEach(function (k) {
-    if (h.indexOf(k) < 0) throw new Error("Column not found: " + k);
-  });
+const SIGNATURE_COLS = ["Signature Person", "Signature Supervisor", "Signature Ops Manager", "Signature HS Manager", "Signature Ops Director"];
+const DATA_COL = "Investigation Data";
+const CELL_LIMIT = 49000; // Google Sheets allows 50,000 characters in a cell
 
-  const wasClosed = String(v[rowIdx][h.indexOf("Status")] == null ? "" : v[rowIdx][h.indexOf("Status")]) === "Closed";
-  const r = rowIdx + 1;
-  const cell = (k) => tabRef(colLetter(h.indexOf(k)) + r);
+async function post(url, body) {
+  return gjson(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+}
 
-  const data = present.map(function (k) { return { range: cell(k), values: [[out[k]]] }; });
-  if (out["Status"] === "Open") data.push({ range: cell("Closed Date"), values: [[""]] });
-  data.push({ range: cell("Updated By"), values: [[me]] });
-
-  await gjson(SHEETS + CONFIG.logSheetId + "/values:batchUpdate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ valueInputOption: "USER_ENTERED", data: data }),
-  });
-
-  if (out["Status"] === "Closed" && !wasClosed) {
-    await gjson(SHEETS + CONFIG.logSheetId + "/values:batchUpdate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        valueInputOption: "USER_ENTERED",
-        data: [{ range: cell("Closed Date"), values: [[new Date().toISOString().slice(0, 10)]] }],
-      }),
+/** Add any missing column headers to the end of row 1, so nothing is silently dropped. */
+async function ensureColumns(header, names) {
+  const missing = names.filter((n) => header.indexOf(n) < 0);
+  if (!missing.length) return header;
+  const meta = await gjson(SHEETS + CONFIG.logSheetId + "?fields=sheets.properties");
+  const tab = meta.sheets.map((s) => s.properties).find((p) => p.title === CONFIG.sheetName);
+  if (!tab) throw new Error("Incidents tab not found");
+  const short = header.length + missing.length - tab.gridProperties.columnCount;
+  if (short > 0) {
+    await post(SHEETS + CONFIG.logSheetId + ":batchUpdate", {
+      requests: [{ appendDimension: { sheetId: tab.sheetId, dimension: "COLUMNS", length: short } }],
     });
   }
-  return { ok: true };
+  await post(SHEETS + CONFIG.logSheetId + "/values:batchUpdate", {
+    valueInputOption: "RAW",
+    data: [{ range: tabRef(colLetter(header.length) + "1"), values: [missing] }],
+  });
+  return header.concat(missing);
+}
+
+async function findRow(ref, columns) {
+  const v = await readSheet();
+  const i = v.findIndex((row, n) => n > 0 && String(row[0]) === String(ref));
+  if (i < 0) return null;
+  const header = await ensureColumns(v[0], columns);
+  return {
+    row: v[i],
+    get: (k) => String(v[i][header.indexOf(k)] == null ? "" : v[i][header.indexOf(k)]),
+    cell: (k) => tabRef(colLetter(header.indexOf(k)) + (i + 1)),
+  };
+}
+
+function revOf(json) {
+  try { return JSON.parse(json).rev || 0; } catch (_) { return 0; }
+}
+
+export async function saveCase(ref, flat, answers, loadedRev) {
+  const me = await need();
+  const found = await findRow(ref, CONFIG.editable.concat([DATA_COL, "Closed Date", "Updated By"]));
+  if (!found) return { ok: false, error: "Incident not found." };
+  if (revOf(found.get(DATA_COL)) !== loadedRev) {
+    return { ok: false, error: "Someone else has saved this case since you opened it. Note your changes, press Refresh and open it again." };
+  }
+  if (["Open", "Closed"].indexOf(flat["Status"]) < 0) return { ok: false, error: "Please choose a case status." };
+  const lost = flat["Lost Days"];
+  if (lost !== "" && lost != null && !(Number(lost) >= 0 && Number(lost) <= 3650)) {
+    return { ok: false, error: "Lost days must be a number." };
+  }
+  const json = JSON.stringify({ rev: loadedRev + 1, savedBy: me, savedAt: new Date().toISOString(), answers: answers });
+  if (json.length > CELL_LIMIT) return { ok: false, error: "This case has too much text to save. Please shorten the longest answers." };
+
+  const long = ["Actions Taken", "Corrective Action", "Title"];
+  const data = CONFIG.editable
+    .filter((k) => flat[k] !== undefined)
+    .map((k) => ({ range: found.cell(k), values: [[clean(flat[k], long.indexOf(k) >= 0 ? 2000 : 200)]] }));
+  if (flat["Status"] === "Open") data.push({ range: found.cell("Closed Date"), values: [[""]] });
+  else if (found.get("Status") !== "Closed") data.push({ range: found.cell("Closed Date"), values: [[new Date().toISOString().slice(0, 10)]] });
+  data.push({ range: found.cell("Updated By"), values: [[me]] });
+
+  await post(SHEETS + CONFIG.logSheetId + "/values:batchUpdate", { valueInputOption: "USER_ENTERED", data: data });
+  // RAW: stored exactly as typed, never treated as a formula
+  await post(SHEETS + CONFIG.logSheetId + "/values:batchUpdate", {
+    valueInputOption: "RAW",
+    data: [{ range: found.cell(DATA_COL), values: [[json]] }],
+  });
+  return { ok: true, data: json };
+}
+
+export async function saveSignature(ref, column, sig) {
+  const me = await need();
+  if (SIGNATURE_COLS.indexOf(column) < 0) return { ok: false, error: "Unknown signature." };
+  const found = await findRow(ref, SIGNATURE_COLS.concat([DATA_COL]));
+  if (!found) return { ok: false, error: "Incident not found." };
+  if (revOf(found.get(DATA_COL)) !== sig.rev) {
+    return { ok: false, error: "The case has changed since you opened it. Press Refresh and check it before signing." };
+  }
+  const value = JSON.stringify(Object.assign({}, sig, { recordedBy: me, recordedAt: new Date().toISOString() }));
+  if (value.length > CELL_LIMIT) return { ok: false, error: "Signature is too detailed. Please clear and sign again." };
+  await post(SHEETS + CONFIG.logSheetId + "/values:batchUpdate", {
+    valueInputOption: "RAW",
+    data: [{ range: found.cell(column), values: [[value]] }],
+  });
+  return { ok: true, value: value };
+}
+
+/* ---------- document uploads ---------- */
+
+export async function uploadFile(ref, file) {
+  await need();
+  if (!CONFIG.uploadFolderId) throw new Error("the private upload folder has not been set up yet.");
+  if (file.size > 25 * 1024 * 1024) throw new Error("files must be under 25 MB.");
+  const type = file.type || "application/octet-stream";
+  const start = await gfetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,webViewLink", {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": type },
+    body: JSON.stringify({ name: "Incident " + ref + " - " + file.name, parents: [CONFIG.uploadFolderId] }),
+  });
+  const where = start.ok && start.headers.get("Location");
+  if (!where) throw new Error("Google Drive refused the upload (" + start.status + "). Check you can edit the folder.");
+  const done = await gfetch(where, { method: "PUT", headers: { "Content-Type": type }, body: file });
+  if (!done.ok) throw new Error("Google Drive error " + done.status);
+  const j = await done.json();
+  return { id: j.id, name: file.name, link: j.webViewLink };
 }

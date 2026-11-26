@@ -7,8 +7,9 @@ It does **not** import anything from the main KPI app.
 |------|---------|
 | `index.html` | The original Apps Script page, unchanged (logo moved to `logo.jpg`, plus a `<title>` and the shim `<script>`) |
 | `gas-shim.js` | Recreates `google.script.run` so the page runs outside Apps Script |
-| `backend.js` | Port of Code.gs: `getData`, `getPhoto`, `saveCloseOut` using the Sheets/Drive REST APIs |
+| `backend.js` | Port of Code.gs: `getData`, `getPhoto`, `saveCase`, `saveSignature`, `uploadFile` using the Sheets/Drive REST APIs |
 | `google.js` | Google sign-in screen + token handling |
+| `investigation.js` | Investigation form, signatures and summary document |
 | `config.js` | Sheet ID, tab name, `managers` list, editable columns, OAuth client + scopes |
 | `logo.jpg` | Header logo |
 
@@ -33,9 +34,15 @@ Azure when you are ready to separate it.
 - **Manager check:** same `managers` list and same "no access" page, but it runs in the browser, so it is
   a courtesy, not security. The real protection is Google's sharing on the sheet and photo folder.
   Move the check server-side when this goes to Azure.
-- **No script lock:** close-out only writes the specific cells it changes (not the whole row).
+- **No script lock:** a save only writes the cells it changes, and is refused if someone else saved the case first.
 
 ## Moving to Azure
 
 1. Add the Azure URL to the Google OAuth client's authorised origins (or replace Google with Azure auth).
-2. Re-implement the three functions in `backend.js` against your own API; `index.html` and `gas-shim.js` stay as they are.
+2. Re-implement the functions in `backend.js` against your own API; `index.html` and `gas-shim.js` stay as they are.
+
+## Uploads set-up
+
+1. Create a Google Drive folder, shared only with the people who investigate (never "anyone with the link").
+2. Put its ID (after `/folders/` in the address) in `config.js` -> `uploadFolderId`.
+3. The Google Cloud project needs the Drive API enabled; Google will ask each manager to approve Drive access.

@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Incident Log - Staircraft</title>
 <script src="gas-shim.js"></script>
+<script src="investigation.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root{--ink:#14232B;--paper:#EEF1F2;--card:#fff;--line:#C9D2D6;--amber:#F2B100;--red:#C2301E;--ok:#1E7A4C;--muted:#566872}
@@ -186,12 +187,6 @@
     var info=[['Date',fmtD(r['Date'])+' '+(r['Time']||'')],['Site',r['Site']+' / '+(r['Department']||'')],['Reported by',(r['Reporter']||r['Name']||'')+(r['Company']?' ('+r['Company']+')':'')],['Contact',r['Contact']||''],['Reported',fmtD(String(r['Reported']||'').slice(0,10))+' '+String(r['Reported']||'').slice(11)]];
     if(hurt) info=info.concat([['Injured person',r['Injured Person']],['Line manager',r['Line Manager']],['Injury',r['Injury Type']],['Body parts',r['Body Parts']],['Hospital',r['Hospital']],['First aid',r['First Aid']+(r['First Aid Details']?' - '+r['First Aid Details']:'')]]);
 
-    var subTypes=['','Injury','Occupational health or ill health','Unsafe condition','Unsafe Act','Property Damage','Environmental','Vehicle or FLT'];
-    var severities=['','Low','Medium','High','Critical'];
-    var invLevels=['','None required','Local review','Standard Investigation'];
-    var personTypes=['','Employee','Contractor','Agency worker','Visitor','Member of the public'];
-    var riddorOpts=['','Not assessed','Not reportable','Potentially reportable','Reported','Yes','No'];
-
     $('detailIn').innerHTML=
       '<button class="back" onclick="closeItem()">Back to log</button>'+
       '<div class="panel" style="border-left:8px solid '+(hurt&&!isNear?'var(--red)':'var(--amber)')+'">'+
@@ -199,42 +194,8 @@
       '</div>'+
       '<div class="panel"><h2>What happened (from report)</h2><p style="white-space:pre-wrap;margin:0">'+esc(r['Description'])+'</p></div>'+
       '<div class="panel"><h2>Photos</h2>'+(ids.length?'<div class="photos" id="ph"></div><div id="phErr" class="none"></div>':'<p class="none">No photos were attached to this report.</p>')+'</div>'+
-      '<div class="panel"><h2>Case details</h2>'+
-        '<p class="none" style="margin-top:0">Filled in by investigator — not on the shop-floor app.</p>'+
-        '<label for="cTitle">Title <span style="font-weight:400;color:var(--muted)">(short name for finding this case)</span></label>'+
-        '<input id="cTitle" maxlength="200" value="'+esc(r['Title']||'')+'" placeholder="e.g. Fire on CNC machine in 1st Fix">'+
-        '<label for="cSpecLoc">Specific location</label>'+
-        '<input id="cSpecLoc" maxlength="200" value="'+esc(r['Specific Location']||'')+'" placeholder="e.g. Bay 3, paintline">'+
-        '<div class="row">'+
-          '<div><label for="cSub">Sub type</label><select id="cSub">'+opts(subTypes,r['Sub Type']||'')+'</select></div>'+
-          '<div><label for="cSev">Potential severity</label><select id="cSev">'+opts(severities,r['Potential Severity']||'')+'</select></div>'+
-        '</div>'+
-        '<div class="row">'+
-          '<div><label for="cPerson">Person type</label><select id="cPerson">'+opts(personTypes,r['Person Type']||'')+'</select></div>'+
-          '<div><label for="cInvLevel">Investigation level</label><select id="cInvLevel">'+opts(invLevels,r['Investigation Level']||'')+'</select></div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="panel"><h2>RIDDOR & injury follow-up</h2>'+
-        '<div class="row">'+
-          '<div><label for="cRid">RIDDOR status</label><select id="cRid">'+opts(riddorOpts,r['RIDDOR']||'')+'</select></div>'+
-          '<div><label for="cRidDate">Date reported to HSE</label><input id="cRidDate" type="date" value="'+esc(String(r['RIDDOR Date']||'').slice(0,10))+'"></div>'+
-        '</div>'+
-        (hurt?
-          '<div class="row"><div><label for="cLti">Lost time injury (LTI)</label><select id="cLti" onchange="ltiToggle()">'+opts(['','Yes','No'],r['LTI']||'')+'</select></div>'+
-          '<div id="ldBox" class="'+(r['LTI']==='Yes'?'':'hide')+'"><label for="cLost">Lost days</label><input id="cLost" type="number" min="0" value="'+esc(r['Lost Days']||'')+'"></div></div>'
-        :'')+
-      '</div>'+
-      '<div class="panel"><h2>Investigation & actions</h2>'+
-        '<div class="row">'+
-          '<div><label for="cInv">Investigation status</label><select id="cInv">'+opts(['','Required','In progress','Complete','Not required'],r['Investigation']||'')+'</select></div>'+
-          '<div><label for="cStatus">Case status</label><select id="cStatus">'+opts(['Open','Closed'],r['Status']||'Open')+'</select></div>'+
-        '</div>'+
-        '<label for="cAssign">Assigned to</label><input id="cAssign" maxlength="200" value="'+esc(r['Assigned To']||'')+'">'+
-        '<label for="cActions">Actions taken / comments</label><textarea id="cActions">'+esc(r['Actions Taken']||'')+'</textarea>'+
-        '<label for="cCorr">Corrective action</label><textarea id="cCorr">'+esc(r['Corrective Action']||'')+'</textarea>'+
-        (r['Closed Date']?'<p class="none">Closed on '+fmtD(r['Closed Date'])+(r['Updated By']?' — last updated by '+esc(r['Updated By']):'')+'</p>':'')+
-        '<div id="saveMsg"></div><button class="btn" id="saveBtn" onclick="save()">Save</button>'+
-      '</div>';
+      '<div id="invForm"></div>';
+    Investigation.mount($('invForm'),r);
 
     $('detail').classList.remove('hide'); $('detail').scrollTop=0;
     ids.forEach(function(id){
@@ -243,41 +204,10 @@
       google.script.run.withSuccessHandler(function(u){b.innerHTML='<img alt="Photo" src="'+u+'">';b.onclick=function(){bigPhoto(id,u)}}).withFailureHandler(function(e){b.textContent='!';if($('phErr'))$('phErr').textContent='Could not load a photo: '+(e&&e.message?e.message:'unknown error')}).getPhoto(id,false);
     });
   }
-  function ltiToggle(){var c=$('ldBox');if(c)c.classList.toggle('hide',$('cLti').value!=='Yes')}
-  function closeItem(){$('detail').classList.add('hide');CUR=null}
+  function closeItem(){if(!Investigation.canLeave())return;Investigation.left();$('detail').classList.add('hide');CUR=null}
   function bigPhoto(id,thumb){
     $('lbImg').src=thumb;$('lb').classList.remove('hide');
     google.script.run.withSuccessHandler(function(u){$('lbImg').src=u}).getPhoto(id,true);
-  }
-  function save(){
-    var r=CUR,btn=$('saveBtn');
-    var f={
-      'Status':$('cStatus')?$('cStatus').value:(r['Status']||'Open'),
-      'Title':$('cTitle')?$('cTitle').value:'',
-      'Specific Location':$('cSpecLoc')?$('cSpecLoc').value:'',
-      'Sub Type':$('cSub')?$('cSub').value:'',
-      'Potential Severity':$('cSev')?$('cSev').value:'',
-      'Investigation Level':$('cInvLevel')?$('cInvLevel').value:'',
-      'Person Type':$('cPerson')?$('cPerson').value:'',
-      'Investigation':$('cInv')?$('cInv').value:'',
-      'Assigned To':$('cAssign')?$('cAssign').value:'',
-      'RIDDOR':$('cRid')?$('cRid').value:(r['RIDDOR']||''),
-      'RIDDOR Date':$('cRidDate')?$('cRidDate').value:'',
-      'LTI':$('cLti')?$('cLti').value:(r['LTI']||''),
-      'Lost Days':($('cLost')&&$('cLti')&&$('cLti').value==='Yes')?$('cLost').value:'',
-      'Actions Taken':$('cActions')?$('cActions').value:'',
-      'Corrective Action':$('cCorr')?$('cCorr').value:''
-    };
-    btn.disabled=true;btn.textContent='Saving...';
-    google.script.run.withSuccessHandler(function(res){
-      btn.disabled=false;btn.textContent='Save';
-      if(res&&res.ok){
-        Object.keys(f).forEach(function(k){r[k]=f[k]});
-        if(f['Status']==='Closed'&&!r['Closed Date']) r['Closed Date']=new Date().toISOString().slice(0,10);
-        if(f['Status']==='Open') r['Closed Date']='';
-        $('saveMsg').innerHTML='<div class="msg ok">Saved.</div>'; drawOv(); drawLog();
-      } else $('saveMsg').innerHTML='<div class="msg err">'+esc((res&&res.error)||'Could not save.')+'</div>';
-    }).withFailureHandler(function(){btn.disabled=false;btn.textContent='Save';$('saveMsg').innerHTML='<div class="msg err">Could not save. Please try again.</div>'}).saveCloseOut(r['Ref'],f);
   }
   load();
 </script>
