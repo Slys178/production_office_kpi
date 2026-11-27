@@ -438,12 +438,16 @@
         if (tileArea1stFix) {
             tileArea1stFix.addEventListener('click', function() {
                 showPage('firstFixPage');
-                if (window.loadFirstFix) window.loadFirstFix();
+                if (window.loadFirstFix) window.loadFirstFix(true);
+                if (window.startFirstFixAutoRefresh) window.startFirstFixAutoRefresh();
             });
         }
         var back1st = document.getElementById('backToAreaFrom1stFix');
         if (back1st) {
-            back1st.addEventListener('click', function() { goAreaLanding(); });
+            back1st.addEventListener('click', function() {
+                if (window.stopFirstFixAutoRefresh) window.stopFirstFixAutoRefresh();
+                goAreaLanding();
+            });
         }
         var refresh1st = document.getElementById('refresh1stFixBtn');
         if (refresh1st) {
