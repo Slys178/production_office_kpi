@@ -30,15 +30,20 @@ const LOOKER_TAB = (CONFIG.sheets && CONFIG.sheets.projectTracking && CONFIG.she
   || 'Looker Source Data';
 
 function gvizUrl(sheetId, gid, tabName) {
+  // Cache-bust so ticks on Project Tracking show up without a hard browser refresh
+  var bust = '&_ts=' + Date.now();
   if (tabName) {
     return 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json&headers=1&sheet=' +
-      encodeURIComponent(tabName);
+      encodeURIComponent(tabName) + bust;
   }
-  return 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json&gid=' + gid;
+  return 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json&gid=' + gid + bust;
 }
 
 async function fetchGviz(sheetId, gid, tabName) {
-  const res = await fetch(gvizUrl(sheetId, gid, tabName));
+  const res = await fetch(gvizUrl(sheetId, gid, tabName), {
+    cache: 'no-store',
+    credentials: 'omit',
+  });
   const text = await res.text();
   const json = JSON.parse(text.substring(47, text.length - 2));
   if (json.status === 'error') {
@@ -403,7 +408,7 @@ function dialCard(def, value, info) {
   );
 }
 
-var REFRESH_MS = 5 * 60 * 1000;
+var REFRESH_MS = 2 * 60 * 1000;
 var latest = null;      // last data read from the sheet
 var latestAt = null;    // when it was read
 var zoomKey = null;     // dial currently shown full screen
@@ -527,42 +532,58 @@ function render(payload) {
 }
 
 var loading = false;
+var pageRefreshTimer = null;
+var PAGE_REFRESH_MS = 60 * 1000; // auto-refresh while viewing WIP page
+
+function buildLastFromLive(table) {
+  var cols = colMap(table.labels);
+  return {
+    officeCnc: lastTickInfo(table.rows, cols, cols.office),
+    strings: lastTickInfo(table.rows, cols, cols.strings),
+    winders: lastTickInfo(table.rows, cols, cols.winders),
+    posts: lastTickInfo(table.rows, cols, cols.posts),
+    treads: lastTickInfo(table.rows, cols, cols.treads),
+    bullnose: lastTickInfo(table.rows, cols, cols.bullnose),
+    stacked: lastTickInfo(table.rows, cols, cols.stacked),
+    dispatch: lastTickInfo(table.rows, cols, cols.dispatch),
+  };
+}
+
+function buildPayloadFromLive(table) {
+  var cols = colMap(table.labels);
+  if (cols.stairs < 0) throw new Error('Stairs column not found');
+  if (cols.office < 0) throw new Error('PROGRAMS COMPLETED column not found');
+  return {
+    wip: computeWip(table.rows, cols),
+    last: buildLastFromLive(table),
+    source: 'live from Project Tracking',
+  };
+}
 
 /** quiet = background refresh: no "Loading" flash, and old figures stay up if it fails. */
 export async function loadFirstFix(force, quiet) {
   var root = document.getElementById('firstFixBody');
   if (!root) return;
-  if (loading) return;
+  // force (Refresh button / open page) always reloads; quiet background can skip if busy
+  if (loading && !force) return;
   loading = true;
   if (!quiet) root.innerHTML = '<p class="ff-intro">Loading Project Tracking…</p>';
   try {
-    var payload = null;
+    // Always read the live Project Tracking tab so ticks update dials + dates
+    var liveTable = await fetchGviz(SHEET_ID, GID);
+    var payload = buildPayloadFromLive(liveTable);
+
+    // Optionally overlay WIP numbers from Looker Source Data if present
     try {
-      payload = fromLookerTab(await fetchGviz(SHEET_ID, null, LOOKER_TAB));
-      if (payload) payload.source = 'Looker Source Data tab';
+      var looker = fromLookerTab(await fetchGviz(SHEET_ID, null, LOOKER_TAB));
+      if (looker && looker.wip) {
+        payload.wip = looker.wip;
+        payload.source = 'Looker WIP + live last-tick dates';
+      }
     } catch (e) {
-      console.warn('1st Fix: Looker Source Data tab not available, recalculating', e);
+      console.warn('1st Fix: Looker Source Data tab not available; using live WIP', e);
     }
-    if (!payload) {
-      var table = await fetchGviz(SHEET_ID, GID);
-      var cols = colMap(table.labels);
-      if (cols.stairs < 0) throw new Error('Stairs column not found');
-      if (cols.office < 0) throw new Error('PROGRAMS COMPLETED column not found');
-      payload = {
-        wip: computeWip(table.rows, cols),
-        last: {
-          officeCnc: lastTickInfo(table.rows, cols, cols.office),
-          strings: lastTickInfo(table.rows, cols, cols.strings),
-          winders: lastTickInfo(table.rows, cols, cols.winders),
-          posts: lastTickInfo(table.rows, cols, cols.posts),
-          treads: lastTickInfo(table.rows, cols, cols.treads),
-          bullnose: lastTickInfo(table.rows, cols, cols.bullnose),
-          stacked: lastTickInfo(table.rows, cols, cols.stacked),
-          dispatch: lastTickInfo(table.rows, cols, cols.dispatch),
-        },
-        source: 'recalculated from 2026 tab',
-      };
-    }
+
     latest = payload;
     latestAt = new Date();
     render(payload);
@@ -577,4 +598,24 @@ export async function loadFirstFix(force, quiet) {
   }
 }
 
+/** Keep refreshing while the 1st Fix page is open (so ticks show without hard refresh). */
+export function startFirstFixAutoRefresh() {
+  stopFirstFixAutoRefresh();
+  pageRefreshTimer = setInterval(function () {
+    var page = document.getElementById('firstFixPage');
+    if (!page || !page.classList.contains('active')) return;
+    if (document.hidden) return;
+    loadFirstFix(false, true);
+  }, PAGE_REFRESH_MS);
+}
+
+export function stopFirstFixAutoRefresh() {
+  if (pageRefreshTimer) {
+    clearInterval(pageRefreshTimer);
+    pageRefreshTimer = null;
+  }
+}
+
 window.loadFirstFix = loadFirstFix;
+window.startFirstFixAutoRefresh = startFirstFixAutoRefresh;
+window.stopFirstFixAutoRefresh = stopFirstFixAutoRefresh;
