@@ -6,7 +6,10 @@
 window.REPORT_CONFIG = {
   // The Apps Script web app "/exec" URL that saves reports (see README.md, step 1-2).
   // Leave empty until that is set up: the form will then say reporting is not connected.
-  endpoint: "https://script.google.com/a/macros/staircraftgroup.com/s/AKfycbwvrKdagsSZMQrP2y2wWc-WwUJIwW5eRoezvoYOsEP_zmDriC0zljbhViqfTWws9jth/exec",
+  endpoint: "window.REPORT_CONFIG = {
+  // The Apps Script web app "/exec" URL that saves reports (see README.md, step 1-2).
+  // Leave empty until that is set up: the form will then say reporting is not connected.
+  endpoint: "https://script.google.com/a/macros/staircraftgroup.com/s/AKfycbwvrKdagsSZMQrP2y2wWc-WwUJIwW5eRoezvoYOsEP_zmDriC0zljbhViqfTWws9jth/exec",",
 
   sites: ["Bayton Road", "Ansty", "Ibstock Road"],
   departments: {
